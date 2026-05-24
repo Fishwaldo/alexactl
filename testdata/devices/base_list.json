@@ -1,0 +1,48 @@
+{
+  "devices": [
+    {
+      "accountName": "Kitchen Echo",
+      "capabilities": ["MICROPHONE", "AUDIO_PLAYER", "REMINDERS"],
+      "deviceFamily": "ECHO",
+      "deviceType": "A18O6U1U9KIYDM",
+      "deviceOwnerCustomerId": "OWNER",
+      "online": true,
+      "serialNumber": "S-KITCHEN-001",
+      "softwareVersion": "12345",
+      "deviceTypeFriendlyName": "Echo Dot",
+      "clusterMembers": []
+    },
+    {
+      "accountName": "Living Room Pair",
+      "capabilities": ["MICROPHONE", "AUDIO_PLAYER"],
+      "deviceFamily": "WHA",
+      "deviceType": "AP1F6KUH00XPV",
+      "deviceOwnerCustomerId": "OWNER",
+      "online": true,
+      "serialNumber": "S-PAIR-001",
+      "softwareVersion": "0",
+      "deviceTypeFriendlyName": "Stereo Pair",
+      "clusterMembers": ["S-PAIR-LEFT", "S-PAIR-RIGHT"]
+    },
+    {
+      "accountName": "Old App",
+      "capabilities": ["MICROPHONE"],
+      "deviceFamily": "MOBILE",
+      "deviceType": "A2IVLV5VM2W81",
+      "deviceOwnerCustomerId": "OWNER",
+      "online": false,
+      "serialNumber": "S-APP-001",
+      "clusterMembers": []
+    },
+    {
+      "accountName": "Headset",
+      "capabilities": ["AUDIO_PLAYER"],
+      "deviceFamily": "ROOK",
+      "deviceType": "A189LTZOO5ZTGA",
+      "deviceOwnerCustomerId": "OWNER",
+      "online": false,
+      "serialNumber": "S-HEADSET-001",
+      "clusterMembers": []
+    }
+  ]
+}

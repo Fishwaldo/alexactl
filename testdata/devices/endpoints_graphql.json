@@ -1,0 +1,39 @@
+{
+  "data": {
+    "allDevices": {
+      "endpoints": [
+        {
+          "endpointId": "ep-kitchen",
+          "friendlyNameObject": {"value": {"text": "Kitchen Echo"}},
+          "manufacturer": {"value": {"text": "Amazon"}},
+          "model": {"value": {"text": "Echo Dot (5th Gen)"}},
+          "serialNumber": {"value": {"text": "S-KITCHEN-001"}},
+          "softwareVersion": {"value": {"text": "12345"}},
+          "alexaEnabledMetadata": {"category": "DEVICE"},
+          "displayCategories": {
+            "primary": {"value": "SPEAKER"},
+            "all": [{"value": "SPEAKER"}, {"value": "ALEXA_VOICE_ENABLED"}]
+          },
+          "legacyIdentifiers": {
+            "dmsIdentifier": {"deviceType": {"value": {"text": "A18O6U1U9KIYDM"}}},
+            "chrsIdentifier": {"entityId": "entity-kitchen"}
+          }
+        },
+        {
+          "endpointId": "ep-aqm-1",
+          "friendlyNameObject": {"value": {"text": "Bedroom Air Monitor"}},
+          "manufacturer": {"value": {"text": "Amazon"}},
+          "serialNumber": {"value": {"text": "S-AQM-001"}},
+          "softwareVersion": {"value": {"text": "999"}},
+          "displayCategories": {
+            "primary": {"value": "AIR_QUALITY_MONITOR"},
+            "all": [{"value": "AIR_QUALITY_MONITOR"}]
+          },
+          "legacyIdentifiers": {
+            "dmsIdentifier": {"deviceType": {"value": {"text": "AEZME1X38KDRA"}}}
+          }
+        }
+      ]
+    }
+  }
+}

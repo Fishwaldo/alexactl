@@ -1,0 +1,22 @@
+# Reference clone of upstream aioamazondevices — never committed
+/aioamazondevices/
+
+# Go build artifacts
+*.test
+*.out
+coverage.txt
+/bin/
+/dist/
+/amazondevices-test
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+*.swp
+
+# Local test/CLI artifacts
+/testdata/captured/
+/session.json
+/login_data.json
+config.yaml

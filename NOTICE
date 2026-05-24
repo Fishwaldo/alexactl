@@ -1,0 +1,12 @@
+goamazondevices
+Copyright 2026 Fishwaldo
+
+This product is a Go port of aioamazondevices
+(https://github.com/chemelli74/aioamazondevices),
+Copyright Simone Chemelli and contributors,
+licensed under the Apache License, Version 2.0.
+
+Portions of the public API (struct field names, enum values,
+URL paths, and wire formats) are necessarily identical to the
+upstream Python library in order to communicate with Amazon's
+services.

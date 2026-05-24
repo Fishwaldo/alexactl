@@ -1,0 +1,25 @@
+{
+  "access_token": "Atna|sample-access",
+  "refresh_token": "Atnr|sample-refresh",
+  "adp_token": "sample-adp",
+  "device_private_key": "-----BEGIN RSA PRIVATE KEY-----\nMIIE...\n-----END RSA PRIVATE KEY-----",
+  "expires_at": "2026-05-25T10:00:00Z",
+  "website_cookies": {
+    "session-id": "abc-123",
+    "ubid-main": "xyz-789"
+  },
+  "store_authentication_cookie": "cookie-value",
+  "device_info": {
+    "device_serial_number": "0123456789ABCDEF",
+    "device_type": "A2IVLV5VM2W81"
+  },
+  "customer_info": {
+    "home_region": "NA",
+    "account_id": "amzn1.account.SAMPLE",
+    "name": "Sample User",
+    "given_name": "Sample"
+  },
+  "site": "https://www.amazon.com",
+  "domain": "com",
+  "account_customer_id": "amzn1.account.SAMPLE"
+}
