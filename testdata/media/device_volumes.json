@@ -1,0 +1,7 @@
+{
+  "volumes": [
+    { "dsn": "S-A", "speakerVolume": 42, "speakerMuted": false },
+    { "dsn": "S-B", "speakerVolume": 0,  "speakerMuted": true },
+    { "dsn": "S-C", "speakerVolume": 90, "speakerMuted": false }
+  ]
+}

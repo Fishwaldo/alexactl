@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -28,10 +29,18 @@ func newMediaTest(t *testing.T, handler http.HandlerFunc) (*MediaService, *httpt
 		RandReader: bytes.NewReader(bytes.Repeat([]byte{0x42}, 1024)),
 	})
 	require.NoError(t, err)
-	return &MediaService{
+	sess := &Session{AccountCustomerID: "OWNER", Domain: "com"}
+	seq := &SequenceService{
 		wrapper: wr,
-		session: &Session{AccountCustomerID: "OWNER", Domain: "com"},
-	}, srv
+		session: sess,
+		sleepFn: func(_ context.Context, _ time.Duration) error { return nil },
+	}
+	ms := &MediaService{
+		wrapper:  wr,
+		sequence: seq,
+		session:  sess,
+	}
+	return ms, srv
 }
 
 func TestMedia_Speak_SinglePOST(t *testing.T) {

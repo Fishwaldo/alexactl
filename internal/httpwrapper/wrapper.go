@@ -31,9 +31,10 @@ type Wrapper struct {
 	httpClient *http.Client
 	logger     *slog.Logger
 
-	site     string
-	domain   string
-	language string
+	site        string
+	domain      string
+	language    string
+	countryCode string
 
 	initialCookies map[string]string
 	// sessionCookies is the post-login cookie set. When non-nil, it takes
@@ -211,7 +212,17 @@ func (w *Wrapper) SetSite(site string) error {
 	w.site = site
 	w.domain = domain
 	w.language = lang
+	w.countryCode = cc
 	return nil
+}
+
+// CountryCode returns the ISO-3166 alpha-2 country code derived from the
+// current site domain (e.g., "us" for "https://www.amazon.com", "jp" for
+// "https://www.amazon.co.jp"). Lowercased.
+func (w *Wrapper) CountryCode() string {
+	w.mu.RLock()
+	defer w.mu.RUnlock()
+	return w.countryCode
 }
 
 // HTTPClient exposes the underlying client. Callers should use Do; this is

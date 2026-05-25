@@ -1,0 +1,36 @@
+{
+  "alexaHistoryRecords": [
+    {
+      "deviceInfo": {"deviceSerialNumber": "S-KITCHEN-001"},
+      "utteranceType": "GENERAL",
+      "timestamp": 1748179200000,
+      "intent": "PlayMusic",
+      "title": "play some jazz",
+      "subTitle": "Alexa, play some jazz"
+    },
+    {
+      "deviceInfo": {"deviceSerialNumber": "S-KITCHEN-001"},
+      "utteranceType": "GENERAL",
+      "timestamp": 1748175600000,
+      "intent": "GetTime",
+      "title": "what time is it",
+      "subTitle": "Alexa, what time is it"
+    },
+    {
+      "deviceInfo": {"deviceSerialNumber": "S-LIVING-001"},
+      "utteranceType": "ASR_TIMEOUT",
+      "timestamp": 1748179800000,
+      "intent": "",
+      "title": "(ignored utterance type)",
+      "subTitle": "ASR_TIMEOUT records are dropped"
+    },
+    {
+      "deviceInfo": {"deviceSerialNumber": "S-LIVING-001"},
+      "utteranceType": "GENERAL",
+      "timestamp": 1748179900000,
+      "intent": "SetTimer",
+      "title": "set a five minute timer",
+      "subTitle": "Alexa, set a five minute timer"
+    }
+  ]
+}

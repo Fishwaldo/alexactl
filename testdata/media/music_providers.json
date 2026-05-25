@@ -1,0 +1,32 @@
+{
+  "generatedArrayWrapper": [
+    {
+      "id": "amzn-music",
+      "displayName": "Amazon Music",
+      "availability": "AVAILABLE",
+      "supportedProperties": ["Alexa.Music.PlaySearchPhrase"],
+      "providerData": { "isDefaultMusicProvider": true }
+    },
+    {
+      "id": "spotify",
+      "displayName": "Spotify",
+      "availability": "AVAILABLE",
+      "supportedProperties": ["Alexa.Music.PlaySearchPhrase"],
+      "providerData": { "isDefaultMusicProvider": false }
+    },
+    {
+      "id": "tunein",
+      "displayName": "TuneIn",
+      "availability": "UNAVAILABLE",
+      "supportedProperties": ["Alexa.Music.PlaySearchPhrase"],
+      "providerData": {}
+    },
+    {
+      "id": "non-music-skill",
+      "displayName": "Smart Plug",
+      "availability": "AVAILABLE",
+      "supportedProperties": ["Alexa.SwitchController"],
+      "providerData": {}
+    }
+  ]
+}

@@ -55,6 +55,7 @@ const (
 
 // URI paths on the alexa.amazon.<domain> host.
 const (
+	URIAutomations      = "/api/behaviors/v2/automations"
 	URICapabilities     = "/v1/devices/@self/capabilities"
 	URIDeviceVolumes    = "/api/devices/deviceType/dsn/audio/v1/allDeviceVolumes"
 	URIDevices          = "/api/devices-v2/device"

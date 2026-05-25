@@ -1,0 +1,103 @@
+{
+  "data": {
+    "listEndpoints": {
+      "endpoints": [
+        {
+          "endpointId": "ep-kitchen",
+          "friendlyNameObject": {"value": {"text": "Kitchen Echo"}},
+          "features": [
+            {
+              "name": "connectivity",
+              "instance": null,
+              "properties": [
+                {
+                  "name": "reachability",
+                  "type": "AlexaInterface",
+                  "reachabilityStatusValue": "OK"
+                }
+              ]
+            },
+            {
+              "name": "temperatureSensor",
+              "instance": null,
+              "properties": [
+                {
+                  "name": "temperature",
+                  "value": {"value": 21.5, "scale": "CELSIUS"}
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "endpointId": "ep-bedroom",
+          "friendlyNameObject": {"value": {"text": "Bedroom Echo"}},
+          "features": [
+            {
+              "name": "connectivity",
+              "instance": null,
+              "properties": [
+                {
+                  "name": "reachability",
+                  "reachabilityStatusValue": "UNAVAILABLE"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "endpointId": "ep-aqm-1",
+          "friendlyNameObject": {"value": {"text": "Bedroom Air Monitor"}},
+          "features": [
+            {
+              "name": "connectivity",
+              "instance": null,
+              "properties": [
+                {
+                  "name": "reachability",
+                  "reachabilityStatusValue": "OK"
+                }
+              ]
+            },
+            {
+              "name": "range",
+              "instance": "4",
+              "properties": [
+                {
+                  "name": "rangeValue",
+                  "rangeValue": {"value": 47.0}
+                }
+              ]
+            },
+            {
+              "name": "range",
+              "instance": "6",
+              "properties": [
+                {
+                  "name": "rangeValue",
+                  "rangeValue": {"value": 12.0}
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "endpointId": "ep-aqm-error",
+          "friendlyNameObject": {"value": {"text": "Errored AQM"}},
+          "features": [
+            {
+              "name": "connectivity",
+              "instance": null,
+              "properties": [
+                {
+                  "name": "reachability",
+                  "error": {"type": "INTERNAL_ERROR", "message": "transient"}
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

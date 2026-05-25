@@ -94,8 +94,12 @@ func (s *DevicesService) SetDefault(d *Device) error {
 
 // Refresh forces a re-fetch of the device list, including the GraphQL
 // endpoint enrichment.
-func (s *DevicesService) Refresh(ctx context.Context) error {
-	return s.refresh(ctx)
+func (s *DevicesService) Refresh(ctx context.Context, opts ...RefreshOption) error {
+	cfg := refreshConfig{}
+	for _, o := range opts {
+		o.apply(&cfg)
+	}
+	return s.refresh(ctx, cfg)
 }
 
 // refreshIfStale calls refresh if the cache is older than the daily window.
@@ -109,12 +113,12 @@ func (s *DevicesService) refreshIfStale(ctx context.Context) error {
 		return nil
 	}
 	_, err, _ := s.refreshGroup.Do("refresh", func() (any, error) {
-		return nil, s.refresh(ctx)
+		return nil, s.refresh(ctx, refreshConfig{})
 	})
 	return err
 }
 
-func (s *DevicesService) refresh(ctx context.Context) error {
+func (s *DevicesService) refresh(ctx context.Context, cfg refreshConfig) error {
 	s.wrapper.Logger(ctx).DebugContext(ctx, "amazondevices: refreshing devices")
 	sitePrefix := s.alexaHost()
 
@@ -130,6 +134,21 @@ func (s *DevicesService) refresh(ctx context.Context) error {
 	endpoints, err := s.fetchEndpoints(ctx, sitePrefix, base)
 	if err != nil {
 		return err
+	}
+
+	// Sensors enrichment — best-effort. Failures (network, malformed
+	// GraphQL response) log a WARN and do NOT fail Refresh. Callers that
+	// don't care about sensors can pass WithoutSensors() to skip the
+	// extra HTTP roundtrip entirely.
+	if !cfg.skipSensors && s.sensorsHook != nil {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		if hookErr := s.sensorsHook(ctx, base, endpoints); hookErr != nil {
+			s.wrapper.Logger(ctx).WarnContext(ctx,
+				"amazondevices: sensor enrichment failed; continuing without it",
+				"err", hookErr)
+		}
 	}
 
 	s.mu.Lock()

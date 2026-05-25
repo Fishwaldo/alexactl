@@ -1,0 +1,36 @@
+{
+  "mediaSessionList": [
+    {
+      "endpointList": [
+        { "id": { "deviceSerialNumber": "S-A" } }
+      ],
+      "nowPlayingData": {
+        "playerState": "PLAYING",
+        "mainArt": { "largeUrl": "https://example/art-a.jpg" },
+        "infoText": {
+          "title": "Bohemian Rhapsody",
+          "subText1": "Queen",
+          "subText2": "A Night at the Opera"
+        },
+        "transport": {
+          "next": "ENABLED", "previous": "DISABLED", "playPause": "ENABLED",
+          "seekForward": "ENABLED", "seekBack": "DISABLED",
+          "shuffle": "ENABLED", "repeat": "DISABLED"
+        },
+        "progress": { "mediaLength": "354000", "mediaProgress": "120500" },
+        "provider": {
+          "providerName": "Amazon Music",
+          "providerLogo": { "url": "https://example/amzn.png" }
+        }
+      }
+    },
+    {
+      "endpointList": [
+        { "id": { "deviceSerialNumber": "S-B" } }
+      ],
+      "nowPlayingData": {
+        "playerState": "PAUSED"
+      }
+    }
+  ]
+}

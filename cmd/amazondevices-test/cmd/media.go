@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"strconv"
 
 	"github.com/spf13/cobra"
 )
@@ -75,21 +76,27 @@ func newAnnounceCmd() *cobra.Command {
 	return cmd
 }
 
-// newVolumeCmd builds the `volume` subcommand with closure-scoped flags.
+// newVolumeCmd builds the `volume` subcommand — value is a positional
+// argument.
+//
+// Usage: amazondevices-test volume --serial S 42
 func newVolumeCmd() *cobra.Command {
 	var serial string
-	var value int
 	cmd := &cobra.Command{
-		Use:   "volume",
-		Short: "Set device volume (0..100)",
+		Use:   "volume <0..100>",
+		Short: "Set device volume",
+		Args:  cobra.ExactArgs(1),
 	}
 	cmd.Flags().StringVar(&serial, "serial", "", "device serial number (required)")
-	cmd.Flags().IntVar(&value, "value", 50, "volume value (0..100)")
 	_ = cmd.MarkFlagRequired("serial")
-	cmd.RunE = func(_ *cobra.Command, _ []string) error {
+	cmd.RunE = func(_ *cobra.Command, args []string) error {
 		ctx, cancel := signalContext()
 		defer cancel()
 
+		value, err := strconv.Atoi(args[0])
+		if err != nil {
+			return fmt.Errorf("volume must be an integer in [0,100], got %q", args[0])
+		}
 		client, sess, err := newClient(true)
 		if err != nil {
 			return err

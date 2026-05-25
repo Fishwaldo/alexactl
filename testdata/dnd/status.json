@@ -1,0 +1,19 @@
+{
+  "doNotDisturbDeviceStatusList": [
+    {
+      "deviceSerialNumber": "S-KITCHEN-001",
+      "deviceType": "A18O6U1U9KIYDM",
+      "enabled": true
+    },
+    {
+      "deviceSerialNumber": "S-LIVING-001",
+      "deviceType": "A18O6U1U9KIYDM",
+      "enabled": false
+    },
+    {
+      "deviceSerialNumber": "S-BEDROOM-001",
+      "deviceType": "A2H4LV5GIZ1JFT",
+      "enabled": false
+    }
+  ]
+}

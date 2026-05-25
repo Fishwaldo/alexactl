@@ -2,27 +2,39 @@ package amazondevices
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"net/http"
-	"sort"
 	"sync"
 
 	"github.com/Fishwaldo/goamazondevices/internal/amzconst"
 	"github.com/Fishwaldo/goamazondevices/internal/httpwrapper"
 )
 
-// MediaService sends Alexa.Speak / AlexaAnnouncement / SetVolume operations
-// to one or more devices via the /api/behaviors/preview endpoint.
+// MediaService is the user-facing surface for Alexa media operations.
+// Command facades (Speak/Announce/SetVolume/PlaySound/PlayMusic/...)
+// route through SequenceService for batching + ParallelNode wrapping.
+// State queries (DeviceVolumes/MediaStates/MusicProviders) call
+// alexa.amazon.<domain> directly.
+//
+// Safe for concurrent use.
 type MediaService struct {
 	wrapper *httpwrapper.Wrapper
 
+	// sequence is the SequenceService instance owned by the same Client.
+	// Wired by NewClient at construction time. Tests must wire it
+	// explicitly when constructing MediaService bare.
+	sequence *SequenceService
+
 	mu      sync.RWMutex
 	session *Session
+
+	// validateMusicProviderFn is a test seam for PlayMusic's provider
+	// lookup; production leaves nil and PlayMusic calls MusicProviders()
+	// directly. Populated by media_commands_test.go for unit isolation.
+	validateMusicProviderFn func(ctx context.Context, providerID string) error
 }
 
 // setSession swaps in a fresh *Session pointer. Invoked by AuthService
-// after Login / Restore / refreshAccessToken.
+// via the broadcast pipeline.
 func (s *MediaService) setSession(sess *Session) {
 	s.mu.Lock()
 	s.session = sess
@@ -30,68 +42,29 @@ func (s *MediaService) setSession(sess *Session) {
 }
 
 // snapshotSession returns the current *Session pointer under the read
-// lock. Callers may dereference the returned pointer freely — AuthService
-// always swaps in a fresh pointer rather than mutating in place.
+// lock.
 func (s *MediaService) snapshotSession() *Session {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return s.session
 }
 
-// Speak utters text on the given device (and on each cluster member if
-// the device is part of a group).
+// Speak utters text on the given device (and on each cluster member).
+// One Sequence.Send per cluster member is buffered and a single Flush
+// dispatches them in a single POST (optimised into a ParallelNode by
+// the optimisation pass).
 func (s *MediaService) Speak(ctx context.Context, d *Device, text string) error {
-	nodes, err := s.buildClusterNodes(d, SeqSpeak, text)
-	if err != nil {
-		return err
-	}
-	return s.postSequence(ctx, nodes)
+	return s.fanoutAndFlush(ctx, d, SeqSpeak, text, "")
 }
 
-// Announce broadcasts a message on the device's cluster. Cluster fanout
-// happens inside the single operation payload (target.devices), so only
-// one operation node is needed.
+// Announce broadcasts a message on the device's cluster. Cluster
+// fanout lives inside the operation payload's target.devices field
+// (not as per-member nodes), so this is a single Send + Flush.
 func (s *MediaService) Announce(ctx context.Context, d *Device, text string) error {
-	sess := s.snapshotSession()
-	if sess == nil || sess.AccountCustomerID == "" {
-		return fmt.Errorf("%w: missing customer ID", ErrCannotAuthenticate)
+	if err := s.sequence.Send(ctx, d, SeqAnnouncement, text, ""); err != nil {
+		return err
 	}
-	members := sortedKeys(d.ClusterMembers)
-	if len(members) == 0 {
-		members = []string{d.SerialNumber}
-	}
-	devices := make([]map[string]any, 0, len(members))
-	for _, serial := range members {
-		dt := d.ClusterMembers[serial]
-		if dt == "" {
-			dt = d.DeviceType
-		}
-		devices = append(devices, map[string]any{
-			"deviceSerialNumber": serial,
-			"deviceTypeId":       dt,
-		})
-	}
-	payload := map[string]any{
-		"deviceType":         d.DeviceType,
-		"deviceSerialNumber": d.SerialNumber,
-		"locale":             s.wrapper.Language(),
-		"customerId":         sess.AccountCustomerID,
-		"expireAfter":        "PT5S",
-		"content": []any{
-			map[string]any{
-				"locale":  s.wrapper.Language(),
-				"display": map[string]any{"title": "goamazondevices", "body": text},
-				"speak":   map[string]any{"type": "text", "value": text},
-			},
-		},
-		"target": map[string]any{
-			"customerId": sess.AccountCustomerID,
-			"devices":    devices,
-		},
-		"skillId": "amzn1.ask.1p.routines.messaging",
-	}
-	node := s.opaqueNode(string(SeqAnnouncement), payload)
-	return s.postSequence(ctx, []map[string]any{node})
+	return s.sequence.Flush(ctx)
 }
 
 // SetVolume sets a volume in [0, 100] on each cluster member.
@@ -100,127 +73,26 @@ func (s *MediaService) SetVolume(ctx context.Context, d *Device, vol int) error 
 		return fmt.Errorf("amazondevices: volume %d not in [%d,%d]",
 			vol, amzconst.VolumeMin, amzconst.VolumeMax)
 	}
-	nodes, err := s.buildClusterNodes(d, SeqVolume, vol)
-	if err != nil {
-		return err
-	}
-	return s.postSequence(ctx, nodes)
+	return s.fanoutAndFlush(ctx, d, SeqVolume, vol, "")
 }
 
-// buildClusterNodes constructs one operation node per cluster member for
-// per-member fanout (Speak, SetVolume).
-func (s *MediaService) buildClusterNodes(d *Device, msgType SequenceType, msgBody any) ([]map[string]any, error) {
-	sess := s.snapshotSession()
-	if sess == nil || sess.AccountCustomerID == "" {
-		return nil, fmt.Errorf("%w: missing customer ID", ErrCannotAuthenticate)
-	}
+// fanoutAndFlush enqueues one Sequence.Send per cluster member (or
+// for the device itself if it has no cluster), then Flushes so the
+// resulting batch is POSTed synchronously.
+func (s *MediaService) fanoutAndFlush(ctx context.Context, d *Device, kind SequenceType, body any, providerID string) error {
 	members := sortedKeys(d.ClusterMembers)
 	if len(members) == 0 {
 		members = []string{d.SerialNumber}
 	}
-	out := make([]map[string]any, 0, len(members))
 	for _, serial := range members {
 		dt := d.ClusterMembers[serial]
 		if dt == "" {
 			dt = d.DeviceType
 		}
-		var payload map[string]any
-		switch msgType {
-		case SeqSpeak:
-			payload = map[string]any{
-				"deviceType":         dt,
-				"deviceSerialNumber": serial,
-				"locale":             s.wrapper.Language(),
-				"customerId":         sess.AccountCustomerID,
-				"textToSpeak":        msgBody,
-				"target": map[string]any{
-					"customerId": sess.AccountCustomerID,
-					"devices": []any{
-						map[string]any{
-							"deviceSerialNumber": serial,
-							"deviceTypeId":       dt,
-						},
-					},
-				},
-				"skillId": "amzn1.ask.1p.saysomething",
-			}
-		case SeqVolume:
-			payload = map[string]any{
-				"deviceType":         dt,
-				"deviceSerialNumber": serial,
-				"locale":             s.wrapper.Language(),
-				"customerId":         sess.AccountCustomerID,
-				"value":              msgBody,
-			}
-		default:
-			return nil, fmt.Errorf("amazondevices: media: unsupported message type %s", msgType)
-		}
-		out = append(out, s.opaqueNode(string(msgType), payload))
-	}
-	return out, nil
-}
-
-func (s *MediaService) opaqueNode(messageType string, payload map[string]any) map[string]any {
-	return map[string]any{
-		"@type":            "com.amazon.alexa.behaviors.model.OpaquePayloadOperationNode",
-		"type":             messageType,
-		"operationPayload": payload,
-	}
-}
-
-// postSequence POSTs the operation nodes to /api/behaviors/preview, wrapping
-// them in a SerialNode.
-func (s *MediaService) postSequence(ctx context.Context, nodes []map[string]any) error {
-	if len(nodes) == 0 {
-		return nil
-	}
-	s.wrapper.Logger(ctx).DebugContext(ctx, "amazondevices: sending sequence",
-		"node_count", len(nodes))
-
-	seq := map[string]any{
-		"@type": "com.amazon.alexa.behaviors.model.Sequence",
-		"startNode": map[string]any{
-			"@type":          "com.amazon.alexa.behaviors.model.SerialNode",
-			"nodesToExecute": nodes,
-		},
-	}
-	seqJSON, err := json.Marshal(seq)
-	if err != nil {
-		return fmt.Errorf("amazondevices: marshal sequence: %w", err)
-	}
-
-	body := map[string]any{
-		"behaviorId":   "PREVIEW",
-		"sequenceJson": string(seqJSON),
-		"status":       "ENABLED",
-	}
-
-	url := fmt.Sprintf("https://alexa.amazon.%s%s", s.wrapper.Domain(), amzconst.URIBehaviorsPreview)
-	resp, err := s.wrapper.Do(ctx, httpwrapper.Request{
-		Method:   http.MethodPost,
-		URL:      url,
-		JSONBody: body,
-	})
-	if err != nil {
-		return fmt.Errorf("%w: %w", ErrCannotConnect, err)
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode >= 400 {
-		return &APIError{
-			Category:   ErrCannotRetrieveData,
-			Method:     http.MethodPost,
-			StatusCode: resp.StatusCode,
-			URL:        url,
+		fanout := &Device{SerialNumber: serial, DeviceType: dt}
+		if err := s.sequence.Send(ctx, fanout, kind, body, providerID); err != nil {
+			return err
 		}
 	}
-	return nil
-}
-
-func sortedKeys(m map[string]string) []string {
-	keys := make([]string, 0, len(m))
-	for k := range m {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-	return keys
+	return s.sequence.Flush(ctx)
 }

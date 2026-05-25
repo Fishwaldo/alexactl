@@ -1,0 +1,44 @@
+{
+  "generatedArrayWrapper": [
+    {
+      "name": "Good Morning",
+      "status": "ENABLED",
+      "sequence": {
+        "@type": "com.amazon.alexa.behaviors.model.Sequence",
+        "startNode": {
+          "@type": "com.amazon.alexa.behaviors.model.OpaquePayloadOperationNode",
+          "type": "Alexa.Speak",
+          "operationPayload": {
+            "deviceType": "ALEXA_CURRENT_DEVICE_TYPE",
+            "deviceSerialNumber": "ALEXA_CURRENT_DSN",
+            "textToSpeak": "Good morning!"
+          }
+        }
+      }
+    },
+    {
+      "name": "Disabled Routine",
+      "status": "DISABLED",
+      "sequence": {
+        "@type": "com.amazon.alexa.behaviors.model.Sequence",
+        "startNode": {}
+      }
+    },
+    {
+      "name": "Bedtime",
+      "status": "ENABLED",
+      "sequence": {
+        "@type": "com.amazon.alexa.behaviors.model.Sequence",
+        "startNode": {
+          "@type": "com.amazon.alexa.behaviors.model.OpaquePayloadOperationNode",
+          "type": "Alexa.DeviceControls.Volume",
+          "operationPayload": {
+            "deviceType": "ALEXA_CURRENT_DEVICE_TYPE",
+            "deviceSerialNumber": "ALEXA_CURRENT_DSN",
+            "value": 10
+          }
+        }
+      }
+    }
+  ]
+}

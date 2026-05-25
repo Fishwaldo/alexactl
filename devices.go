@@ -30,6 +30,37 @@ type DevicesService struct {
 	// refreshGroup dedupes concurrent refresh calls. The key is a constant
 	// ("refresh") so at most one refresh is in flight per DevicesService.
 	refreshGroup singleflight.Group
+
+	// sensorsHook, if non-nil, is invoked at the end of refresh to enrich
+	// devices with sensor state and DnD. Wired by NewClient; nil when the
+	// service is constructed bare in tests. Failures from the hook are
+	// logged at WARN level and do NOT fail the refresh.
+	sensorsHook func(ctx context.Context, devices map[string]*Device, endpoints map[string]string) error
+}
+
+// RefreshOption tunes DevicesService.Refresh behavior. Returned by
+// functional-option constructors below; pass to Refresh via variadic
+// arguments.
+type RefreshOption interface {
+	apply(*refreshConfig)
+}
+
+// refreshConfig is the internal options bag accumulated from RefreshOption
+// values. Defaults are zero-valued.
+type refreshConfig struct {
+	skipSensors bool
+}
+
+type refreshOptionFunc func(*refreshConfig)
+
+func (f refreshOptionFunc) apply(cfg *refreshConfig) { f(cfg) }
+
+// WithoutSensors instructs Refresh to skip the sensor-enrichment step.
+// Useful for fast-path callers that don't need Device.Sensors populated.
+// Online flags are then taken from the base /api/devices-v2/device
+// response only.
+func WithoutSensors() RefreshOption {
+	return refreshOptionFunc(func(cfg *refreshConfig) { cfg.skipSensors = true })
 }
 
 // setSession swaps in a fresh *Session pointer. Invoked by AuthService

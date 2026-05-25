@@ -1,5 +1,7 @@
 package amazondevices
 
+import "time"
+
 // Device describes one Amazon Echo (or Alexa-enabled) device. Returned by
 // DevicesService.List as a read-only snapshot — mutations on a *Device do
 // NOT update the client's internal cache. Call DevicesService.Refresh to
@@ -52,10 +54,12 @@ type DeviceSensor struct {
 	Scale     string
 }
 
-// Schedule is a single timer/alarm/reminder. Populated in Phase 2.
+// Schedule is a single timer/alarm/reminder occurrence. Populated by
+// NotificationsService.Get (and onto Device.Notifications via the
+// sensors-enrichment step of DevicesService.Refresh).
 type Schedule struct {
-	Type           string // "alarm" | "reminder" | "timer"
-	Status         string
+	Type           string    // "Alarm" | "Reminder" | "Timer" (MusicAlarm normalized to Alarm)
+	Status         string    // "ON" when surfaced
 	Label          string
-	NextOccurrence string // ISO-8601; parsed lazily
+	NextOccurrence time.Time // earliest occurrence >= now-1m; zero value if unparseable
 }

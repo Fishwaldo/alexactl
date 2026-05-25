@@ -48,3 +48,73 @@ fragment DeviceEndpoints on ListEndpointsResponse {
   }
 }
 `
+
+// QuerySensorState is the GraphQL operation used to fetch per-endpoint
+// sensor feature data (temperature, motion, light, reachability, range,
+// AQM sub-sensors). Ported verbatim from aioamazondevices
+// const/queries.py QUERY_SENSOR_STATE.
+//
+// The query takes a list of endpoint IDs and returns features grouped by
+// type via inline fragments. The actual property values are extracted via
+// the Sensors / AQMRangeSensors template tables in metadata.go.
+const QuerySensorState = `
+fragment EndpointState on Endpoint {
+  endpointId: id
+  friendlyNameObject { value { text } }
+  features {
+    name
+    instance
+    properties {
+      name
+      type
+      accuracy
+      error { type message }
+      __typename
+      ... on Illuminance {
+        illuminanceValue { value }
+        timeOfSample
+        timeOfLastChange
+      }
+      ... on Reachability {
+        reachabilityStatusValue
+        timeOfSample
+        timeOfLastChange
+      }
+      ... on DetectionState {
+        detectionStateValue
+        timeOfSample
+        timeOfLastChange
+      }
+      ... on TemperatureSensor {
+        name
+        value {
+          value
+          scale
+        }
+        timeOfSample
+        timeOfLastChange
+      }
+      ... on RangeValue {
+        rangeValue { value }
+        timeOfSample
+        timeOfLastChange
+      }
+    }
+  }
+}
+
+
+query getEndpointState($endpointIds: [String]!) {
+  listEndpoints(
+    listEndpointsInput: {
+      latencyTolerance: LOW,
+      endpointIds: $endpointIds,
+      includeHouseholdDevices: true
+    }
+  ) {
+    endpoints {
+      ...EndpointState
+    }
+  }
+}
+`

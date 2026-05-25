@@ -1,6 +1,7 @@
 package amazondevices
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/Fishwaldo/goamazondevices/internal/httpwrapper"
@@ -13,15 +14,20 @@ type Client struct {
 
 	wrapper *httpwrapper.Wrapper
 
-	Auth    *AuthService
-	Devices *DevicesService
-	Media   *MediaService
+	Auth          *AuthService
+	Devices       *DevicesService
+	Media         *MediaService
+	Sequence      *SequenceService
+	DnD           *DnDService
+	Sensors       *SensorsService
+	Notifications *NotificationsService
+	History       *HistoryService
 }
 
 // NewClient constructs a Client. It performs no I/O.
 //
 // The first network call happens when the caller invokes Auth.Login,
-// Auth.Restore, or any DevicesService / MediaService method.
+// Auth.Restore, or any service method.
 func NewClient(opts ...Option) (*Client, error) {
 	cfg := defaultConfig()
 	for _, opt := range opts {
@@ -47,14 +53,43 @@ func NewClient(opts ...Option) (*Client, error) {
 	}
 
 	c := &Client{
-		cfg:     cfg,
-		wrapper: wr,
-		Auth:    &AuthService{wrapper: wr},
-		Devices: &DevicesService{wrapper: wr},
-		Media:   &MediaService{wrapper: wr},
+		cfg:           cfg,
+		wrapper:       wr,
+		Auth:          &AuthService{wrapper: wr},
+		Devices:       &DevicesService{wrapper: wr},
+		Media:         &MediaService{wrapper: wr},
+		Sequence:      &SequenceService{wrapper: wr},
+		DnD:           &DnDService{wrapper: wr},
+		Sensors:       &SensorsService{wrapper: wr},
+		Notifications: &NotificationsService{wrapper: wr},
+		History:       &HistoryService{wrapper: wr},
 	}
-	// Wire AuthService to broadcast new sessions to Devices and Media.
-	c.Auth.consumers = []sessionConsumer{c.Devices, c.Media}
+	c.Auth.consumers = []sessionConsumer{
+		c.Devices, c.Media, c.Sequence, c.DnD, c.Sensors, c.Notifications, c.History,
+	}
+	c.Media.sequence = c.Sequence
+
+	// Sensors enrichment step for DevicesService.Refresh. DnD status,
+	// Notifications, and Sensors are all best-effort; an individual
+	// failure logs WARN and the next step proceeds with nil for that
+	// input.
+	c.Devices.sensorsHook = func(ctx context.Context, devices map[string]*Device, endpoints map[string]string) error {
+		dnd, dndErr := c.DnD.Status(ctx)
+		if dndErr != nil {
+			c.wrapper.Logger(ctx).WarnContext(ctx,
+				"amazondevices: DnD lookup failed; sensors will be applied without DnD",
+				"err", dndErr)
+			dnd = nil
+		}
+		notifications, nErr := c.Notifications.Get(ctx)
+		if nErr != nil {
+			c.wrapper.Logger(ctx).WarnContext(ctx,
+				"amazondevices: notifications lookup failed; sensors will be applied without notifications",
+				"err", nErr)
+			notifications = nil
+		}
+		return c.Sensors.Update(ctx, devices, endpoints, dnd, notifications)
+	}
 
 	// If the caller supplied a Session via WithSession, push it through the
 	// same broadcast path so every consumer (and Auth itself) ends up with

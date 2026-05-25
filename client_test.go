@@ -170,12 +170,19 @@ func TestAuthService_ConcurrentRefreshDoesNotRace(t *testing.T) {
 	require.NoError(t, err)
 
 	c := &Client{
-		wrapper: wr,
-		Auth:    &AuthService{wrapper: wr, tokenURL: tokenSrv.URL},
-		Devices: &DevicesService{wrapper: wr},
-		Media:   &MediaService{wrapper: wr},
+		wrapper:       wr,
+		Auth:          &AuthService{wrapper: wr, tokenURL: tokenSrv.URL},
+		Devices:       &DevicesService{wrapper: wr},
+		Media:         &MediaService{wrapper: wr},
+		Sequence:      &SequenceService{wrapper: wr},
+		DnD:           &DnDService{wrapper: wr},
+		Sensors:       &SensorsService{wrapper: wr},
+		Notifications: &NotificationsService{wrapper: wr},
+		History:       &HistoryService{wrapper: wr},
 	}
-	c.Auth.consumers = []sessionConsumer{c.Devices, c.Media}
+	c.Auth.consumers = []sessionConsumer{
+		c.Devices, c.Media, c.Sequence, c.DnD, c.Sensors, c.Notifications, c.History,
+	}
 	c.Auth.broadcast(&Session{
 		AccessToken:       "INITIAL-TOK",
 		RefreshToken:      "REFRESH",
@@ -186,7 +193,7 @@ func TestAuthService_ConcurrentRefreshDoesNotRace(t *testing.T) {
 	var wg sync.WaitGroup
 	ctx := context.Background()
 
-	// Reader goroutines: hammer the read sides of all three services.
+	// Reader goroutines: hammer the read sides of all services.
 	for i := 0; i < 10; i++ {
 		wg.Add(1)
 		go func() {
@@ -195,6 +202,7 @@ func TestAuthService_ConcurrentRefreshDoesNotRace(t *testing.T) {
 				_ = c.Auth.Session()
 				_ = c.Devices.snapshotSession()
 				_ = c.Media.snapshotSession()
+				_ = c.Sequence.snapshotSession()
 			}
 		}()
 	}
@@ -217,12 +225,15 @@ func TestAuthService_ConcurrentRefreshDoesNotRace(t *testing.T) {
 	finalAuth := c.Auth.Session()
 	finalDev := c.Devices.snapshotSession()
 	finalMed := c.Media.snapshotSession()
+	finalSeq := c.Sequence.snapshotSession()
 	require.NotNil(t, finalAuth)
 	require.NotNil(t, finalDev)
 	require.NotNil(t, finalMed)
+	require.NotNil(t, finalSeq)
 	assert.Equal(t, "NEW-TOK", finalAuth.AccessToken)
 	assert.Equal(t, "NEW-TOK", finalDev.AccessToken)
 	assert.Equal(t, "NEW-TOK", finalMed.AccessToken)
+	assert.Equal(t, "NEW-TOK", finalSeq.AccessToken)
 }
 
 // writeRegisterSuccess writes the same /auth/register success envelope as
