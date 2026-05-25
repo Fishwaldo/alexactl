@@ -3,6 +3,7 @@ package amazondevices
 import (
 	"context"
 	"fmt"
+	"net/http"
 
 	"github.com/Fishwaldo/goamazondevices/internal/httpwrapper"
 )
@@ -22,6 +23,7 @@ type Client struct {
 	Sensors       *SensorsService
 	Notifications *NotificationsService
 	History       *HistoryService
+	Push          *PushService
 }
 
 // NewClient constructs a Client. It performs no I/O.
@@ -64,8 +66,17 @@ func NewClient(opts ...Option) (*Client, error) {
 		Notifications: &NotificationsService{wrapper: wr},
 		History:       &HistoryService{wrapper: wr},
 	}
+	c.Push = &PushService{
+		wrapper: wr,
+		streamClient: &http.Client{
+			Timeout: 0, // streaming — no top-level timeout
+		},
+	}
+	c.Push.initialSyncFn = func(ctx context.Context) (map[string]*VolumeState, error) {
+		return c.Media.DeviceVolumes(ctx)
+	}
 	c.Auth.consumers = []sessionConsumer{
-		c.Devices, c.Media, c.Sequence, c.DnD, c.Sensors, c.Notifications, c.History,
+		c.Devices, c.Media, c.Sequence, c.DnD, c.Sensors, c.Notifications, c.History, c.Push,
 	}
 	c.Media.sequence = c.Sequence
 

@@ -1,0 +1,21 @@
+{
+  "directive": {
+    "payload": {
+      "renderingUpdates": [
+        {
+          "resourceId": "PUSH_LIST_ITEM_CHANGE",
+          "resourceMetadata": {
+            "payload": {
+              "dopplerId": {
+                "deviceSerialNumber": "G090XXXXXX1234",
+                "deviceType": "A3S5BH2HU6VAYF"
+              },
+              "listId": "list-1",
+              "itemId": "item-1"
+            }
+          }
+        }
+      ]
+    }
+  }
+}

@@ -2,7 +2,9 @@ package httpwrapper_test
 
 import (
 	"bytes"
+	"context"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -13,6 +15,7 @@ import (
 
 	"github.com/Fishwaldo/goamazondevices/internal/amzconst"
 	"github.com/Fishwaldo/goamazondevices/internal/httpwrapper"
+	"github.com/Fishwaldo/goamazondevices/internal/scrub"
 )
 
 func TestDecodeJSON_Object(t *testing.T) {
@@ -122,4 +125,108 @@ func TestDecodeJSON_OversizedJSONTruncatedNoPanic(t *testing.T) {
 	_, err = httpwrapper.DecodeJSON(resp)
 	// We expect an error (truncated JSON), and no panic.
 	assert.Error(t, err)
+}
+
+// newLogCapture builds a slog.Logger backed by an in-memory text
+// handler so tests can inspect emitted log lines. The scrub.Handler
+// is composed on top so the redaction path runs in production-shape.
+func newLogCapture(t *testing.T, level slog.Level) (*slog.Logger, *bytes.Buffer) {
+	t.Helper()
+	var buf bytes.Buffer
+	inner := slog.NewTextHandler(&buf, &slog.HandlerOptions{Level: level})
+	return slog.New(scrub.Handler(inner)), &buf
+}
+
+func TestLogResponseBody_JSONObject_Logged(t *testing.T) {
+	logger, buf := newLogCapture(t, slog.LevelDebug)
+	resp := &http.Response{
+		StatusCode: 200,
+		Body:       io.NopCloser(strings.NewReader(`{"deviceName":"echo-1","accountId":"A123"}`)),
+	}
+	httpwrapper.LogResponseBody(context.Background(), logger, "GET", "https://alexa.amazon.com/api/devices", resp)
+
+	out := buf.String()
+	assert.Contains(t, out, "http response body")
+	assert.Contains(t, out, "echo-1")
+	assert.Contains(t, out, "A123")
+
+	// Body must still be readable.
+	body, err := io.ReadAll(resp.Body)
+	require.NoError(t, err)
+	assert.Equal(t, `{"deviceName":"echo-1","accountId":"A123"}`, string(body))
+}
+
+func TestLogResponseBody_RedactsSensitiveFields(t *testing.T) {
+	logger, buf := newLogCapture(t, slog.LevelDebug)
+	resp := &http.Response{
+		StatusCode: 200,
+		Body:       io.NopCloser(strings.NewReader(
+			`{"accessToken":"SECRET","refresh_token":"SHHH","ok":true}`)),
+	}
+	httpwrapper.LogResponseBody(context.Background(), logger, "GET", "https://alexa.amazon.com/api/x", resp)
+
+	out := buf.String()
+	assert.NotContains(t, out, "SECRET",
+		"scrub middleware must redact accessToken")
+	assert.NotContains(t, out, "SHHH",
+		"scrub middleware must redact refresh_token")
+	assert.Contains(t, out, scrub.Replacement)
+	// Non-sensitive fields survive.
+	assert.Contains(t, out, "ok")
+}
+
+func TestLogResponseBody_DebugDisabled_NoOp(t *testing.T) {
+	logger, buf := newLogCapture(t, slog.LevelInfo) // DEBUG below threshold
+	body := `{"a":1}`
+	resp := &http.Response{
+		StatusCode: 200,
+		Body:       io.NopCloser(strings.NewReader(body)),
+	}
+	httpwrapper.LogResponseBody(context.Background(), logger, "GET", "https://alexa.amazon.com/api/x", resp)
+
+	assert.Empty(t, buf.String(), "no log line when DEBUG disabled")
+
+	// Body untouched and still readable.
+	got, err := io.ReadAll(resp.Body)
+	require.NoError(t, err)
+	assert.Equal(t, body, string(got))
+}
+
+func TestLogResponseBody_NonJSON_LogsKindOnly(t *testing.T) {
+	logger, buf := newLogCapture(t, slog.LevelDebug)
+	resp := &http.Response{
+		StatusCode: 200,
+		Body:       io.NopCloser(strings.NewReader("not json at all")),
+	}
+	httpwrapper.LogResponseBody(context.Background(), logger, "GET", "https://alexa.amazon.com/api/x", resp)
+
+	out := buf.String()
+	assert.Contains(t, out, "non-json")
+	assert.NotContains(t, out, "not json at all",
+		"non-JSON payload contents must not be logged")
+}
+
+func TestLogResponseBody_JSONArray_LoggedAndRestored(t *testing.T) {
+	logger, buf := newLogCapture(t, slog.LevelDebug)
+	resp := &http.Response{
+		StatusCode: 200,
+		Body:       io.NopCloser(strings.NewReader(`[{"n":1},{"n":2}]`)),
+	}
+	httpwrapper.LogResponseBody(context.Background(), logger, "GET", "https://alexa.amazon.com/api/x", resp)
+
+	assert.Contains(t, buf.String(), "http response body")
+	body, err := io.ReadAll(resp.Body)
+	require.NoError(t, err)
+	assert.Equal(t, `[{"n":1},{"n":2}]`, string(body))
+}
+
+func TestLogResponseBody_EmptyBody(t *testing.T) {
+	logger, buf := newLogCapture(t, slog.LevelDebug)
+	resp := &http.Response{
+		StatusCode: 204,
+		Body:       io.NopCloser(bytes.NewReader(nil)),
+	}
+	httpwrapper.LogResponseBody(context.Background(), logger, "GET", "https://alexa.amazon.com/api/x", resp)
+
+	assert.Contains(t, buf.String(), "bytes=0")
 }

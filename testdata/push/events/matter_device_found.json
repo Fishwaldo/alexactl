@@ -1,0 +1,17 @@
+{
+  "directive": {
+    "payload": {
+      "renderingUpdates": [
+        {
+          "resourceId": "MATTER_SETUP_NOTIFICATION",
+          "resourceMetadata": {
+            "payload": {
+              "setupCode": "12345678901",
+              "vendorId": 1234
+            }
+          }
+        }
+      ]
+    }
+  }
+}

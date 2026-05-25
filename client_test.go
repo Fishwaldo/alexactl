@@ -179,9 +179,10 @@ func TestAuthService_ConcurrentRefreshDoesNotRace(t *testing.T) {
 		Sensors:       &SensorsService{wrapper: wr},
 		Notifications: &NotificationsService{wrapper: wr},
 		History:       &HistoryService{wrapper: wr},
+		Push:          &PushService{wrapper: wr},
 	}
 	c.Auth.consumers = []sessionConsumer{
-		c.Devices, c.Media, c.Sequence, c.DnD, c.Sensors, c.Notifications, c.History,
+		c.Devices, c.Media, c.Sequence, c.DnD, c.Sensors, c.Notifications, c.History, c.Push,
 	}
 	c.Auth.broadcast(&Session{
 		AccessToken:       "INITIAL-TOK",
@@ -203,6 +204,7 @@ func TestAuthService_ConcurrentRefreshDoesNotRace(t *testing.T) {
 				_ = c.Devices.snapshotSession()
 				_ = c.Media.snapshotSession()
 				_ = c.Sequence.snapshotSession()
+				_ = c.Push.session()
 			}
 		}()
 	}
@@ -226,14 +228,17 @@ func TestAuthService_ConcurrentRefreshDoesNotRace(t *testing.T) {
 	finalDev := c.Devices.snapshotSession()
 	finalMed := c.Media.snapshotSession()
 	finalSeq := c.Sequence.snapshotSession()
+	finalPush := c.Push.session()
 	require.NotNil(t, finalAuth)
 	require.NotNil(t, finalDev)
 	require.NotNil(t, finalMed)
 	require.NotNil(t, finalSeq)
+	require.NotNil(t, finalPush)
 	assert.Equal(t, "NEW-TOK", finalAuth.AccessToken)
 	assert.Equal(t, "NEW-TOK", finalDev.AccessToken)
 	assert.Equal(t, "NEW-TOK", finalMed.AccessToken)
 	assert.Equal(t, "NEW-TOK", finalSeq.AccessToken)
+	assert.Equal(t, "NEW-TOK", finalPush.AccessToken)
 }
 
 // writeRegisterSuccess writes the same /auth/register success envelope as

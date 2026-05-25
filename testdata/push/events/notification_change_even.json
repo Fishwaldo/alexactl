@@ -1,0 +1,20 @@
+{
+  "directive": {
+    "payload": {
+      "renderingUpdates": [
+        {
+          "resourceId": "PUSH_NOTIFICATION_CHANGE",
+          "resourceMetadata": {
+            "payload": {
+              "dopplerId": {
+                "deviceSerialNumber": "G090XXXXXX1234",
+                "deviceType": "A3S5BH2HU6VAYF"
+              },
+              "notificationVersion": 8
+            }
+          }
+        }
+      ]
+    }
+  }
+}

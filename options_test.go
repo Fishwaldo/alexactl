@@ -11,7 +11,6 @@ import (
 func TestOptions_Defaults(t *testing.T) {
 	cfg := defaultConfig()
 	assert.Equal(t, "https://www.amazon.com", cfg.site)
-	assert.Equal(t, 16, cfg.pushChanCap)
 	assert.Nil(t, cfg.httpClient)
 	assert.Nil(t, cfg.logger)
 	assert.Nil(t, cfg.session)
@@ -29,7 +28,6 @@ func TestOptions_Apply(t *testing.T) {
 		WithSession(sess),
 		WithSite("https://www.amazon.de"),
 		WithUserAgent("UA/1"),
-		WithPushChannelCapacity(64),
 	} {
 		opt.apply(cfg)
 	}
@@ -39,11 +37,4 @@ func TestOptions_Apply(t *testing.T) {
 	assert.Same(t, sess, cfg.session)
 	assert.Equal(t, "https://www.amazon.de", cfg.site)
 	assert.Equal(t, "UA/1", cfg.userAgent)
-	assert.Equal(t, 64, cfg.pushChanCap)
-}
-
-func TestWithPushChannelCapacity_Zero(t *testing.T) {
-	cfg := defaultConfig()
-	WithPushChannelCapacity(0).apply(cfg)
-	assert.Equal(t, 16, cfg.pushChanCap, "zero/negative must not override default")
 }

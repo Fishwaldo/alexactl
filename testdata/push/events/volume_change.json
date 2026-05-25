@@ -1,0 +1,21 @@
+{
+  "directive": {
+    "payload": {
+      "renderingUpdates": [
+        {
+          "resourceId": "PUSH_VOLUME_CHANGE",
+          "resourceMetadata": {
+            "payload": {
+              "dopplerId": {
+                "deviceSerialNumber": "G090XXXXXX1234",
+                "deviceType": "A3S5BH2HU6VAYF"
+              },
+              "volumeSetting": 42,
+              "isMuted": false
+            }
+          }
+        }
+      ]
+    }
+  }
+}

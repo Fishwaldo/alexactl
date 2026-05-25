@@ -1,0 +1,22 @@
+{
+  "directive": {
+    "payload": {
+      "renderingUpdates": [
+        {
+          "resourceId": "PUSH_EQUALIZER_STATE_CHANGE",
+          "resourceMetadata": {
+            "payload": {
+              "dopplerId": {
+                "deviceSerialNumber": "G090XXXXXX1234",
+                "deviceType": "A3S5BH2HU6VAYF"
+              },
+              "bass": 0,
+              "midrange": 0,
+              "treble": 0
+            }
+          }
+        }
+      ]
+    }
+  }
+}

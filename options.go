@@ -16,18 +16,16 @@ func (f optionFunc) apply(c *config) { f(c) }
 
 // config holds the resolved options. Internal; populated by New.
 type config struct {
-	httpClient  *http.Client
-	logger      *slog.Logger
-	session     *Session
-	site        string
-	userAgent   string
-	pushChanCap int
+	httpClient *http.Client
+	logger     *slog.Logger
+	session    *Session
+	site       string
+	userAgent  string
 }
 
 func defaultConfig() *config {
 	return &config{
-		site:        "https://www.amazon.com",
-		pushChanCap: 16,
+		site: "https://www.amazon.com",
 	}
 }
 
@@ -63,12 +61,3 @@ func WithUserAgent(ua string) Option {
 	return optionFunc(func(cfg *config) { cfg.userAgent = ua })
 }
 
-// WithPushChannelCapacity sets the buffer size of the PushService.Subscribe
-// channel. Default 16. Used in Phase 3; accepted now for forward-compat.
-func WithPushChannelCapacity(n int) Option {
-	return optionFunc(func(cfg *config) {
-		if n > 0 {
-			cfg.pushChanCap = n
-		}
-	})
-}

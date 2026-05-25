@@ -211,23 +211,50 @@ func (s *DevicesService) fetchEndpoints(
 	if all == nil {
 		return endpoints, nil
 	}
+	// nameToSerial is a fallback lookup for the JOIN between GraphQL
+	// endpoints and base /api/devices-v2/device entries. Amazon's two
+	// APIs use different serial schemas — the base list returns
+	// physical/registration serials like "GSM427065425023K" while
+	// GraphQL's serialNumber.value.text is a MAC-derived or hashed ID
+	// (e.g., "MTCJEJIYZYT7C"). When they don't match, we fall back to
+	// friendlyName == accountName, which is unique enough in practice
+	// (Alexa app prevents most name collisions). Built lazily — only
+	// when we hit at least one serial-miss.
+	var nameToSerial map[string]string
+	lookupByName := func(friendlyName string) string {
+		if friendlyName == "" {
+			return ""
+		}
+		if nameToSerial == nil {
+			nameToSerial = make(map[string]string, len(devs))
+			for serial, dvc := range devs {
+				if dvc.AccountName != "" {
+					nameToSerial[dvc.AccountName] = serial
+				}
+			}
+		}
+		return nameToSerial[friendlyName]
+	}
+
 	for _, ei := range toAnySlice(all["endpoints"]) {
 		ep, _ := ei.(map[string]any)
 		if ep == nil {
 			continue
 		}
-		serial := digFirstString(ep, "serialNumber", "value", "text")
-		if serial == "" {
-			continue
-		}
+		graphqlSerial := digFirstString(ep, "serialNumber", "value", "text")
 		endpointID, _ := stringOf(ep["endpointId"])
-		endpoints[endpointID] = serial
+		friendlyName := digFirstString(ep, "friendlyNameObject", "value", "text")
 
 		// Detect AQM endpoints by displayCategories — these are NOT in
-		// the base /api/devices-v2/device list, so we add them. Everything
-		// else is treated as an enrichment of an existing base entry.
+		// the base /api/devices-v2/device list, so we add them under
+		// the GraphQL serial. Everything else is treated as an
+		// enrichment of an existing base entry.
 		if endpointIsAQM(ep) {
-			if _, already := devs[serial]; already {
+			if graphqlSerial == "" {
+				continue
+			}
+			endpoints[endpointID] = graphqlSerial
+			if _, already := devs[graphqlSerial]; already {
 				continue
 			}
 			deviceType := digFirstString(ep, "legacyIdentifiers", "dmsIdentifier", "deviceType", "value", "text")
@@ -238,15 +265,15 @@ func (s *DevicesService) fetchEndpoints(
 				household = true
 			}
 			manufacturer := digFirstString(ep, "manufacturer", "value", "text")
-			devs[serial] = &Device{
-				AccountName:           digFirstString(ep, "friendlyNameObject", "value", "text"),
-				SerialNumber:          serial,
+			devs[graphqlSerial] = &Device{
+				AccountName:           friendlyName,
+				SerialNumber:          graphqlSerial,
 				DeviceType:            deviceType,
 				DeviceFamily:          "AIR_QUALITY_MONITOR",
 				DeviceOwnerCustomerID: ownerID,
 				HouseholdDevice:       household,
 				Online:                true,
-				ClusterMembers:        map[string]string{serial: amzconst.DeviceTypeAQM},
+				ClusterMembers:        map[string]string{graphqlSerial: amzconst.DeviceTypeAQM},
 				Manufacturer:          manufacturer,
 				Model:                 amzconst.DeviceTypeHardcodedMetadata[amzconst.DeviceTypeAQM].Model,
 				SoftwareVersion:       digFirstString(ep, "softwareVersion", "value", "text"),
@@ -257,11 +284,22 @@ func (s *DevicesService) fetchEndpoints(
 			continue
 		}
 
-		// Non-AQM endpoint — enrich the matching base entry, if any.
-		d, ok := devs[serial]
-		if !ok {
-			continue
+		// Non-AQM endpoint — find the matching base entry. Try the
+		// GraphQL serial first; on miss, fall back to friendlyName.
+		baseSerial := ""
+		if graphqlSerial != "" {
+			if _, ok := devs[graphqlSerial]; ok {
+				baseSerial = graphqlSerial
+			}
 		}
+		if baseSerial == "" {
+			baseSerial = lookupByName(friendlyName)
+		}
+		if baseSerial == "" {
+			continue // no matching base device — drop
+		}
+		endpoints[endpointID] = baseSerial
+		d := devs[baseSerial]
 		d.EndpointID = endpointID
 		d.EntityID = digFirstString(ep, "legacyIdentifiers", "chrsIdentifier", "entityId")
 

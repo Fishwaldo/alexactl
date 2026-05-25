@@ -1,0 +1,13 @@
+--amzn-alexa-stream
+Content-Type: application/json
+
+{"directive":{"payload":{"renderingUpdates":[{"resourceId":"PUSH_VOLUME_CHANGE"}]}}}
+--amzn-alexa-stream
+Content-Type: application/json
+
+{"directive":{"payload":{"renderingUpdates":[{"resourceId":"PUSH_AUDIO_PLAYER_STATE"}]}}}
+--amzn-alexa-stream
+Content-Type: application/json
+
+{"directive":{"payload":{"renderingUpdates":[{"resourceId":"PUSH_NOTIFICATION_CHANGE"}]}}}
+--amzn-alexa-stream--

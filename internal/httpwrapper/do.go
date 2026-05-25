@@ -205,7 +205,29 @@ func (w *Wrapper) Do(ctx context.Context, req Request) (*http.Response, error) {
 	logger.DebugContext(ctx, "amazondevices: http response",
 		"method", req.Method, "url", req.URL, "status", resp.StatusCode)
 
+	// Body-level DEBUG logging. Skipped for /auth/ and /ap/ endpoints
+	// because their request/response payloads contain raw credential
+	// material (access tokens, MAP cookies, OTP secrets) in arbitrary
+	// shapes that the structured scrub.Handler can't reliably redact.
+	// Auth-flow diagnostics already log enough at the request layer.
+	if !isAuthURL(req.URL) {
+		LogResponseBody(ctx, logger, req.Method, req.URL, resp)
+	}
+
 	return resp, nil
+}
+
+// isAuthURL reports whether the URL is part of the auth flow whose
+// bodies must not be logged. Conservative: a parse failure is treated
+// as auth (skip body logging) so a malformed URL never accidentally
+// exposes credential material.
+func isAuthURL(rawURL string) bool {
+	u, err := url.Parse(rawURL)
+	if err != nil {
+		return true
+	}
+	p := u.Path
+	return strings.HasPrefix(p, "/auth/") || strings.HasPrefix(p, "/ap/")
 }
 
 // injectInitialCookies (re-)seeds the pre-login cookies (frc, map-md,

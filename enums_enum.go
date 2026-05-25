@@ -124,6 +124,167 @@ func (x *MediaCommand) AppendText(b []byte) ([]byte, error) {
 }
 
 const (
+	// PushGenericActivity is a PushMessageType of type PushGenericActivity.
+	PushGenericActivity PushMessageType = "PUSH_ACTIVITY"
+	// PushConnectionStatus is a PushMessageType of type PushConnectionStatus.
+	PushConnectionStatus PushMessageType = "PUSH_DOPPLER_CONNECTION_CHANGE"
+	// PushBluetoothStatus is a PushMessageType of type PushBluetoothStatus.
+	PushBluetoothStatus PushMessageType = "PUSH_BLUETOOTH_STATE_CHANGE"
+	// PushMicrophoneStatus is a PushMessageType of type PushMicrophoneStatus.
+	PushMicrophoneStatus PushMessageType = "PUSH_MICROPHONE_STATE"
+	// PushNotificationChange is a PushMessageType of type PushNotificationChange.
+	PushNotificationChange PushMessageType = "PUSH_NOTIFICATION_CHANGE"
+	// PushAudioPlayerState is a PushMessageType of type PushAudioPlayerState.
+	PushAudioPlayerState PushMessageType = "PUSH_AUDIO_PLAYER_STATE"
+	// PushEqualizerStateChange is a PushMessageType of type PushEqualizerStateChange.
+	PushEqualizerStateChange PushMessageType = "PUSH_EQUALIZER_STATE_CHANGE"
+	// PushMediaQueueChange is a PushMessageType of type PushMediaQueueChange.
+	PushMediaQueueChange PushMessageType = "PUSH_MEDIA_QUEUE_CHANGE"
+	// PushMediaChange is a PushMessageType of type PushMediaChange.
+	PushMediaChange PushMessageType = "PUSH_MEDIA_CHANGE"
+	// PushMediaProgressChange is a PushMessageType of type PushMediaProgressChange.
+	PushMediaProgressChange PushMessageType = "PUSH_MEDIA_PROGRESS_CHANGE"
+	// PushVolumeChange is a PushMessageType of type PushVolumeChange.
+	PushVolumeChange PushMessageType = "PUSH_VOLUME_CHANGE"
+	// PushMediaSessionsUpdated is a PushMessageType of type PushMediaSessionsUpdated.
+	PushMediaSessionsUpdated PushMessageType = "NotifyMediaSessionsUpdated"
+	// PushNowPlayingUpdated is a PushMessageType of type PushNowPlayingUpdated.
+	PushNowPlayingUpdated PushMessageType = "NotifyNowPlayingUpdated"
+	// PushItemChange is a PushMessageType of type PushItemChange.
+	PushItemChange PushMessageType = "PUSH_LIST_ITEM_CHANGE"
+	// PushMatterDeviceFound is a PushMessageType of type PushMatterDeviceFound.
+	PushMatterDeviceFound PushMessageType = "MATTER_SETUP_NOTIFICATION"
+)
+
+var ErrInvalidPushMessageType = fmt.Errorf("not a valid PushMessageType, try [%s]", strings.Join(_PushMessageTypeNames, ", "))
+
+var _PushMessageTypeNames = []string{
+	string(PushGenericActivity),
+	string(PushConnectionStatus),
+	string(PushBluetoothStatus),
+	string(PushMicrophoneStatus),
+	string(PushNotificationChange),
+	string(PushAudioPlayerState),
+	string(PushEqualizerStateChange),
+	string(PushMediaQueueChange),
+	string(PushMediaChange),
+	string(PushMediaProgressChange),
+	string(PushVolumeChange),
+	string(PushMediaSessionsUpdated),
+	string(PushNowPlayingUpdated),
+	string(PushItemChange),
+	string(PushMatterDeviceFound),
+}
+
+// PushMessageTypeNames returns a list of possible string values of PushMessageType.
+func PushMessageTypeNames() []string {
+	tmp := make([]string, len(_PushMessageTypeNames))
+	copy(tmp, _PushMessageTypeNames)
+	return tmp
+}
+
+// PushMessageTypeValues returns a list of the values for PushMessageType
+func PushMessageTypeValues() []PushMessageType {
+	return []PushMessageType{
+		PushGenericActivity,
+		PushConnectionStatus,
+		PushBluetoothStatus,
+		PushMicrophoneStatus,
+		PushNotificationChange,
+		PushAudioPlayerState,
+		PushEqualizerStateChange,
+		PushMediaQueueChange,
+		PushMediaChange,
+		PushMediaProgressChange,
+		PushVolumeChange,
+		PushMediaSessionsUpdated,
+		PushNowPlayingUpdated,
+		PushItemChange,
+		PushMatterDeviceFound,
+	}
+}
+
+// String implements the Stringer interface.
+func (x PushMessageType) String() string {
+	return string(x)
+}
+
+// IsValid provides a quick way to determine if the typed value is
+// part of the allowed enumerated values
+func (x PushMessageType) IsValid() bool {
+	_, err := ParsePushMessageType(string(x))
+	return err == nil
+}
+
+var _PushMessageTypeValue = map[string]PushMessageType{
+	"PUSH_ACTIVITY":                  PushGenericActivity,
+	"push_activity":                  PushGenericActivity,
+	"PUSH_DOPPLER_CONNECTION_CHANGE": PushConnectionStatus,
+	"push_doppler_connection_change": PushConnectionStatus,
+	"PUSH_BLUETOOTH_STATE_CHANGE":    PushBluetoothStatus,
+	"push_bluetooth_state_change":    PushBluetoothStatus,
+	"PUSH_MICROPHONE_STATE":          PushMicrophoneStatus,
+	"push_microphone_state":          PushMicrophoneStatus,
+	"PUSH_NOTIFICATION_CHANGE":       PushNotificationChange,
+	"push_notification_change":       PushNotificationChange,
+	"PUSH_AUDIO_PLAYER_STATE":        PushAudioPlayerState,
+	"push_audio_player_state":        PushAudioPlayerState,
+	"PUSH_EQUALIZER_STATE_CHANGE":    PushEqualizerStateChange,
+	"push_equalizer_state_change":    PushEqualizerStateChange,
+	"PUSH_MEDIA_QUEUE_CHANGE":        PushMediaQueueChange,
+	"push_media_queue_change":        PushMediaQueueChange,
+	"PUSH_MEDIA_CHANGE":              PushMediaChange,
+	"push_media_change":              PushMediaChange,
+	"PUSH_MEDIA_PROGRESS_CHANGE":     PushMediaProgressChange,
+	"push_media_progress_change":     PushMediaProgressChange,
+	"PUSH_VOLUME_CHANGE":             PushVolumeChange,
+	"push_volume_change":             PushVolumeChange,
+	"NotifyMediaSessionsUpdated":     PushMediaSessionsUpdated,
+	"notifymediasessionsupdated":     PushMediaSessionsUpdated,
+	"NotifyNowPlayingUpdated":        PushNowPlayingUpdated,
+	"notifynowplayingupdated":        PushNowPlayingUpdated,
+	"PUSH_LIST_ITEM_CHANGE":          PushItemChange,
+	"push_list_item_change":          PushItemChange,
+	"MATTER_SETUP_NOTIFICATION":      PushMatterDeviceFound,
+	"matter_setup_notification":      PushMatterDeviceFound,
+}
+
+// ParsePushMessageType attempts to convert a string to a PushMessageType.
+func ParsePushMessageType(name string) (PushMessageType, error) {
+	if x, ok := _PushMessageTypeValue[name]; ok {
+		return x, nil
+	}
+	// Case insensitive parse, do a separate lookup to prevent unnecessary cost of lowercasing a string if we don't need to.
+	if x, ok := _PushMessageTypeValue[strings.ToLower(name)]; ok {
+		return x, nil
+	}
+	return PushMessageType(""), fmt.Errorf("%s is %w", name, ErrInvalidPushMessageType)
+}
+
+// MarshalText implements the text marshaller method.
+func (x PushMessageType) MarshalText() ([]byte, error) {
+	return []byte(string(x)), nil
+}
+
+// UnmarshalText implements the text unmarshaller method.
+func (x *PushMessageType) UnmarshalText(text []byte) error {
+	tmp, err := ParsePushMessageType(string(text))
+	if err != nil {
+		return err
+	}
+	*x = tmp
+	return nil
+}
+
+// AppendText appends the textual representation of itself to the end of b
+// (allocating a larger slice if necessary) and returns the updated slice.
+//
+// Implementations must not retain b, nor mutate any bytes within b[:len(b)].
+func (x *PushMessageType) AppendText(b []byte) ([]byte, error) {
+	return append(b, x.String()...), nil
+}
+
+const (
 	// SeqSpeak is a SequenceType of type SeqSpeak.
 	SeqSpeak SequenceType = "Alexa.Speak"
 	// SeqAnnouncement is a SequenceType of type SeqAnnouncement.

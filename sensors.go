@@ -177,6 +177,12 @@ func (s *SensorsService) Update(
 // parseSensorResponse walks the GraphQL response and returns a
 // per-device sensor map keyed by canonical sensor name. Devices not
 // present in either the endpoints map or the devices map are dropped.
+//
+// The /nexus/v1/graphql endpoint is called with a JSON-array request
+// body (batch GraphQL convention), so Amazon returns a JSON-array
+// response too. DecodeJSON wraps the array under amzconst.ArrayWrapper
+// to preserve its "always a map" contract — we unwrap here before
+// reaching into the GraphQL data shape.
 func (s *SensorsService) parseSensorResponse(
 	resp map[string]any,
 	endpoints map[string]string,
@@ -188,7 +194,17 @@ func (s *SensorsService) parseSensorResponse(
 	}
 	dataNode, _ := resp["data"].(map[string]any)
 	if dataNode == nil {
-		return out
+		// Try array-wrapped shape: response was a JSON array of one
+		// query result (the batch GraphQL response form Amazon uses
+		// for getEndpointState).
+		if arr, ok := resp[amzconst.ArrayWrapper].([]any); ok && len(arr) > 0 {
+			if first, ok := arr[0].(map[string]any); ok {
+				dataNode, _ = first["data"].(map[string]any)
+			}
+		}
+		if dataNode == nil {
+			return out
+		}
 	}
 	listEndpoints, _ := dataNode["listEndpoints"].(map[string]any)
 	if listEndpoints == nil {

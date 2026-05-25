@@ -1,0 +1,20 @@
+{
+  "directive": {
+    "payload": {
+      "renderingUpdates": [
+        {
+          "resourceId": "PUSH_DEFINITELY_NOT_REAL",
+          "resourceMetadata": {
+            "payload": {
+              "dopplerId": {
+                "deviceSerialNumber": "G090XXXXXX1234",
+                "deviceType": "A3S5BH2HU6VAYF"
+              },
+              "diagnostic": "hello-from-the-future"
+            }
+          }
+        }
+      ]
+    }
+  }
+}
