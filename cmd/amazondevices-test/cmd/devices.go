@@ -3,9 +3,12 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+
+	amazondevices "github.com/Fishwaldo/goamazondevices"
 )
 
 var devicesCmd = &cobra.Command{
@@ -35,10 +38,28 @@ var devicesListCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		fmt.Fprintf(os.Stdout, "%-32s  %-16s  %-7s  %s\n", "SERIAL", "TYPE", "ONLINE", "NAME")
+		fmt.Fprintf(os.Stdout, "%-32s  %-20s  %-16s  %-7s  %s\n",
+			"SERIAL", "KIND", "TYPE", "ONLINE", "NAME")
 		for _, d := range devs {
-			fmt.Fprintf(os.Stdout, "%-32s  %-16s  %-7v  %s\n",
-				d.SerialNumber, d.DeviceType, d.Online, d.AccountName)
+			fmt.Fprintf(os.Stdout, "%-32s  %-20s  %-16s  %-7v  %s\n",
+				d.SerialNumber, kindOrUnknown(d.Kind), d.DeviceType, d.Online, d.AccountName)
+			if hw := summarizeHardware(d); hw != "" {
+				fmt.Fprintf(os.Stdout, "  %s\n", hw)
+			}
+			if summary := summarizeDevice(d); summary != "" {
+				fmt.Fprintf(os.Stdout, "  %s\n", summary)
+			}
+			if detailFlag {
+				if len(d.DisplayCategories) > 0 {
+					fmt.Fprintf(os.Stdout, "    categories=%v\n", d.DisplayCategories)
+				}
+				if len(d.AlexaInterfaces) > 0 {
+					fmt.Fprintf(os.Stdout, "    interfaces=%v\n", d.AlexaInterfaces)
+				}
+				if d.SoftwareVersion != "" {
+					fmt.Fprintf(os.Stdout, "    software=%q\n", d.SoftwareVersion)
+				}
+			}
 		}
 		return nil
 	},
@@ -55,4 +76,91 @@ func sessionFilePath() string {
 func init() {
 	devicesCmd.AddCommand(devicesListCmd)
 	rootCmd.AddCommand(devicesCmd)
+}
+
+// kindOrUnknown returns the device's Kind string, or "?" if empty.
+// Compact for the table column.
+func kindOrUnknown(k amazondevices.Kind) string {
+	if k == "" {
+		return "?"
+	}
+	return string(k)
+}
+
+// summarizeHardware returns a short manufacturer/model identifier
+// line, or "" if neither is set. Hardware info is on a separate
+// indented line so it doesn't compete with state in the same column.
+// Examples:
+//
+//	"TP-LINK HS100"
+//	"Signify Netherlands B.V. LCT024"
+//	"Amazon Echo Show 8 (gen 2)"
+func summarizeHardware(d *amazondevices.Device) string {
+	mfg := d.Manufacturer
+	model := d.Model
+	switch {
+	case mfg != "" && model != "":
+		return mfg + " " + model
+	case mfg != "":
+		return mfg
+	case model != "":
+		return model
+	default:
+		return ""
+	}
+}
+
+// summarizeDevice returns a short per-Kind status line, or "" if the
+// device's Sensors don't carry enough state to make one. Examples:
+//
+//	light:      "ON, 80%, 2700K"
+//	thermostat: "COOL, target=21.5°C"
+//	lock:       "LOCKED"
+//	switch:     "OFF"
+func summarizeDevice(d *amazondevices.Device) string {
+	var parts []string
+	if p, ok := d.Sensors["powerState"]; ok && p != nil {
+		if s, _ := p.Value.(string); s != "" {
+			parts = append(parts, s)
+		}
+	}
+	if p, ok := d.Sensors["brightness"]; ok && p != nil {
+		switch v := p.Value.(type) {
+		case int:
+			parts = append(parts, fmt.Sprintf("%d%%", v))
+		case float64:
+			parts = append(parts, fmt.Sprintf("%.0f%%", v))
+		}
+	}
+	if p, ok := d.Sensors["colorTemperature"]; ok && p != nil {
+		switch v := p.Value.(type) {
+		case int:
+			parts = append(parts, fmt.Sprintf("%dK", v))
+		case float64:
+			parts = append(parts, fmt.Sprintf("%.0fK", v))
+		}
+	}
+	if p, ok := d.Sensors["lockState"]; ok && p != nil {
+		if s, _ := p.Value.(string); s != "" {
+			parts = []string{s} // lock state is the whole summary
+		}
+	}
+	if p, ok := d.Sensors["thermostatMode"]; ok && p != nil {
+		if s, _ := p.Value.(string); s != "" {
+			parts = append(parts, s)
+		}
+	}
+	if p, ok := d.Sensors["targetSetpoint"]; ok && p != nil {
+		if f, _ := p.Value.(float64); f > 0 {
+			scale := "°"
+			switch p.Scale {
+			case "CELSIUS":
+				scale = "°C"
+			case "FAHRENHEIT":
+				scale = "°F"
+			}
+			parts = append(parts, fmt.Sprintf("target=%.1f%s", f, scale))
+		}
+	}
+	return strings.Join(parts, ", ")
 }

@@ -66,6 +66,12 @@ func NewClient(opts ...Option) (*Client, error) {
 		Notifications: &NotificationsService{wrapper: wr},
 		History:       &HistoryService{wrapper: wr},
 	}
+	// Phase 4b: smart-home write client. Same wrapper as Devices so
+	// auth refresh / retry / scrub carry over. Back-referenced on
+	// every cached *Device so accessors can route writes without a
+	// global.
+	c.Devices.smartHome = newSmartHomeClient(wr)
+
 	c.Push = &PushService{
 		wrapper: wr,
 		streamClient: &http.Client{

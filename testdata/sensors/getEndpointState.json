@@ -4,13 +4,18 @@
       "endpoints": [
         {
           "endpointId": "ep-kitchen",
-          "friendlyNameObject": {"value": {"text": "Kitchen Echo"}},
+          "friendlyNameObject": {
+            "value": {
+              "text": "Kitchen Echo"
+            }
+          },
           "features": [
             {
               "name": "connectivity",
               "instance": null,
               "properties": [
                 {
+                  "__typename": "Reachability",
                   "name": "reachability",
                   "type": "AlexaInterface",
                   "reachabilityStatusValue": "OK"
@@ -22,8 +27,12 @@
               "instance": null,
               "properties": [
                 {
+                  "__typename": "TemperatureSensor",
                   "name": "temperature",
-                  "value": {"value": 21.5, "scale": "CELSIUS"}
+                  "value": {
+                    "value": 21.5,
+                    "scale": "CELSIUS"
+                  }
                 }
               ]
             }
@@ -31,13 +40,18 @@
         },
         {
           "endpointId": "ep-bedroom",
-          "friendlyNameObject": {"value": {"text": "Bedroom Echo"}},
+          "friendlyNameObject": {
+            "value": {
+              "text": "Bedroom Echo"
+            }
+          },
           "features": [
             {
               "name": "connectivity",
               "instance": null,
               "properties": [
                 {
+                  "__typename": "Reachability",
                   "name": "reachability",
                   "reachabilityStatusValue": "UNAVAILABLE"
                 }
@@ -47,13 +61,18 @@
         },
         {
           "endpointId": "ep-aqm-1",
-          "friendlyNameObject": {"value": {"text": "Bedroom Air Monitor"}},
+          "friendlyNameObject": {
+            "value": {
+              "text": "Bedroom Air Monitor"
+            }
+          },
           "features": [
             {
               "name": "connectivity",
               "instance": null,
               "properties": [
                 {
+                  "__typename": "Reachability",
                   "name": "reachability",
                   "reachabilityStatusValue": "OK"
                 }
@@ -64,8 +83,11 @@
               "instance": "4",
               "properties": [
                 {
+                  "__typename": "RangeValue",
                   "name": "rangeValue",
-                  "rangeValue": {"value": 47.0}
+                  "rangeValue": {
+                    "value": 47.0
+                  }
                 }
               ]
             },
@@ -74,8 +96,11 @@
               "instance": "6",
               "properties": [
                 {
+                  "__typename": "RangeValue",
                   "name": "rangeValue",
-                  "rangeValue": {"value": 12.0}
+                  "rangeValue": {
+                    "value": 12.0
+                  }
                 }
               ]
             }
@@ -83,15 +108,220 @@
         },
         {
           "endpointId": "ep-aqm-error",
-          "friendlyNameObject": {"value": {"text": "Errored AQM"}},
+          "friendlyNameObject": {
+            "value": {
+              "text": "Errored AQM"
+            }
+          },
           "features": [
             {
               "name": "connectivity",
               "instance": null,
               "properties": [
                 {
+                  "__typename": "Reachability",
                   "name": "reachability",
-                  "error": {"type": "INTERNAL_ERROR", "message": "transient"}
+                  "error": {
+                    "type": "INTERNAL_ERROR",
+                    "message": "transient"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "endpointId": "ep-light-001",
+          "friendlyNameObject": {
+            "value": {
+              "text": "Test RGB Light"
+            }
+          },
+          "features": [
+            {
+              "name": "power",
+              "instance": null,
+              "operations": [
+                {
+                  "name": "turnOn"
+                },
+                {
+                  "name": "turnOff"
+                }
+              ],
+              "configuration": null,
+              "properties": [
+                {
+                  "__typename": "Power",
+                  "name": "powerState",
+                  "powerStateValue": "ON"
+                }
+              ]
+            },
+            {
+              "name": "brightness",
+              "instance": null,
+              "operations": [
+                {
+                  "name": "setBrightness"
+                },
+                {
+                  "name": "adjustBrightness"
+                }
+              ],
+              "configuration": null,
+              "properties": [
+                {
+                  "__typename": "Brightness",
+                  "name": "brightness",
+                  "brightnessStateValue": 75
+                }
+              ]
+            },
+            {
+              "name": "color",
+              "instance": null,
+              "operations": [
+                {
+                  "name": "setColor"
+                }
+              ],
+              "configuration": null,
+              "properties": [
+                {
+                  "__typename": "Color",
+                  "name": "color",
+                  "colorStateValue": {
+                    "hue": 120,
+                    "saturation": 0.5,
+                    "brightness": 0.8
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "endpointId": "ep-thermostat-001",
+          "friendlyNameObject": {
+            "value": {
+              "text": "Test Thermostat"
+            }
+          },
+          "features": [
+            {
+              "name": "thermostat",
+              "instance": null,
+              "operations": [
+                {
+                  "name": "setTargetSetpoint"
+                },
+                {
+                  "name": "setThermostatMode"
+                }
+              ],
+              "configuration": {
+                "__typename": "ThermostatConfiguration",
+                "supportedModes": [
+                  "COOL",
+                  "HEAT",
+                  "AUTO"
+                ]
+              },
+              "properties": [
+                {
+                  "__typename": "ThermostatMode",
+                  "name": "thermostatMode",
+                  "thermostatModeValue": "COOL"
+                },
+                {
+                  "__typename": "Setpoint",
+                  "name": "targetSetpoint",
+                  "value": {
+                    "value": 21.5,
+                    "scale": "CELSIUS"
+                  },
+                  "deviceNativeScaleValue": null
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "endpointId": "ep-lock-001",
+          "friendlyNameObject": {
+            "value": {
+              "text": "Test Lock"
+            }
+          },
+          "features": [
+            {
+              "name": "lock",
+              "instance": null,
+              "operations": [
+                {
+                  "name": "lockDoor"
+                },
+                {
+                  "name": "unlockDoor"
+                }
+              ],
+              "configuration": null,
+              "properties": [
+                {
+                  "__typename": "Lock",
+                  "name": "lockState",
+                  "lockState": "LOCKED"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "endpointId": "ep-ac-001",
+          "friendlyNameObject": {
+            "value": {
+              "text": "Test AC"
+            }
+          },
+          "features": [
+            {
+              "name": "range",
+              "instance": "Apparatus.Humidity",
+              "operations": [],
+              "configuration": null,
+              "properties": [
+                {
+                  "__typename": "RangeValue",
+                  "name": "rangeValue",
+                  "rangeValue": {
+                    "value": 47.5
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "endpointId": "ep-weird-001",
+          "friendlyNameObject": {
+            "value": {
+              "text": "Test Weird"
+            }
+          },
+          "features": [
+            {
+              "name": "range",
+              "instance": "Apparatus.WhateverNew",
+              "operations": [],
+              "configuration": null,
+              "properties": [
+                {
+                  "__typename": "RangeValue",
+                  "name": "rangeValue",
+                  "rangeValue": {
+                    "value": 99.0
+                  }
                 }
               ]
             }

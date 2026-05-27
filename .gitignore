@@ -8,6 +8,7 @@ coverage.txt
 /bin/
 /dist/
 /amazondevices-test
+/alexa-introspect
 
 # Editors / OS
 .vscode/
@@ -20,3 +21,6 @@ coverage.txt
 /session.json
 /login_data.json
 config.yaml
+
+# HTTP traffic captures — contain session cookies, never commit
+*.har

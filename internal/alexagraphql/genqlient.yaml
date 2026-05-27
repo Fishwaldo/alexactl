@@ -1,0 +1,109 @@
+# Configuration for genqlient (https://github.com/Khan/genqlient).
+# Edit a .graphql file in queries/ then run `go generate ./internal/alexagraphql/...`.
+#
+# The schema lives in research/ alongside the raw introspection JSON it
+# was derived from; codegen pulls from there via a relative path.
+
+schema:
+  - ../../docs/superpowers/research/2026-05-25-alexa-graphql-schema.graphql
+
+operations:
+  - queries/*.graphql
+
+generated: generated.go
+package: alexagraphql
+use_struct_references: true
+
+# Optional-field handling: pointers for nullable fields. The Alexa
+# schema returns null for many RETRIEVABLE properties when the device
+# is offline or the feature is not present.
+optional: pointer
+
+# Custom scalar bindings: map Alexa-schema scalars to Go primitives.
+# DateTime is an ISO-8601 timestamp; we keep it as string so callers can
+# parse with time.Parse if needed.
+bindings:
+  DateTime:
+    type: string
+  Long:
+    type: int64
+  JSON:
+    type: interface{}
+  EndpointId:
+    type: string
+  AddressId:
+    type: string
+  AmazonFloorPlanLayoutV1:
+    type: string
+  AmazonFloorPlanLayoutVectorV1:
+    type: string
+  Asin:
+    type: string
+  AutomationId:
+    type: string
+  BrandId:
+    type: string
+  CameraDetailsMap:
+    type: interface{}
+  CameraTilePersonRelevanceMap:
+    type: interface{}
+  CategoryId:
+    type: string
+  CHRSDeviceType:
+    type: string
+  CrsId:
+    type: string
+  DdmUuid:
+    type: string
+  DeviceAccountId:
+    type: string
+  DeviceGroupId:
+    type: string
+  DeviceModelId:
+    type: string
+  ExperienceId:
+    type: string
+  FFSDeviceType:
+    type: string
+  FloorPlanImageUploadOperationType:
+    type: string
+  FloorPlanImageUploadReferenceId:
+    type: string
+  FloorPlanImageUploadUrl:
+    type: string
+  FloorPlanLayoutId:
+    type: string
+  GroupId:
+    type: string
+  HomeId:
+    type: string
+  HunchId:
+    type: string
+  Locale:
+    type: string
+  LocalTime:
+    type: string
+  MarketplaceId:
+    type: string
+  RecurrencePattern:
+    type: string
+  RetailASIN:
+    type: string
+  SetupDeviceModelId:
+    type: string
+  SetupExperienceId:
+    type: string
+  SetupWorkflowName:
+    type: string
+  SetupWorkflowNamespace:
+    type: string
+  SetupWorkflowSessionId:
+    type: string
+  SkillASIN:
+    type: string
+  SkillId:
+    type: string
+  TimeZone:
+    type: string
+  UnitId:
+    type: string

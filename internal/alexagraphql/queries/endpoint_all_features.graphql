@@ -1,0 +1,78 @@
+# EndpointAllFeatures returns the deep per-endpoint feature graph for
+# one device. Backs DevicesService.Inspect(ctx, serial).
+#
+# The wire operationName is "endpointAllFeatures" (matches what the
+# live web UI sends). The Go-side function is exported as
+# EndpointAllFeatures via exports.go.
+query endpointAllFeatures($endpointId: String!, $latencyTolerance: LatencyToleranceValue) {
+  endpoint(id: $endpointId) {
+    id
+    enablement
+    friendlyNameObject { value { text } }
+    displayCategories {
+      all { value }
+      primary { value }
+    }
+    legacyIdentifiers {
+      chrsIdentifier { entityId }
+      dmsIdentifier {
+        deviceType { value { text } }
+        deviceSerialNumber { value { text } }
+      }
+    }
+    operations { name }
+    features(latencyToleranceValue: $latencyTolerance) {
+      name
+      instance
+      operations { name }
+      configuration {
+        __typename
+        ... on ThermostatConfiguration { supportedModes }
+        ... on ModeConfiguration {
+          friendlyName { value { text } }
+          modeOptions {
+            value
+            modeResources { friendlyName { value { text } } }
+          }
+        }
+        ... on RangeConfiguration {
+          friendlyName { value { text } }
+          supportedRange { minimumValue maximumValue precision }
+          unitOfMeasure { value { text } }
+          presets {
+            rangeValue
+            presetResources { friendlyName { value { text } } }
+          }
+        }
+      }
+      properties {
+        name
+        type
+        accuracy
+        error { type message }
+        __typename
+        ... on Reachability { reachabilityStatusValue }
+        ... on Power { powerStateValue }
+        ... on Brightness { brightnessStateValue }
+        ... on Color { colorStateValue { hue saturation brightness } }
+        ... on ColorTemperature { colorTemperatureInKelvinStateValue }
+        ... on Lock { lockState }
+        ... on Setpoint {
+          value { value scale }
+          deviceNativeScaleValue
+        }
+        ... on ThermostatMode { thermostatModeValue }
+        ... on TemperatureSensor { value { value scale } }
+        ... on RangeValue { rangeValue { value } }
+        ... on Mode { modeValue { value } }
+        ... on ToggleState { toggleStateValue }
+        ... on Illuminance { illuminanceValue { value } }
+        ... on DetectionState { detectionStateValue }
+        ... on EnablementState { enablementStateValue }
+        ... on DetectionSensitivity { detectionSensitivityValue }
+        ... on DetectionRange { detectionRangeValue }
+        ... on DetectionTechnology { detectionTechnologyValue }
+      }
+    }
+  }
+}

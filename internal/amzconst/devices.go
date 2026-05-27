@@ -24,6 +24,24 @@ var DeviceTypeHardcodedMetadata = map[string]struct {
 	DeviceTypeStereoPair:   {Model: "Stereo Pair", Manufacturer: "Amazon"},
 }
 
+// Alexa capability-interface names that gate the typed control accessors
+// on *Device. These are the literal strings Amazon reports under
+// alexaEnabledMetadata.capabilities for endpoints that expose the
+// corresponding controller. Constants used by Device.Power(),
+// Device.Brightness(), etc. to decide whether to return a non-nil
+// control struct.
+const (
+	InterfacePowerController            = "Alexa.PowerController"
+	InterfaceBrightnessController       = "Alexa.BrightnessController"
+	InterfaceColorController            = "Alexa.ColorController"
+	InterfaceColorTemperatureController = "Alexa.ColorTemperatureController"
+	InterfaceThermostatController       = "Alexa.ThermostatController"
+	InterfaceLockController             = "Alexa.LockController"
+	InterfaceModeController             = "Alexa.ModeController"
+	InterfaceRangeController            = "Alexa.RangeController"
+	InterfaceToggleController           = "Alexa.ToggleController"
+)
+
 // DeviceTypesToIgnore lists device types we strip from List responses
 // because they're known non-controllable or buggy. Port of
 // aioamazondevices DEVICE_TYPES_TO_IGNORE.

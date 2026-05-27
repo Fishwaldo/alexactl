@@ -3,12 +3,17 @@ package amazondevices
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"sort"
+	"strings"
 	"time"
 
+	"github.com/Khan/genqlient/graphql"
+	"github.com/Fishwaldo/goamazondevices/internal/alexagraphql"
 	"github.com/Fishwaldo/goamazondevices/internal/amzconst"
-	"github.com/Fishwaldo/goamazondevices/internal/httpwrapper"
+)
+
+type (
+	listEndpointsEndpoint = alexagraphql.DevicesEndpoint
 )
 
 // List returns all enrichable Amazon devices for the account, including
@@ -149,6 +154,16 @@ func (s *DevicesService) refresh(ctx context.Context, cfg refreshConfig) error {
 				"amazondevices: sensor enrichment failed; continuing without it",
 				"err", hookErr)
 		}
+		// Derive AlexaInterfaces from each device's populated sensor
+		// keys and merge into d.AlexaInterfaces. Skill-discovered
+		// third-party devices have empty alexaEnabledMetadata.
+		// capabilities; this step is what makes their typed accessors
+		// (d.Power(), d.Brightness(), d.Lock(), ...) return non-nil.
+		for _, d := range base {
+			if derived := inferAlexaInterfacesFromSensors(d.Sensors); len(derived) > 0 {
+				d.AlexaInterfaces = mergeAlexaInterfaces(d.AlexaInterfaces, derived)
+			}
+		}
 	}
 
 	s.mu.Lock()
@@ -183,34 +198,16 @@ func (s *DevicesService) fetchEndpoints(
 	devs map[string]*Device,
 ) (map[string]string, error) {
 	url := fmt.Sprintf("%s%s", trimTrailingSlash(sitePrefix), amzconst.URINexusGraphQL)
-	payload := map[string]any{
-		"operationName": "getDevicesBaseData",
-		"query":         amzconst.QueryDeviceData,
-	}
-	resp, err := s.wrapper.Do(ctx, httpwrapper.Request{
-		Method:       http.MethodPost,
-		URL:          url,
-		JSONBody:     payload,
-		ExtraHeaders: http.Header{"User-Agent": []string{amzconst.UserAgentAmazon}},
-	})
+	client := graphql.NewClient(url, alexagraphql.NewDoer(s.wrapper))
+	resp, err := alexagraphql.ListEndpoints(ctx, client)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%w: %w", ErrCannotConnect, err)
 	}
-	data, err := httpwrapper.DecodeJSON(resp)
-	if err != nil {
-		return nil, err
-	}
-
 	endpoints := map[string]string{}
-	dataNode, _ := data["data"].(map[string]any)
-	if dataNode == nil {
+	if resp == nil || resp.AllDevices == nil {
 		return endpoints, nil
 	}
 
-	all, _ := dataNode["allDevices"].(map[string]any)
-	if all == nil {
-		return endpoints, nil
-	}
 	// nameToSerial is a fallback lookup for the JOIN between GraphQL
 	// endpoints and base /api/devices-v2/device entries. Amazon's two
 	// APIs use different serial schemas — the base list returns
@@ -236,20 +233,33 @@ func (s *DevicesService) fetchEndpoints(
 		return nameToSerial[friendlyName]
 	}
 
-	for _, ei := range toAnySlice(all["endpoints"]) {
-		ep, _ := ei.(map[string]any)
+	for _, ep := range resp.AllDevices.Endpoints {
 		if ep == nil {
 			continue
 		}
-		graphqlSerial := digFirstString(ep, "serialNumber", "value", "text")
-		endpointID, _ := stringOf(ep["endpointId"])
-		friendlyName := digFirstString(ep, "friendlyNameObject", "value", "text")
+		endpointID := ep.EndpointId
+		graphqlSerial := ""
+		if ep.SerialNumber != nil && ep.SerialNumber.Value != nil {
+			graphqlSerial = ep.SerialNumber.Value.Text
+		}
+		// entityId is the bare UUID portion of endpointId. We use it as
+		// the cache-key fallback for skill-discovered smart-home endpoints
+		// (TP-Link, Hue, Sensibo, etc.) which Amazon returns with
+		// serialNumber=null — those devices have no Amazon-issued serial.
+		entityID := ""
+		if ep.LegacyIdentifiers != nil && ep.LegacyIdentifiers.ChrsIdentifier != nil {
+			entityID = ep.LegacyIdentifiers.ChrsIdentifier.EntityId
+		}
+		friendlyName := ""
+		if ep.FriendlyNameObject != nil && ep.FriendlyNameObject.Value != nil {
+			friendlyName = ep.FriendlyNameObject.Value.Text
+		}
 
 		// Detect AQM endpoints by displayCategories — these are NOT in
 		// the base /api/devices-v2/device list, so we add them under
 		// the GraphQL serial. Everything else is treated as an
 		// enrichment of an existing base entry.
-		if endpointIsAQM(ep) {
+		if endpointIsAQMTyped(ep) {
 			if graphqlSerial == "" {
 				continue
 			}
@@ -257,14 +267,26 @@ func (s *DevicesService) fetchEndpoints(
 			if _, already := devs[graphqlSerial]; already {
 				continue
 			}
-			deviceType := digFirstString(ep, "legacyIdentifiers", "dmsIdentifier", "deviceType", "value", "text")
+			deviceType := ""
+			if ep.LegacyIdentifiers != nil && ep.LegacyIdentifiers.DmsIdentifier != nil &&
+				ep.LegacyIdentifiers.DmsIdentifier.DeviceType != nil &&
+				ep.LegacyIdentifiers.DmsIdentifier.DeviceType.Value != nil {
+				deviceType = ep.LegacyIdentifiers.DmsIdentifier.DeviceType.Value.Text
+			}
 			ownerID := ""
 			household := false
 			if sess := s.snapshotSession(); sess != nil && sess.AccountCustomerID != "" {
 				ownerID = sess.AccountCustomerID
 				household = true
 			}
-			manufacturer := digFirstString(ep, "manufacturer", "value", "text")
+			manufacturer := ""
+			if ep.Manufacturer != nil && ep.Manufacturer.Value != nil {
+				manufacturer = ep.Manufacturer.Value.Text
+			}
+			softwareVersion := ""
+			if ep.SoftwareVersion != nil && ep.SoftwareVersion.Value != nil {
+				softwareVersion = ep.SoftwareVersion.Value.Text
+			}
 			devs[graphqlSerial] = &Device{
 				AccountName:           friendlyName,
 				SerialNumber:          graphqlSerial,
@@ -276,10 +298,16 @@ func (s *DevicesService) fetchEndpoints(
 				ClusterMembers:        map[string]string{graphqlSerial: amzconst.DeviceTypeAQM},
 				Manufacturer:          manufacturer,
 				Model:                 amzconst.DeviceTypeHardcodedMetadata[amzconst.DeviceTypeAQM].Model,
-				SoftwareVersion:       digFirstString(ep, "softwareVersion", "value", "text"),
+				SoftwareVersion:       softwareVersion,
 				EndpointID:            endpointID,
 				Sensors:               map[string]*DeviceSensor{},
 				Notifications:         map[string]*Schedule{},
+				// Phase 4a: AQM is its own kind regardless of DisplayCategory.
+				Kind:              KindAQM,
+				DisplayCategories: extractDisplayCategories(ep),
+				AlexaInterfaces:   extractAlexaInterfaces(ep),
+				Operations:        extractEndpointOperations(ep),
+				controller:        s.smartHome,
 			}
 			continue
 		}
@@ -296,14 +324,98 @@ func (s *DevicesService) fetchEndpoints(
 			baseSerial = lookupByName(friendlyName)
 		}
 		if baseSerial == "" {
-			continue // no matching base device — drop
+			// Phase 4a Task 4: surface smart-home endpoints as their own
+			// *Device. Echos always match through the GraphQL-serial or
+			// friendlyName fallback above, so this branch only fires for
+			// non-Echo endpoints (lights, switches, thermostats, locks,
+			// cameras, sensors).
+			//
+			// Cache-key fallback: skill-discovered devices (TP-Link, Hue,
+			// Sensibo, Ring, etc.) typically have serialNumber=null in
+			// Amazon's response. For those, fall back to chrsIdentifier.
+			// entityId (the bare UUID portion of endpointId) so they
+			// surface in List output instead of being silently dropped.
+			cacheKey := graphqlSerial
+			if cacheKey == "" {
+				cacheKey = entityID
+			}
+			if cacheKey == "" {
+				continue // truly nothing to key on; drop
+			}
+			if _, already := devs[cacheKey]; already {
+				continue // existing device already enriched
+			}
+			ownerID := ""
+			household := false
+			if sess := s.snapshotSession(); sess != nil && sess.AccountCustomerID != "" {
+				ownerID = sess.AccountCustomerID
+				household = true
+			}
+			manufacturer := ""
+			if ep.Manufacturer != nil && ep.Manufacturer.Value != nil {
+				manufacturer = ep.Manufacturer.Value.Text
+			}
+			modelText := ""
+			if ep.Model != nil && ep.Model.Value != nil {
+				modelText = ep.Model.Value.Text
+			}
+			model, hw := parseDeviceDetails(modelText)
+			if model == "" {
+				model = modelText
+			}
+			softwareVersion := ""
+			if ep.SoftwareVersion != nil && ep.SoftwareVersion.Value != nil {
+				softwareVersion = ep.SoftwareVersion.Value.Text
+			}
+			primaryCategory := ""
+			if ep.DisplayCategories != nil && ep.DisplayCategories.Primary != nil &&
+				ep.DisplayCategories.Primary.Value != nil {
+				primaryCategory = *ep.DisplayCategories.Primary.Value
+			}
+			devs[cacheKey] = &Device{
+				AccountName:           friendlyName,
+				SerialNumber:          cacheKey,
+				EntityID:              entityID,
+				DeviceFamily:          primaryCategory,
+				DeviceOwnerCustomerID: ownerID,
+				HouseholdDevice:       household,
+				Online:                true,
+				ClusterMembers:        map[string]string{cacheKey: ""},
+				Manufacturer:          manufacturer,
+				Model:                 model,
+				HardwareVersion:       hw,
+				SoftwareVersion:       softwareVersion,
+				EndpointID:            endpointID,
+				Sensors:               map[string]*DeviceSensor{},
+				Notifications:         map[string]*Schedule{},
+
+				Kind:              Kind(amzconst.DisplayCategoryToKind(primaryCategory)),
+				DisplayCategories: extractDisplayCategories(ep),
+				AlexaInterfaces:   extractAlexaInterfaces(ep),
+				Operations:        extractEndpointOperations(ep),
+				controller:        s.smartHome,
+			}
+			endpoints[endpointID] = cacheKey
+			continue
 		}
 		endpoints[endpointID] = baseSerial
 		d := devs[baseSerial]
 		d.EndpointID = endpointID
-		d.EntityID = digFirstString(ep, "legacyIdentifiers", "chrsIdentifier", "entityId")
+		if ep.LegacyIdentifiers != nil && ep.LegacyIdentifiers.ChrsIdentifier != nil {
+			d.EntityID = ep.LegacyIdentifiers.ChrsIdentifier.EntityId
+		}
 
-		modelText := digFirstString(ep, "model", "value", "text")
+		// Populate new Phase 4a fields.
+		d.Kind = KindEcho
+		d.DisplayCategories = extractDisplayCategories(ep)
+		d.AlexaInterfaces = extractAlexaInterfaces(ep)
+		d.Operations = extractEndpointOperations(ep)
+		d.controller = s.smartHome
+
+		modelText := ""
+		if ep.Model != nil && ep.Model.Value != nil {
+			modelText = ep.Model.Value.Text
+		}
 		model, hw := parseDeviceDetails(modelText)
 		if model != "" {
 			d.Model = model
@@ -315,57 +427,278 @@ func (s *DevicesService) fetchEndpoints(
 			}
 		}
 
-		if d.Manufacturer == "" {
-			d.Manufacturer = digFirstString(ep, "manufacturer", "value", "text")
+		if d.Manufacturer == "" && ep.Manufacturer != nil && ep.Manufacturer.Value != nil {
+			d.Manufacturer = ep.Manufacturer.Value.Text
 		}
 	}
 
 	return endpoints, nil
 }
 
-// endpointIsAQM reports whether the given GraphQL endpoint entry's
+// endpointIsAQMTyped reports whether the given typed endpoint entry's
 // displayCategories include AIR_QUALITY_MONITOR (either primary or all).
-func endpointIsAQM(ep map[string]any) bool {
-	cats, _ := ep["displayCategories"].(map[string]any)
-	if cats == nil {
+func endpointIsAQMTyped(ep *listEndpointsEndpoint) bool {
+	if ep == nil || ep.DisplayCategories == nil {
 		return false
 	}
-	if primary, _ := cats["primary"].(map[string]any); primary != nil {
-		if v, _ := stringOf(primary["value"]); v == "AIR_QUALITY_MONITOR" {
-			return true
-		}
+	if ep.DisplayCategories.Primary != nil && ep.DisplayCategories.Primary.Value != nil &&
+		*ep.DisplayCategories.Primary.Value == "AIR_QUALITY_MONITOR" {
+		return true
 	}
-	for _, ai := range toAnySlice(cats["all"]) {
-		entry, _ := ai.(map[string]any)
-		if entry == nil {
-			continue
-		}
-		if v, _ := stringOf(entry["value"]); v == "AIR_QUALITY_MONITOR" {
+	for _, c := range ep.DisplayCategories.All {
+		if c != nil && c.Value != nil && *c.Value == "AIR_QUALITY_MONITOR" {
 			return true
 		}
 	}
 	return false
 }
 
-func digFirstString(m map[string]any, keys ...string) string {
-	cur := m
-	for i, k := range keys {
-		if i == len(keys)-1 {
-			if s, ok := cur[k].(string); ok {
-				return s
-			}
-			return ""
-		}
-		nxt, ok := cur[k].(map[string]any)
-		if !ok {
-			return ""
-		}
-		cur = nxt
+// extractDisplayCategories pulls the .all[].value strings from the typed
+// endpoint, in stable order. Returns nil when no categories are present.
+func extractDisplayCategories(ep *listEndpointsEndpoint) []string {
+	if ep == nil || ep.DisplayCategories == nil {
+		return nil
 	}
-	return ""
+	out := make([]string, 0, len(ep.DisplayCategories.All))
+	for _, c := range ep.DisplayCategories.All {
+		if c != nil && c.Value != nil && *c.Value != "" {
+			out = append(out, *c.Value)
+		}
+	}
+	if len(out) == 0 {
+		return nil
+	}
+	return out
 }
 
-func toAnySlice(v any) []any {
-	a, _ := v.([]any)
-	return a
+// extractAlexaInterfaces pulls the capabilities list from the typed
+// endpoint's alexaEnabledMetadata, if present.
+//
+// CAVEAT: For most third-party smart-home endpoints (skill-discovered
+// devices: TP-Link, Hue, Sensibo, Ring, etc.) alexaEnabledMetadata is
+// nil, so this returns nil. For first-party Echos it returns Echo-skill
+// capability strings (MUSIC_SKILL, BT_PAIRING_FLOW_V2, ...) — NOT
+// Alexa.*Controller interface names. The authoritative source of which
+// Alexa.*Controllers a device exposes is its sensor data; see
+// inferAlexaInterfacesFromSensors which runs after the sensors-hook
+// pass during refresh and after applyInspectResponse during Inspect.
+func extractAlexaInterfaces(ep *listEndpointsEndpoint) []string {
+	if ep == nil || ep.AlexaEnabledMetadata == nil {
+		return nil
+	}
+	if len(ep.AlexaEnabledMetadata.Capabilities) == 0 {
+		return nil
+	}
+	out := make([]string, 0, len(ep.AlexaEnabledMetadata.Capabilities))
+	out = append(out, ep.AlexaEnabledMetadata.Capabilities...)
+	return out
+}
+
+// inferAlexaInterfacesFromSensors returns the set of Alexa.*Controller
+// interface strings implied by a device's populated Sensors keys.
+//
+// Amazon's alexaEnabledMetadata.capabilities does NOT carry the
+// Alexa.*Controller strings for third-party smart-home devices — it's
+// nil for them and a list of Echo-skill capabilities for first-party
+// Alexa devices. The presence of a sensor key (e.g. "powerState",
+// "brightness", "lockState") proves the device speaks the
+// corresponding interface, so we derive AlexaInterfaces from the
+// observed sensors. This is what makes the typed accessors
+// (d.Power(), d.Brightness(), d.Lock(), ...) work against
+// skill-discovered devices.
+//
+// Range / Toggle / Mode (generic controllers) are intentionally
+// excluded for now — Phase 4e will add InterfaceRangeController etc.
+// when the wire payloads are HAR-captured and the typed accessors
+// are wired up.
+func inferAlexaInterfacesFromSensors(sensors map[string]*DeviceSensor) []string {
+	if len(sensors) == 0 {
+		return nil
+	}
+	var out []string
+	if _, ok := sensors["powerState"]; ok {
+		out = append(out, amzconst.InterfacePowerController)
+	}
+	if _, ok := sensors["brightness"]; ok {
+		out = append(out, amzconst.InterfaceBrightnessController)
+	}
+	if _, ok := sensors["color"]; ok {
+		out = append(out, amzconst.InterfaceColorController)
+	}
+	if _, ok := sensors["colorTemperature"]; ok {
+		out = append(out, amzconst.InterfaceColorTemperatureController)
+	}
+	if _, ok := sensors["lockState"]; ok {
+		out = append(out, amzconst.InterfaceLockController)
+	}
+	if _, ok := sensors["targetSetpoint"]; ok {
+		out = append(out, amzconst.InterfaceThermostatController)
+	} else if _, ok := sensors["thermostatMode"]; ok {
+		out = append(out, amzconst.InterfaceThermostatController)
+	}
+
+	// Mode / Range / Toggle have variable-keyed sensors — canonical
+	// instance names (fanSpeed, humidity, ...) AND "<feature>:<instance>"
+	// prefix fallbacks. Iterate once and de-dup via seen flags.
+	hasMode, hasRange, hasToggle := false, false, false
+	for key := range sensors {
+		switch {
+		case key == "fanSpeed", key == "fanDirection":
+			hasMode = true
+		case key == "humidity":
+			hasRange = true
+		case strings.HasPrefix(key, "mode:"):
+			hasMode = true
+		case strings.HasPrefix(key, "range:"):
+			hasRange = true
+		case strings.HasPrefix(key, "toggle:"):
+			hasToggle = true
+		}
+	}
+	if hasMode {
+		out = append(out, amzconst.InterfaceModeController)
+	}
+	if hasRange {
+		out = append(out, amzconst.InterfaceRangeController)
+	}
+	if hasToggle {
+		out = append(out, amzconst.InterfaceToggleController)
+	}
+	return out
+}
+
+// mergeAlexaInterfaces unions two interface-name slices, preserving
+// order from `existing` first then appending unseen entries from
+// `derived`. Returns nil only when both inputs are empty.
+func mergeAlexaInterfaces(existing, derived []string) []string {
+	if len(existing) == 0 {
+		if len(derived) == 0 {
+			return nil
+		}
+		return derived
+	}
+	seen := make(map[string]struct{}, len(existing))
+	for _, s := range existing {
+		seen[s] = struct{}{}
+	}
+	out := existing
+	for _, d := range derived {
+		if _, ok := seen[d]; ok {
+			continue
+		}
+		seen[d] = struct{}{}
+		out = append(out, d)
+	}
+	return out
+}
+
+// extractEndpointOperations pulls the .operations[].name list from the
+// typed endpoint, in stable order. Returns nil when no operations are
+// reported.
+func extractEndpointOperations(ep *listEndpointsEndpoint) []string {
+	if ep == nil {
+		return nil
+	}
+	out := make([]string, 0, len(ep.Operations))
+	for _, op := range ep.Operations {
+		if op != nil && op.Name != "" {
+			out = append(out, op.Name)
+		}
+	}
+	if len(out) == 0 {
+		return nil
+	}
+	return out
+}
+
+// Inspect issues a per-endpoint deep query (endpointAllFeatures) for
+// the given serial and updates the cached *Device in place with fresh
+// feature + property + operation + configuration data. Returns the
+// updated device. Use this when a caller wants the full state for one
+// device without paying for a list-wide Refresh.
+//
+// If serial is not in the cache, Inspect returns an error wrapping
+// ErrDeviceNotFound; the caller should call Refresh first.
+func (s *DevicesService) Inspect(ctx context.Context, serial string) (*Device, error) {
+	s.mu.RLock()
+	d, ok := s.cache[serial]
+	s.mu.RUnlock()
+	if !ok {
+		return nil, fmt.Errorf("%w: device %q not in cache", ErrDeviceNotFound, serial)
+	}
+	if d.EndpointID == "" {
+		return nil, fmt.Errorf("%w: device %q has no EndpointID (run Refresh first)", ErrCannotRetrieveData, serial)
+	}
+
+	sitePrefix := s.alexaHost()
+	url := fmt.Sprintf("%s%s", trimTrailingSlash(sitePrefix), amzconst.URINexusGraphQL)
+	client := graphql.NewClient(url, alexagraphql.NewDoer(s.wrapper))
+	low := alexagraphql.LatencyToleranceValueLow
+	resp, err := alexagraphql.EndpointAllFeatures(ctx, client, d.EndpointID, &low)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %w", ErrCannotConnect, err)
+	}
+	if resp == nil || resp.Endpoint == nil {
+		return nil, fmt.Errorf("%w: empty endpoint response", ErrCannotRetrieveData)
+	}
+
+	s.applyInspectResponse(ctx, d, resp.Endpoint)
+	return d, nil
+}
+
+// applyInspectResponse merges the deep-query response into the cached
+// *Device in place. Acquires the service write-lock so concurrent
+// readers see a consistent snapshot.
+func (s *DevicesService) applyInspectResponse(_ context.Context, d *Device, ep *alexagraphql.EndpointAllFeaturesEndpoint) {
+	s.mu.Lock()
+	if ep.FriendlyNameObject != nil && ep.FriendlyNameObject.Value != nil {
+		if name := ep.FriendlyNameObject.Value.Text; name != "" {
+			d.AccountName = name
+		}
+	}
+	if ep.DisplayCategories != nil {
+		d.DisplayCategories = nil
+		for _, c := range ep.DisplayCategories.All {
+			if c != nil && c.Value != nil && *c.Value != "" {
+				d.DisplayCategories = append(d.DisplayCategories, *c.Value)
+			}
+		}
+		// Preserve sticky kinds: Echos and AQMs are tagged by the base-list
+		// or AQM-detection branches in fetchEndpoints, not by DisplayCategory.
+		// Re-deriving from DisplayCategory.primary here would flip an Echo
+		// (primary "SPEAKER") to KindOther.
+		if d.Kind != KindEcho && d.Kind != KindAQM &&
+			ep.DisplayCategories.Primary != nil && ep.DisplayCategories.Primary.Value != nil {
+			d.Kind = Kind(amzconst.DisplayCategoryToKind(*ep.DisplayCategories.Primary.Value))
+		}
+	}
+	if ep.Operations != nil {
+		d.Operations = nil
+		for _, op := range ep.Operations {
+			if op != nil && op.Name != "" {
+				d.Operations = append(d.Operations, op.Name)
+			}
+		}
+	}
+
+	// Parse property data directly from the deep-query response — no
+	// second network call. Replaces the prior sensorsHook delegation
+	// that issued a second getEndpointState POST.
+	if sensors := parseAllFeaturesEndpoint(ep, d); len(sensors) > 0 {
+		d.Sensors = sensors
+		// Online reflects the reachability property if present, same
+		// rule SensorsService.Update uses for the bulk path.
+		if r := sensors["reachability"]; r != nil {
+			d.Online = r.Value == "OK"
+		}
+		// Same AlexaInterfaces derivation as the bulk refresh path —
+		// see inferAlexaInterfacesFromSensors. Inspect re-derives
+		// because the deep query returns richer feature data than the
+		// listEndpoints pass; this keeps the typed-accessor gating in
+		// sync with the freshest snapshot.
+		if derived := inferAlexaInterfacesFromSensors(sensors); len(derived) > 0 {
+			d.AlexaInterfaces = mergeAlexaInterfaces(d.AlexaInterfaces, derived)
+		}
+	}
+	s.mu.Unlock()
 }

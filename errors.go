@@ -34,6 +34,28 @@ var (
 	// ErrReauthRequired signals that the caller must run Auth.Login again.
 	// Surfaced by the Phase-3 push event stream before the channel closes.
 	ErrReauthRequired = errors.New("amazondevices: reauth required")
+
+	// ErrCannotControlDevice is returned when Amazon's setEndpointFeatures
+	// mutation responds with a structured error for one of the requested
+	// FeatureControl entries (e.g. "INVALID_VALUE" for out-of-range
+	// brightness, "ENDPOINT_UNREACHABLE" for an offline smart plug).
+	// Wrapped errors carry the upstream `code` and `message` via the
+	// formatted string; callers can `errors.Is(err, ErrCannotControlDevice)`
+	// to distinguish protocol-level rejections from transport errors
+	// (which return ErrCannotConnect / ErrCannotRetrieveData).
+	ErrCannotControlDevice = errors.New("amazondevices: cannot control device")
+
+	// ErrControllerNotImplemented is returned by typed control accessors
+	// whose wire payload shape has not yet been confirmed against real
+	// hardware. Phase 4e ships stub Device.Range / Device.Toggle
+	// accessors that return this sentinel — when callers see it, the
+	// stub also emits a WARN log directing them to file an issue with a
+	// HAR capture so we can wire the real path.
+	//
+	//	if err := dvc.Range("FanSpeed").Set(ctx, 5.0); errors.Is(err, ErrControllerNotImplemented) {
+	//	    // expected — Range write surface is HAR-capture-gated
+	//	}
+	ErrControllerNotImplemented = errors.New("amazondevices: typed controller not yet wired — HAR capture needed")
 )
 
 // APIError carries HTTP-level detail about a failed request. Its Unwrap

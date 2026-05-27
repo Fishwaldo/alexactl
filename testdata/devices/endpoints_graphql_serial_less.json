@@ -1,0 +1,102 @@
+{
+  "data": {
+    "allDevices": {
+      "endpoints": [
+        {
+          "endpointId": "amzn1.alexa.endpoint.b235b90d-fb31-4473-8042-64adb79bf9d9",
+          "friendlyNameObject": {
+            "value": {
+              "text": "Bedroom Lamp"
+            }
+          },
+          "manufacturer": {
+            "value": {
+              "text": "TP-LINK"
+            }
+          },
+          "model": {
+            "value": {
+              "text": "HS100"
+            }
+          },
+          "serialNumber": null,
+          "softwareVersion": {
+            "value": {
+              "text": "1.2.6 Build 200727 Rel.120236"
+            }
+          },
+          "enablement": "ENABLED",
+          "displayCategories": {
+            "primary": {
+              "value": "LIGHT"
+            },
+            "all": [
+              {
+                "value": "SMARTPLUG"
+              },
+              {
+                "value": "LIGHT"
+              }
+            ]
+          },
+          "alexaEnabledMetadata": null,
+          "legacyAppliance": null,
+          "legacyIdentifiers": {
+            "dmsIdentifier": null,
+            "chrsIdentifier": {
+              "entityId": "b235b90d-fb31-4473-8042-64adb79bf9d9"
+            }
+          },
+          "operations": [
+            {
+              "name": "forget"
+            }
+          ]
+        },
+        {
+          "endpointId": "amzn1.alexa.endpoint.4603608e-380a-4635-8b5d-66c3241b0bdc",
+          "friendlyNameObject": {
+            "value": {
+              "text": "Side room Sensibo"
+            }
+          },
+          "manufacturer": {
+            "value": {
+              "text": "Sensibo"
+            }
+          },
+          "model": null,
+          "serialNumber": null,
+          "softwareVersion": null,
+          "enablement": "DISABLED_BY_CUSTOMER",
+          "displayCategories": {
+            "primary": {
+              "value": "THERMOSTAT"
+            },
+            "all": [
+              {
+                "value": "THERMOSTAT"
+              },
+              {
+                "value": "TEMPERATURE_SENSOR"
+              }
+            ]
+          },
+          "alexaEnabledMetadata": null,
+          "legacyAppliance": null,
+          "legacyIdentifiers": {
+            "dmsIdentifier": null,
+            "chrsIdentifier": {
+              "entityId": "4603608e-380a-4635-8b5d-66c3241b0bdc"
+            }
+          },
+          "operations": [
+            {
+              "name": "forget"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

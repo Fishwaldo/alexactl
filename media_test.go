@@ -30,10 +30,22 @@ func newMediaTest(t *testing.T, handler http.HandlerFunc) (*MediaService, *httpt
 	})
 	require.NoError(t, err)
 	sess := &Session{AccountCustomerID: "OWNER", Domain: "com"}
+	// processBatch's debounce goroutine must NOT race the synchronous
+	// Flush in facades that Send-N-then-Flush (fanoutAndFlush). A
+	// no-op sleepFn lets the goroutine fire between Sends and POST a
+	// partial batch concurrently with Flush's own POST, racing on the
+	// shared `posted` map the handler decodes into. Blocking sleepFn
+	// until cleanup guarantees Flush always wins; when the goroutine
+	// finally wakes it sees the bumped batchGen and exits silently.
+	releaseSleep := make(chan struct{})
+	t.Cleanup(func() { close(releaseSleep) })
 	seq := &SequenceService{
 		wrapper: wr,
 		session: sess,
-		sleepFn: func(_ context.Context, _ time.Duration) error { return nil },
+		sleepFn: func(_ context.Context, _ time.Duration) error {
+			<-releaseSleep
+			return nil
+		},
 	}
 	ms := &MediaService{
 		wrapper:  wr,

@@ -4,34 +4,150 @@
       "endpoints": [
         {
           "endpointId": "ep-kitchen",
-          "friendlyNameObject": {"value": {"text": "Kitchen Echo"}},
-          "manufacturer": {"value": {"text": "Amazon"}},
-          "model": {"value": {"text": "Echo Dot (5th Gen)"}},
-          "serialNumber": {"value": {"text": "S-KITCHEN-001"}},
-          "softwareVersion": {"value": {"text": "12345"}},
-          "alexaEnabledMetadata": {"category": "DEVICE"},
+          "friendlyNameObject": {
+            "value": {
+              "text": "Kitchen Echo"
+            }
+          },
+          "manufacturer": {
+            "value": {
+              "text": "Amazon"
+            }
+          },
+          "model": {
+            "value": {
+              "text": "Echo Dot (5th Gen)"
+            }
+          },
+          "serialNumber": {
+            "value": {
+              "text": "S-KITCHEN-001"
+            }
+          },
+          "softwareVersion": {
+            "value": {
+              "text": "12345"
+            }
+          },
+          "alexaEnabledMetadata": {
+            "category": "DEVICE"
+          },
           "displayCategories": {
-            "primary": {"value": "SPEAKER"},
-            "all": [{"value": "SPEAKER"}, {"value": "ALEXA_VOICE_ENABLED"}]
+            "primary": {
+              "value": "SPEAKER"
+            },
+            "all": [
+              {
+                "value": "SPEAKER"
+              },
+              {
+                "value": "ALEXA_VOICE_ENABLED"
+              }
+            ]
           },
           "legacyIdentifiers": {
-            "dmsIdentifier": {"deviceType": {"value": {"text": "A18O6U1U9KIYDM"}}},
-            "chrsIdentifier": {"entityId": "entity-kitchen"}
-          }
+            "dmsIdentifier": {
+              "deviceType": {
+                "value": {
+                  "text": "A18O6U1U9KIYDM"
+                }
+              }
+            },
+            "chrsIdentifier": {
+              "entityId": "entity-kitchen"
+            }
+          },
+          "operations": []
         },
         {
           "endpointId": "ep-aqm-1",
-          "friendlyNameObject": {"value": {"text": "Bedroom Air Monitor"}},
-          "manufacturer": {"value": {"text": "Amazon"}},
-          "serialNumber": {"value": {"text": "S-AQM-001"}},
-          "softwareVersion": {"value": {"text": "999"}},
+          "friendlyNameObject": {
+            "value": {
+              "text": "Bedroom Air Monitor"
+            }
+          },
+          "manufacturer": {
+            "value": {
+              "text": "Amazon"
+            }
+          },
+          "serialNumber": {
+            "value": {
+              "text": "S-AQM-001"
+            }
+          },
+          "softwareVersion": {
+            "value": {
+              "text": "999"
+            }
+          },
           "displayCategories": {
-            "primary": {"value": "AIR_QUALITY_MONITOR"},
-            "all": [{"value": "AIR_QUALITY_MONITOR"}]
+            "primary": {
+              "value": "AIR_QUALITY_MONITOR"
+            },
+            "all": [
+              {
+                "value": "AIR_QUALITY_MONITOR"
+              }
+            ]
           },
           "legacyIdentifiers": {
-            "dmsIdentifier": {"deviceType": {"value": {"text": "AEZME1X38KDRA"}}}
-          }
+            "dmsIdentifier": {
+              "deviceType": {
+                "value": {
+                  "text": "AEZME1X38KDRA"
+                }
+              }
+            }
+          },
+          "operations": []
+        },
+        {
+          "endpointId": "amzn1.alexa.endpoint.smartplug-001",
+          "friendlyNameObject": {
+            "value": {
+              "text": "Test Smart Plug"
+            }
+          },
+          "manufacturer": {
+            "value": {
+              "text": "TestCo"
+            }
+          },
+          "model": {
+            "value": {
+              "text": "TestPlug v1"
+            }
+          },
+          "serialNumber": {
+            "value": {
+              "text": "TESTPLUG001"
+            }
+          },
+          "softwareVersion": null,
+          "creationTime": null,
+          "enablement": "ENABLED",
+          "displayCategories": {
+            "all": [
+              {
+                "value": "SMARTPLUG"
+              }
+            ],
+            "primary": {
+              "value": "SMARTPLUG"
+            }
+          },
+          "alexaEnabledMetadata": null,
+          "legacyIdentifiers": null,
+          "legacyAppliance": null,
+          "operations": [
+            {
+              "name": "turnOn"
+            },
+            {
+              "name": "turnOff"
+            }
+          ]
         }
       ]
     }

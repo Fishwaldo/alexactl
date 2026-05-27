@@ -1,0 +1,35 @@
+# getDevicesBaseData fetches every endpoint linked to the account (Echo
+# devices, AQMs, smart-home accessories). Port of QueryDeviceData;
+# the same response feeds DevicesService.fetchEndpoints.
+query getDevicesBaseData {
+  allDevices: listEndpoints(
+    listEndpointsInput: { includeHouseholdDevices: true }
+  ) {
+    endpoints {
+      endpointId: id
+      friendlyNameObject { value { text } }
+      manufacturer { value { text } }
+      model { value { text } }
+      serialNumber { value { text } }
+      softwareVersion { value { text } }
+      creationTime
+      enablement
+      displayCategories {
+        all { value }
+        primary { value }
+      }
+      alexaEnabledMetadata {
+        iconId
+        isVisible
+        category
+        capabilities
+      }
+      legacyIdentifiers {
+        dmsIdentifier { deviceType { value { text } } }
+        chrsIdentifier { entityId }
+      }
+      legacyAppliance { applianceId }
+      operations { name }
+    }
+  }
+}

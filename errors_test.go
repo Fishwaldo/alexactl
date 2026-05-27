@@ -2,6 +2,7 @@ package amazondevices
 
 import (
 	"errors"
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -91,6 +92,7 @@ func TestSentinelsAreDistinct(t *testing.T) {
 		ErrCannotRegisterDevice,
 		ErrWrongMethod,
 		ErrReauthRequired,
+		ErrCannotControlDevice,
 	}
 	for i, a := range all {
 		for j, b := range all {
@@ -100,4 +102,14 @@ func TestSentinelsAreDistinct(t *testing.T) {
 			assert.NotErrorIs(t, a, b, "%v should not match %v", a, b)
 		}
 	}
+}
+
+func TestErrCannotControlDevice_IsComparable(t *testing.T) {
+	wrapped := fmt.Errorf("%w: INVALID_VALUE", ErrCannotControlDevice)
+	assert.True(t, errors.Is(wrapped, ErrCannotControlDevice),
+		"wrapped errors should match the sentinel via errors.Is")
+
+	// Cross-sentinel check: must not falsely match a different sentinel.
+	assert.False(t, errors.Is(wrapped, ErrCannotConnect),
+		"ErrCannotControlDevice must be distinct from ErrCannotConnect")
 }

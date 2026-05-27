@@ -11,6 +11,241 @@ import (
 )
 
 const (
+	// KindEcho is a Kind of type KindEcho.
+	KindEcho Kind = "echo"
+	// KindLight is a Kind of type KindLight.
+	KindLight Kind = "light"
+	// KindSwitch is a Kind of type KindSwitch.
+	KindSwitch Kind = "switch"
+	// KindDimmer is a Kind of type KindDimmer.
+	KindDimmer Kind = "dimmer"
+	// KindThermostat is a Kind of type KindThermostat.
+	KindThermostat Kind = "thermostat"
+	// KindLock is a Kind of type KindLock.
+	KindLock Kind = "lock"
+	// KindCamera is a Kind of type KindCamera.
+	KindCamera Kind = "camera"
+	// KindContact is a Kind of type KindContact.
+	KindContact Kind = "contact_sensor"
+	// KindMotion is a Kind of type KindMotion.
+	KindMotion Kind = "motion_sensor"
+	// KindAQM is a Kind of type KindAQM.
+	KindAQM Kind = "air_quality_monitor"
+	// KindSensor is a Kind of type KindSensor.
+	KindSensor Kind = "sensor"
+	// KindAirPurifier is a Kind of type KindAirPurifier.
+	KindAirPurifier Kind = "air_purifier"
+	// KindSecurityPanel is a Kind of type KindSecurityPanel.
+	KindSecurityPanel Kind = "security_panel"
+	// KindScene is a Kind of type KindScene.
+	KindScene Kind = "scene"
+	// KindOther is a Kind of type KindOther.
+	KindOther Kind = "other"
+)
+
+var ErrInvalidKind = fmt.Errorf("not a valid Kind, try [%s]", strings.Join(_KindNames, ", "))
+
+var _KindNames = []string{
+	string(KindEcho),
+	string(KindLight),
+	string(KindSwitch),
+	string(KindDimmer),
+	string(KindThermostat),
+	string(KindLock),
+	string(KindCamera),
+	string(KindContact),
+	string(KindMotion),
+	string(KindAQM),
+	string(KindSensor),
+	string(KindAirPurifier),
+	string(KindSecurityPanel),
+	string(KindScene),
+	string(KindOther),
+}
+
+// KindNames returns a list of possible string values of Kind.
+func KindNames() []string {
+	tmp := make([]string, len(_KindNames))
+	copy(tmp, _KindNames)
+	return tmp
+}
+
+// KindValues returns a list of the values for Kind
+func KindValues() []Kind {
+	return []Kind{
+		KindEcho,
+		KindLight,
+		KindSwitch,
+		KindDimmer,
+		KindThermostat,
+		KindLock,
+		KindCamera,
+		KindContact,
+		KindMotion,
+		KindAQM,
+		KindSensor,
+		KindAirPurifier,
+		KindSecurityPanel,
+		KindScene,
+		KindOther,
+	}
+}
+
+// String implements the Stringer interface.
+func (x Kind) String() string {
+	return string(x)
+}
+
+// IsValid provides a quick way to determine if the typed value is
+// part of the allowed enumerated values
+func (x Kind) IsValid() bool {
+	_, err := ParseKind(string(x))
+	return err == nil
+}
+
+var _KindValue = map[string]Kind{
+	"echo":                KindEcho,
+	"light":               KindLight,
+	"switch":              KindSwitch,
+	"dimmer":              KindDimmer,
+	"thermostat":          KindThermostat,
+	"lock":                KindLock,
+	"camera":              KindCamera,
+	"contact_sensor":      KindContact,
+	"motion_sensor":       KindMotion,
+	"air_quality_monitor": KindAQM,
+	"sensor":              KindSensor,
+	"air_purifier":        KindAirPurifier,
+	"security_panel":      KindSecurityPanel,
+	"scene":               KindScene,
+	"other":               KindOther,
+}
+
+// ParseKind attempts to convert a string to a Kind.
+func ParseKind(name string) (Kind, error) {
+	if x, ok := _KindValue[name]; ok {
+		return x, nil
+	}
+	// Case insensitive parse, do a separate lookup to prevent unnecessary cost of lowercasing a string if we don't need to.
+	if x, ok := _KindValue[strings.ToLower(name)]; ok {
+		return x, nil
+	}
+	return Kind(""), fmt.Errorf("%s is %w", name, ErrInvalidKind)
+}
+
+// MarshalText implements the text marshaller method.
+func (x Kind) MarshalText() ([]byte, error) {
+	return []byte(string(x)), nil
+}
+
+// UnmarshalText implements the text unmarshaller method.
+func (x *Kind) UnmarshalText(text []byte) error {
+	tmp, err := ParseKind(string(text))
+	if err != nil {
+		return err
+	}
+	*x = tmp
+	return nil
+}
+
+// AppendText appends the textual representation of itself to the end of b
+// (allocating a larger slice if necessary) and returns the updated slice.
+//
+// Implementations must not retain b, nor mutate any bytes within b[:len(b)].
+func (x *Kind) AppendText(b []byte) ([]byte, error) {
+	return append(b, x.String()...), nil
+}
+
+const (
+	// LockStateLocked is a LockState of type LockStateLocked.
+	LockStateLocked LockState = "LOCKED"
+	// LockStateUnlocked is a LockState of type LockStateUnlocked.
+	LockStateUnlocked LockState = "UNLOCKED"
+	// LockStateJammed is a LockState of type LockStateJammed.
+	LockStateJammed LockState = "JAMMED"
+)
+
+var ErrInvalidLockState = fmt.Errorf("not a valid LockState, try [%s]", strings.Join(_LockStateNames, ", "))
+
+var _LockStateNames = []string{
+	string(LockStateLocked),
+	string(LockStateUnlocked),
+	string(LockStateJammed),
+}
+
+// LockStateNames returns a list of possible string values of LockState.
+func LockStateNames() []string {
+	tmp := make([]string, len(_LockStateNames))
+	copy(tmp, _LockStateNames)
+	return tmp
+}
+
+// LockStateValues returns a list of the values for LockState
+func LockStateValues() []LockState {
+	return []LockState{
+		LockStateLocked,
+		LockStateUnlocked,
+		LockStateJammed,
+	}
+}
+
+// String implements the Stringer interface.
+func (x LockState) String() string {
+	return string(x)
+}
+
+// IsValid provides a quick way to determine if the typed value is
+// part of the allowed enumerated values
+func (x LockState) IsValid() bool {
+	_, err := ParseLockState(string(x))
+	return err == nil
+}
+
+var _LockStateValue = map[string]LockState{
+	"LOCKED":   LockStateLocked,
+	"locked":   LockStateLocked,
+	"UNLOCKED": LockStateUnlocked,
+	"unlocked": LockStateUnlocked,
+	"JAMMED":   LockStateJammed,
+	"jammed":   LockStateJammed,
+}
+
+// ParseLockState attempts to convert a string to a LockState.
+func ParseLockState(name string) (LockState, error) {
+	if x, ok := _LockStateValue[name]; ok {
+		return x, nil
+	}
+	// Case insensitive parse, do a separate lookup to prevent unnecessary cost of lowercasing a string if we don't need to.
+	if x, ok := _LockStateValue[strings.ToLower(name)]; ok {
+		return x, nil
+	}
+	return LockState(""), fmt.Errorf("%s is %w", name, ErrInvalidLockState)
+}
+
+// MarshalText implements the text marshaller method.
+func (x LockState) MarshalText() ([]byte, error) {
+	return []byte(string(x)), nil
+}
+
+// UnmarshalText implements the text unmarshaller method.
+func (x *LockState) UnmarshalText(text []byte) error {
+	tmp, err := ParseLockState(string(text))
+	if err != nil {
+		return err
+	}
+	*x = tmp
+	return nil
+}
+
+// AppendText appends the textual representation of itself to the end of b
+// (allocating a larger slice if necessary) and returns the updated slice.
+//
+// Implementations must not retain b, nor mutate any bytes within b[:len(b)].
+func (x *LockState) AppendText(b []byte) ([]byte, error) {
+	return append(b, x.String()...), nil
+}
+
+const (
 	// CmdPlay is a MediaCommand of type CmdPlay.
 	CmdPlay MediaCommand = "PlayCommand"
 	// CmdStop is a MediaCommand of type CmdStop.
@@ -406,5 +641,201 @@ func (x *SequenceType) UnmarshalText(text []byte) error {
 //
 // Implementations must not retain b, nor mutate any bytes within b[:len(b)].
 func (x *SequenceType) AppendText(b []byte) ([]byte, error) {
+	return append(b, x.String()...), nil
+}
+
+const (
+	// TemperatureScaleCelsius is a TemperatureScale of type TemperatureScaleCelsius.
+	TemperatureScaleCelsius TemperatureScale = "CELSIUS"
+	// TemperatureScaleFahrenheit is a TemperatureScale of type TemperatureScaleFahrenheit.
+	TemperatureScaleFahrenheit TemperatureScale = "FAHRENHEIT"
+	// TemperatureScaleKelvin is a TemperatureScale of type TemperatureScaleKelvin.
+	TemperatureScaleKelvin TemperatureScale = "KELVIN"
+)
+
+var ErrInvalidTemperatureScale = fmt.Errorf("not a valid TemperatureScale, try [%s]", strings.Join(_TemperatureScaleNames, ", "))
+
+var _TemperatureScaleNames = []string{
+	string(TemperatureScaleCelsius),
+	string(TemperatureScaleFahrenheit),
+	string(TemperatureScaleKelvin),
+}
+
+// TemperatureScaleNames returns a list of possible string values of TemperatureScale.
+func TemperatureScaleNames() []string {
+	tmp := make([]string, len(_TemperatureScaleNames))
+	copy(tmp, _TemperatureScaleNames)
+	return tmp
+}
+
+// TemperatureScaleValues returns a list of the values for TemperatureScale
+func TemperatureScaleValues() []TemperatureScale {
+	return []TemperatureScale{
+		TemperatureScaleCelsius,
+		TemperatureScaleFahrenheit,
+		TemperatureScaleKelvin,
+	}
+}
+
+// String implements the Stringer interface.
+func (x TemperatureScale) String() string {
+	return string(x)
+}
+
+// IsValid provides a quick way to determine if the typed value is
+// part of the allowed enumerated values
+func (x TemperatureScale) IsValid() bool {
+	_, err := ParseTemperatureScale(string(x))
+	return err == nil
+}
+
+var _TemperatureScaleValue = map[string]TemperatureScale{
+	"CELSIUS":    TemperatureScaleCelsius,
+	"celsius":    TemperatureScaleCelsius,
+	"FAHRENHEIT": TemperatureScaleFahrenheit,
+	"fahrenheit": TemperatureScaleFahrenheit,
+	"KELVIN":     TemperatureScaleKelvin,
+	"kelvin":     TemperatureScaleKelvin,
+}
+
+// ParseTemperatureScale attempts to convert a string to a TemperatureScale.
+func ParseTemperatureScale(name string) (TemperatureScale, error) {
+	if x, ok := _TemperatureScaleValue[name]; ok {
+		return x, nil
+	}
+	// Case insensitive parse, do a separate lookup to prevent unnecessary cost of lowercasing a string if we don't need to.
+	if x, ok := _TemperatureScaleValue[strings.ToLower(name)]; ok {
+		return x, nil
+	}
+	return TemperatureScale(""), fmt.Errorf("%s is %w", name, ErrInvalidTemperatureScale)
+}
+
+// MarshalText implements the text marshaller method.
+func (x TemperatureScale) MarshalText() ([]byte, error) {
+	return []byte(string(x)), nil
+}
+
+// UnmarshalText implements the text unmarshaller method.
+func (x *TemperatureScale) UnmarshalText(text []byte) error {
+	tmp, err := ParseTemperatureScale(string(text))
+	if err != nil {
+		return err
+	}
+	*x = tmp
+	return nil
+}
+
+// AppendText appends the textual representation of itself to the end of b
+// (allocating a larger slice if necessary) and returns the updated slice.
+//
+// Implementations must not retain b, nor mutate any bytes within b[:len(b)].
+func (x *TemperatureScale) AppendText(b []byte) ([]byte, error) {
+	return append(b, x.String()...), nil
+}
+
+const (
+	// ThermostatModeHeat is a ThermostatMode of type ThermostatModeHeat.
+	ThermostatModeHeat ThermostatMode = "HEAT"
+	// ThermostatModeCool is a ThermostatMode of type ThermostatModeCool.
+	ThermostatModeCool ThermostatMode = "COOL"
+	// ThermostatModeAuto is a ThermostatMode of type ThermostatModeAuto.
+	ThermostatModeAuto ThermostatMode = "AUTO"
+	// ThermostatModeOff is a ThermostatMode of type ThermostatModeOff.
+	ThermostatModeOff ThermostatMode = "OFF"
+	// ThermostatModeEco is a ThermostatMode of type ThermostatModeEco.
+	ThermostatModeEco ThermostatMode = "ECO"
+	// ThermostatModeEmHeat is a ThermostatMode of type ThermostatModeEmHeat.
+	ThermostatModeEmHeat ThermostatMode = "EM_HEAT"
+)
+
+var ErrInvalidThermostatMode = fmt.Errorf("not a valid ThermostatMode, try [%s]", strings.Join(_ThermostatModeNames, ", "))
+
+var _ThermostatModeNames = []string{
+	string(ThermostatModeHeat),
+	string(ThermostatModeCool),
+	string(ThermostatModeAuto),
+	string(ThermostatModeOff),
+	string(ThermostatModeEco),
+	string(ThermostatModeEmHeat),
+}
+
+// ThermostatModeNames returns a list of possible string values of ThermostatMode.
+func ThermostatModeNames() []string {
+	tmp := make([]string, len(_ThermostatModeNames))
+	copy(tmp, _ThermostatModeNames)
+	return tmp
+}
+
+// ThermostatModeValues returns a list of the values for ThermostatMode
+func ThermostatModeValues() []ThermostatMode {
+	return []ThermostatMode{
+		ThermostatModeHeat,
+		ThermostatModeCool,
+		ThermostatModeAuto,
+		ThermostatModeOff,
+		ThermostatModeEco,
+		ThermostatModeEmHeat,
+	}
+}
+
+// String implements the Stringer interface.
+func (x ThermostatMode) String() string {
+	return string(x)
+}
+
+// IsValid provides a quick way to determine if the typed value is
+// part of the allowed enumerated values
+func (x ThermostatMode) IsValid() bool {
+	_, err := ParseThermostatMode(string(x))
+	return err == nil
+}
+
+var _ThermostatModeValue = map[string]ThermostatMode{
+	"HEAT":    ThermostatModeHeat,
+	"heat":    ThermostatModeHeat,
+	"COOL":    ThermostatModeCool,
+	"cool":    ThermostatModeCool,
+	"AUTO":    ThermostatModeAuto,
+	"auto":    ThermostatModeAuto,
+	"OFF":     ThermostatModeOff,
+	"off":     ThermostatModeOff,
+	"ECO":     ThermostatModeEco,
+	"eco":     ThermostatModeEco,
+	"EM_HEAT": ThermostatModeEmHeat,
+	"em_heat": ThermostatModeEmHeat,
+}
+
+// ParseThermostatMode attempts to convert a string to a ThermostatMode.
+func ParseThermostatMode(name string) (ThermostatMode, error) {
+	if x, ok := _ThermostatModeValue[name]; ok {
+		return x, nil
+	}
+	// Case insensitive parse, do a separate lookup to prevent unnecessary cost of lowercasing a string if we don't need to.
+	if x, ok := _ThermostatModeValue[strings.ToLower(name)]; ok {
+		return x, nil
+	}
+	return ThermostatMode(""), fmt.Errorf("%s is %w", name, ErrInvalidThermostatMode)
+}
+
+// MarshalText implements the text marshaller method.
+func (x ThermostatMode) MarshalText() ([]byte, error) {
+	return []byte(string(x)), nil
+}
+
+// UnmarshalText implements the text unmarshaller method.
+func (x *ThermostatMode) UnmarshalText(text []byte) error {
+	tmp, err := ParseThermostatMode(string(text))
+	if err != nil {
+		return err
+	}
+	*x = tmp
+	return nil
+}
+
+// AppendText appends the textual representation of itself to the end of b
+// (allocating a larger slice if necessary) and returns the updated slice.
+//
+// Implementations must not retain b, nor mutate any bytes within b[:len(b)].
+func (x *ThermostatMode) AppendText(b []byte) ([]byte, error) {
 	return append(b, x.String()...), nil
 }

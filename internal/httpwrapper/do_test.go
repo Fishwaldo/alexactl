@@ -320,3 +320,30 @@ func TestDo_NoBody(t *testing.T) {
 	body, _ := io.ReadAll(resp.Body)
 	assert.Equal(t, "ok", strings.TrimSpace(string(body)))
 }
+
+func TestDo_RawBody_NotReMarshaled(t *testing.T) {
+	var gotBody []byte
+	var gotCT string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotBody, _ = io.ReadAll(r.Body)
+		gotCT = r.Header.Get("Content-Type")
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"ok":true}`))
+	}))
+	t.Cleanup(srv.Close)
+
+	w := newWrapper(t, srv)
+	resp, err := w.Do(t.Context(), httpwrapper.Request{
+		Method:       http.MethodPost,
+		URL:          srv.URL,
+		RawBody:      []byte(`{"already":"encoded"}`),
+		ExtraHeaders: http.Header{"Content-Type": []string{"application/graphql-response+json"}},
+	})
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = resp.Body.Close() })
+
+	assert.Equal(t, `{"already":"encoded"}`, string(gotBody),
+		"RawBody bytes must be sent verbatim — no double JSON encode")
+	assert.Equal(t, "application/graphql-response+json", gotCT,
+		"caller-supplied Content-Type must win when RawBody is used")
+}

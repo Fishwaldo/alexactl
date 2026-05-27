@@ -1,0 +1,27 @@
+# setEndpointFeatures issues the mutation captured from the Alexa+ web
+# UI (see docs/superpowers/research/2026-05-25-alexa-web-graphql.md
+# §"Mutation: setPower" / "Mutation: setBrightness"). One mutation can
+# carry multiple FeatureControl entries; Phase 4b only ever sends one
+# at a time (batching is a Phase 4c-or-later refinement).
+#
+# The wire operationName is "setEndpointFeatures" — match what the
+# server expects and what smarthome_test.go asserts.
+mutation setEndpointFeatures($requests: [FeatureControlRequest!]!) {
+  setEndpointFeatures(setEndpointFeaturesInput: { featureControlRequests: $requests }) {
+    featureControlResponses {
+      endpointId
+      featureName
+      featureOperationName
+      instance
+      code
+    }
+    errors {
+      endpointId
+      featureName
+      featureOperationName
+      instance
+      code
+      message
+    }
+  }
+}

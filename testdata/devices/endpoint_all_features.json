@@ -1,0 +1,31 @@
+{
+  "data": {
+    "endpoint": {
+      "id": "amzn1.alexa.endpoint.32f10fc0-9933-4cfa-b8eb-c223a779c190",
+      "enablement": "ENABLED",
+      "friendlyNameObject": {"value": {"text": "Sideroom Airconditioner"}},
+      "displayCategories": {
+        "primary": {"value": "THERMOSTAT"},
+        "all": [
+          {"value": "THERMOSTAT"},
+          {"value": "TEMPERATURE_SENSOR"},
+          {"value": "AIR_CONDITIONER"}
+        ]
+      },
+      "legacyIdentifiers": {
+        "chrsIdentifier": {"entityId": "32f10fc0-9933-4cfa-b8eb-c223a779c190"},
+        "dmsIdentifier": null
+      },
+      "operations": [],
+      "features": [
+        {"name": "power", "instance": null, "operations": [{"name":"turnOn"},{"name":"turnOff"}], "configuration": null, "properties": [{"__typename":"Power","name":"powerState","powerStateValue":"ON"}]},
+        {"name": "connectivity", "instance": null, "operations": [], "configuration": null, "properties": [{"__typename":"Reachability","name":"reachability","reachabilityStatusValue":"OK"}]},
+        {"name": "temperatureSensor", "instance": null, "operations": [], "configuration": null, "properties": [{"__typename":"TemperatureSensor","name":"temperature","value":{"value":28.0,"scale":"CELSIUS"}}]},
+        {"name": "thermostat", "instance": null, "operations": [{"name":"setTargetSetpoint"},{"name":"setThermostatMode"}], "configuration": {"__typename":"ThermostatConfiguration","supportedModes":["COOL","AUTO"]}, "properties": [
+          {"__typename":"ThermostatMode","name":"thermostatMode","thermostatModeValue":"COOL"},
+          {"__typename":"Setpoint","name":"targetSetpoint","value":{"value":20.0,"scale":"CELSIUS"},"deviceNativeScaleValue":null}
+        ]}
+      ]
+    }
+  }
+}

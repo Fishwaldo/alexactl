@@ -24,6 +24,15 @@ jobs:
           cache: true
       - run: go mod download
       - run: go vet ./...
+      - name: Verify codegen is up to date
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          go generate ./...
+          if ! git diff --quiet; then
+            echo "::error::go generate produced uncommitted changes; commit the regenerated files"
+            git diff
+            exit 1
+          fi
       - run: go test -race -coverprofile=coverage.txt ./...
       - name: Upload coverage
         if: matrix.os == 'ubuntu-latest'

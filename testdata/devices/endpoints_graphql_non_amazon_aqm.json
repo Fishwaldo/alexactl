@@ -4,17 +4,46 @@
       "endpoints": [
         {
           "endpointId": "ep-aqm-acme",
-          "friendlyNameObject": {"value": {"text": "Office Acme Monitor"}},
-          "manufacturer": {"value": {"text": "Acme"}},
-          "serialNumber": {"value": {"text": "S-AQM-ACME-1"}},
-          "softwareVersion": {"value": {"text": "42"}},
+          "friendlyNameObject": {
+            "value": {
+              "text": "Office Acme Monitor"
+            }
+          },
+          "manufacturer": {
+            "value": {
+              "text": "Acme"
+            }
+          },
+          "serialNumber": {
+            "value": {
+              "text": "S-AQM-ACME-1"
+            }
+          },
+          "softwareVersion": {
+            "value": {
+              "text": "42"
+            }
+          },
           "displayCategories": {
-            "primary": {"value": "AIR_QUALITY_MONITOR"},
-            "all": [{"value": "AIR_QUALITY_MONITOR"}]
+            "primary": {
+              "value": "AIR_QUALITY_MONITOR"
+            },
+            "all": [
+              {
+                "value": "AIR_QUALITY_MONITOR"
+              }
+            ]
           },
           "legacyIdentifiers": {
-            "dmsIdentifier": {"deviceType": {"value": {"text": "ACMETYPE"}}}
-          }
+            "dmsIdentifier": {
+              "deviceType": {
+                "value": {
+                  "text": "ACMETYPE"
+                }
+              }
+            }
+          },
+          "operations": []
         }
       ]
     }

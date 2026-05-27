@@ -28,14 +28,22 @@ const (
 	retryWaitMax     = 21 * time.Second
 )
 
-// Request describes a single Amazon API request. Either JSONBody or Form
-// (or neither) may be set, never both.
+// Request describes a single Amazon API request. Either JSONBody, RawBody,
+// or Form (or neither) may be set, never two or more together.
 type Request struct {
 	Method string
 	URL    string
 
 	// JSONBody is marshaled to JSON. Content-Type is set automatically.
+	// Mutually exclusive with RawBody and Form.
 	JSONBody any
+
+	// RawBody, if non-nil, is sent verbatim as the request body without
+	// any encoding. The caller is responsible for the Content-Type header
+	// (typically via ExtraHeaders). Used by the generated GraphQL client
+	// to forward pre-marshaled queries through the wrapper without
+	// double-encoding.
+	RawBody []byte
 
 	// Form is sent as application/x-www-form-urlencoded.
 	Form map[string]string
@@ -91,9 +99,10 @@ func idempotentRetryStatus(method string, status int) bool {
 // token refresh, and CSRF-cookie capture from responses. The caller is
 // responsible for closing resp.Body.
 func (w *Wrapper) Do(ctx context.Context, req Request) (*http.Response, error) {
-	if req.JSONBody != nil && req.Form != nil {
-		return nil, fmt.Errorf("httpwrapper: cannot set both JSONBody and Form")
+	if 1 < boolToInt(req.JSONBody != nil)+boolToInt(req.RawBody != nil)+boolToInt(req.Form != nil) {
+		return nil, fmt.Errorf("httpwrapper: JSONBody, RawBody, Form are mutually exclusive")
 	}
+
 	// External callers always get default-on transparent-refresh behavior;
 	// the wrapper's recursive retry opts out via the noRefreshKey context
 	// marker injected by withNoRefresh.
@@ -103,6 +112,9 @@ func (w *Wrapper) Do(ctx context.Context, req Request) (*http.Response, error) {
 
 	var body io.Reader
 	switch {
+	case req.RawBody != nil:
+		body = bytes.NewReader(req.RawBody)
+		// Caller supplies Content-Type via ExtraHeaders.
 	case req.JSONBody != nil:
 		buf, err := json.Marshal(req.JSONBody)
 		if err != nil {
@@ -272,4 +284,13 @@ func (w *Wrapper) injectInitialCookies(rawURL string) {
 		})
 	}
 	w.httpClient.Jar.SetCookies(u, cs)
+}
+
+// boolToInt returns 1 for true, 0 for false. Used by the mutual-exclusion
+// guard in Do to check at most one body-kind field is set.
+func boolToInt(b bool) int {
+	if b {
+		return 1
+	}
+	return 0
 }

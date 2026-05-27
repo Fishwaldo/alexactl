@@ -1,0 +1,23 @@
+# setEndpointFeaturesV2 — same effect as setEndpointFeatures but takes
+# string-based feature and operation names instead of typed enums.
+# Backs Device.SendDirective(...) for interfaces we don't expose via
+# typed control accessors.
+mutation setEndpointFeaturesV2($input: SetGenericEndpointFeaturesInput!) {
+  setEndpointFeaturesV2(input: $input) {
+    featureControlResponses {
+      endpointId
+      featureName
+      featureOperationName
+      instance
+      code
+    }
+    errors {
+      endpointId
+      featureName
+      featureOperationName
+      instance
+      code
+      message
+    }
+  }
+}

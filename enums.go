@@ -48,3 +48,54 @@ type MediaCommand string
 //   PushMatterDeviceFound="MATTER_SETUP_NOTIFICATION"
 // )
 type PushMessageType string
+
+//go:generate go tool go-enum -f $GOFILE --marshal --names --values --nocase --noprefix
+//
+// ENUM(
+//   KindEcho="echo",
+//   KindLight="light",
+//   KindSwitch="switch",
+//   KindDimmer="dimmer",
+//   KindThermostat="thermostat",
+//   KindLock="lock",
+//   KindCamera="camera",
+//   KindContact="contact_sensor",
+//   KindMotion="motion_sensor",
+//   KindAQM="air_quality_monitor",
+//   KindSensor="sensor",
+//   KindAirPurifier="air_purifier",
+//   KindSecurityPanel="security_panel",
+//   KindScene="scene",
+//   KindOther="other"
+// )
+type Kind string
+
+//go:generate go tool go-enum -f $GOFILE --marshal --names --values --nocase --noprefix
+//
+// ENUM(
+//   TemperatureScaleCelsius="CELSIUS",
+//   TemperatureScaleFahrenheit="FAHRENHEIT",
+//   TemperatureScaleKelvin="KELVIN"
+// )
+type TemperatureScale string
+
+//go:generate go tool go-enum -f $GOFILE --marshal --names --values --nocase --noprefix
+//
+// ENUM(
+//   ThermostatModeHeat="HEAT",
+//   ThermostatModeCool="COOL",
+//   ThermostatModeAuto="AUTO",
+//   ThermostatModeOff="OFF",
+//   ThermostatModeEco="ECO",
+//   ThermostatModeEmHeat="EM_HEAT"
+// )
+type ThermostatMode string
+
+//go:generate go tool go-enum -f $GOFILE --marshal --names --values --nocase --noprefix
+//
+// ENUM(
+//   LockStateLocked="LOCKED",
+//   LockStateUnlocked="UNLOCKED",
+//   LockStateJammed="JAMMED"
+// )
+type LockState string

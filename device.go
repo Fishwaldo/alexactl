@@ -26,6 +26,44 @@ type Device struct {
 	Notifications          map[string]*Schedule     // populated in Phase 2
 	NotificationsSupported bool
 	MediaPlayerSupported   bool
+
+	// Phase 4a additions — classify and describe smart-home endpoints.
+	//
+	// Kind is the canonical device-class (KindLight, KindThermostat, …).
+	// Derived from DisplayCategories.primary via amzconst.DisplayCategoryToKind
+	// for non-Echo endpoints; Echos are tagged KindEcho regardless of the
+	// GraphQL-reported DisplayCategory.
+	Kind Kind
+
+	// DisplayCategories carries every Alexa DisplayCategory reported for
+	// this endpoint (e.g. ["THERMOSTAT", "AIR_CONDITIONER",
+	// "TEMPERATURE_SENSOR"] for an AC unit). Useful for UI consumers that
+	// want to render composite-device hints. Empty for Echos that aren't
+	// surfaced via the GraphQL endpoint graph.
+	DisplayCategories []string
+
+	// AlexaInterfaces lists the Alexa capability interfaces Amazon
+	// advertises for this endpoint (e.g. "Alexa.PowerController",
+	// "Alexa.BrightnessController"). Sourced from
+	// AlexaEnabledMetadata.capabilities; empty when the endpoint isn't
+	// ALEXA_VOICE_ENABLED.
+	AlexaInterfaces []string
+
+	// Operations lists the operation names Amazon's directive system
+	// accepts for this endpoint (e.g. ["turnOn", "turnOff",
+	// "setBrightness"]). The schema-level manifest of what the
+	// setEndpointFeatures mutation would accept. Phase 4a populates this
+	// from Endpoint.operations; Phase 4b uses it to drive typed control
+	// surfaces.
+	Operations []string
+
+	// controller is the back-reference to the per-Client smartHomeClient
+	// that backs the typed control accessors (Power(), Brightness(), …).
+	// Set by DevicesService when a device is added to the cache; nil for
+	// devices that were never registered through a Client (e.g. tests
+	// that build a *Device by hand can leave it nil — accessors then
+	// return nil for safety).
+	controller *smartHomeClient
 }
 
 // HasCapability reports whether the device advertises the given capability.
@@ -52,6 +90,21 @@ type DeviceSensor struct {
 	ErrorType string
 	ErrorMsg  string
 	Scale     string
+
+	// Phase 4a additions — surface the feature's action space.
+	//
+	// Configuration carries the typed Feature.configuration values
+	// (e.g. ThermostatConfiguration.supportedModes). Map keys are
+	// configuration-variant-specific; common keys are documented per
+	// feature. Empty when the feature has no Configuration or we don't
+	// extract it.
+	Configuration map[string]any
+
+	// Operations lists the feature-level operation names the directive
+	// system accepts for this sensor's feature (e.g. ["setBrightness",
+	// "adjustBrightness"] for a brightness sensor). Empty when the
+	// feature exposes no operations.
+	Operations []string
 }
 
 // Schedule is a single timer/alarm/reminder occurrence. Populated by

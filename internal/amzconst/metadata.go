@@ -69,6 +69,65 @@ var Sensors = map[string]SensorTemplate{
 		Subkey: "value",
 		Scale:  "",
 	},
+
+	// Phase 4a additions — smart-home property types.
+	"power": {
+		Name:   "powerState",
+		Key:    "powerStateValue",
+		Subkey: "",
+		Scale:  "",
+	},
+	"brightness": {
+		Name:   "brightness",
+		Key:    "brightnessStateValue",
+		Subkey: "",
+		Scale:  "",
+	},
+	"color": {
+		Name:   "color",
+		Key:    "colorStateValue",
+		Subkey: "", // colorStateValue is itself a typed struct; buildSensor extracts {hue,saturation,brightness}
+		Scale:  "",
+	},
+	"colorTemperature": {
+		Name:   "colorTemperature",
+		Key:    "colorTemperatureInKelvinStateValue",
+		Subkey: "",
+		Scale:  "K", // kelvin — fixed unit
+	},
+	"lock": {
+		Name:   "lockState",
+		Key:    "lockState",
+		Subkey: "",
+		Scale:  "",
+	},
+	"thermostat": {
+		// Thermostat features carry TWO property kinds — ThermostatMode
+		// and Setpoint — distinguished only by the property's __typename.
+		// SensorTemplate cannot express "two properties per feature";
+		// buildSensor type-switches on the property concrete type to
+		// produce two separate sensor entries with different Names.
+		Name: "thermostat",
+	},
+	// Generic Alexa.ModeController state. The actual user-facing key
+	// is rewritten in buildSensor based on feature.instance (canonical
+	// "Apparatus.FanSpeed" → "fanSpeed", unknown → "mode:<instance>").
+	"mode": {
+		Name:   "mode",
+		Key:    "modeValue",
+		Subkey: "value",
+		Scale:  "",
+	},
+	// Generic Alexa.ToggleController state. The user-facing key is
+	// rewritten in buildSensor as "toggle:<instance>" — no canonical
+	// instance table yet because skill instances vary widely
+	// (ChildLock / Ionizer / Swing / ...).
+	"toggle": {
+		Name:   "toggleState",
+		Key:    "toggleStateValue",
+		Subkey: "",
+		Scale:  "",
+	},
 }
 
 // AQMRangeSensor describes one Air Quality Monitor sub-sensor surfaced
@@ -90,4 +149,37 @@ var AQMRangeSensors = map[string]AQMRangeSensor{
 	"7": {Name: "PM10", Scale: "MicroGramsPerCubicMeter"},
 	"8": {Name: "CO", Scale: "ppm"},
 	"9": {Name: "Air Quality", Scale: ""},
+}
+
+// RangeInstanceSensor describes one canonical Range-feature instance
+// — distinct from AQMRangeSensors because these aren't AQM-specific.
+// Maps feature.instance (e.g. "Apparatus.Humidity") to the canonical
+// sensor name (e.g. "humidity") and a fixed scale string.
+type RangeInstanceSensor struct {
+	Name  string
+	Scale string
+}
+
+// RangeInstances is the canonical lookup for non-AQM Range-feature
+// instances. Devices like ACs report humidity, fan speed, and other
+// generic "range" readings under stable instance names; we surface them
+// with the canonical sensor names below. Unknown instances fall through
+// to a generic key in sensors.go.
+var RangeInstances = map[string]RangeInstanceSensor{
+	"Apparatus.Humidity": {Name: "humidity", Scale: "%"},
+}
+
+// ModeInstanceSensor describes one canonical Mode-feature instance.
+// Mode-feature properties are normally strings (typed via
+// thermostatModeValue, fanModeValue, etc.); these mappings only
+// affect the sensor key + scale on the produced DeviceSensor.
+type ModeInstanceSensor struct {
+	Name  string
+	Scale string
+}
+
+// ModeInstances is the canonical lookup for Mode-feature instances.
+var ModeInstances = map[string]ModeInstanceSensor{
+	"Apparatus.FanSpeed":     {Name: "fanSpeed", Scale: ""},
+	"Apparatus.FanDirection": {Name: "fanDirection", Scale: ""},
 }

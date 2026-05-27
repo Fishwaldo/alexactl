@@ -23,3 +23,17 @@ func TestDevice_IsCluster(t *testing.T) {
 	empty := &Device{}
 	assert.False(t, empty.IsCluster())
 }
+
+func TestDevice_NewFieldsZeroValuedByDefault(t *testing.T) {
+	d := &Device{}
+	assert.Empty(t, d.Kind, "Kind defaults to zero value")
+	assert.Nil(t, d.DisplayCategories, "DisplayCategories nil by default")
+	assert.Nil(t, d.AlexaInterfaces, "AlexaInterfaces nil by default")
+	assert.Nil(t, d.Operations, "Operations nil by default")
+}
+
+func TestDeviceSensor_NewFieldsZeroValuedByDefault(t *testing.T) {
+	s := &DeviceSensor{}
+	assert.Nil(t, s.Configuration, "Configuration nil by default")
+	assert.Nil(t, s.Operations, "Operations nil by default")
+}

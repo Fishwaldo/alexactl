@@ -36,6 +36,11 @@ type DevicesService struct {
 	// service is constructed bare in tests. Failures from the hook are
 	// logged at WARN level and do NOT fail the refresh.
 	sensorsHook func(ctx context.Context, devices map[string]*Device, endpoints map[string]string) error
+
+	// smartHome is the per-Client write helper; non-nil after NewClient
+	// runs. Devices added to the cache get this back-reference so their
+	// typed control accessors can find it.
+	smartHome *smartHomeClient
 }
 
 // RefreshOption tunes DevicesService.Refresh behavior. Returned by
@@ -160,6 +165,7 @@ func (s *DevicesService) fetchBase(ctx context.Context, sitePrefix string) (map[
 			Notifications:          map[string]*Schedule{},
 			NotificationsSupported: sliceContains(caps, "REMINDERS") || sliceContains(caps, "TIMERS_AND_ALARMS"),
 			MediaPlayerSupported:   sliceContains(caps, "AUDIO_PLAYER"),
+			controller:             s.smartHome,
 		}
 		out[serial] = d
 		serialToType[serial] = dt

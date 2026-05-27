@@ -22,6 +22,7 @@ var (
 	sessionFile  string
 	siteFlag     string
 	debugFlag    bool
+	detailFlag   bool
 )
 
 // signalContext returns a context that's canceled on SIGINT / SIGTERM.
@@ -80,6 +81,8 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&sessionFile, "session-file", "session.json", "path to saved session")
 	rootCmd.PersistentFlags().StringVar(&siteFlag, "site", "https://www.amazon.com", "Amazon site URL")
 	rootCmd.PersistentFlags().BoolVar(&debugFlag, "debug", false, "enable debug-level logging (default is info)")
+	rootCmd.PersistentFlags().BoolVar(&detailFlag, "detail", false,
+		"include extra per-item detail in read-only commands (Configuration / supported modes / presets / interfaces / categories)")
 }
 
 // Execute is the cobra entry point.

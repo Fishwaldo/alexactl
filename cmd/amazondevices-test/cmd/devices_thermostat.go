@@ -1,0 +1,141 @@
+package cmd
+
+import (
+	"fmt"
+	"strconv"
+	"strings"
+
+	"github.com/spf13/cobra"
+
+	amazondevices "github.com/Fishwaldo/goamazondevices"
+)
+
+var devicesThermostatCmd = &cobra.Command{
+	Use:   "thermostat <serial> <subcommand>",
+	Short: "Control a thermostat device (set-target | set-mode)",
+	Long: `Parent command for thermostat directives. Run with a subcommand
+('set-target' or 'set-mode'). See the subcommand --help for details.`,
+}
+
+var devicesThermostatSetTargetCmd = &cobra.Command{
+	Use:   "set-target <serial> <value> [c|f]",
+	Short: "Set a thermostat's target setpoint",
+	Long: `Issues a setTargetSetpoint directive. Scale defaults to celsius
+('c'); pass 'f' for fahrenheit. Amazon rejects values outside the
+device's supported range with INVALID_VALUE.
+
+Example:
+  amazondevices-test devices thermostat set-target AB1234567890 21.5 c
+  amazondevices-test devices thermostat set-target AB1234567890 72 f`,
+	Args: cobra.RangeArgs(2, 3),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		ctx, cancel := signalContext()
+		defer cancel()
+
+		value, err := strconv.ParseFloat(args[1], 64)
+		if err != nil {
+			return fmt.Errorf("invalid value %q: %w", args[1], err)
+		}
+		scale := amazondevices.TemperatureScaleCelsius
+		if len(args) == 3 {
+			scale, err = parseScaleArg(args[2])
+			if err != nil {
+				return err
+			}
+		}
+
+		client, sess, err := newClient(true)
+		if err != nil {
+			return err
+		}
+		if sess == nil {
+			return fmt.Errorf("no saved session at %s — run `login` first", sessionFilePath())
+		}
+		if _, err := client.Auth.Restore(ctx); err != nil {
+			return err
+		}
+		if err := client.Devices.Refresh(ctx); err != nil {
+			return err
+		}
+
+		d, err := client.Devices.Get(ctx, args[0])
+		if err != nil {
+			return err
+		}
+		th := d.Thermostat()
+		if th == nil {
+			return fmt.Errorf("device %q does not expose Alexa.ThermostatController", d.SerialNumber)
+		}
+		return th.SetTarget(ctx, value, scale)
+	},
+}
+
+var devicesThermostatSetModeCmd = &cobra.Command{
+	Use:   "set-mode <serial> <heat|cool|auto|off|eco|em_heat>",
+	Short: "Set a thermostat's operating mode",
+	Long: `Issues a setThermostatMode directive. Mode is case-insensitive.
+Per-device support varies — query the device's
+Sensors["thermostatMode"].Configuration["supportedModes"] (via
+'devices inspect') to confirm what each device accepts before
+calling.
+
+Examples:
+  amazondevices-test devices thermostat set-mode AB1234567890 cool
+  amazondevices-test devices thermostat set-mode AB1234567890 heat`,
+	Args: cobra.ExactArgs(2),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		ctx, cancel := signalContext()
+		defer cancel()
+
+		mode, err := amazondevices.ParseThermostatMode(args[1])
+		if err != nil {
+			return fmt.Errorf("invalid mode %q: %w", args[1], err)
+		}
+
+		client, sess, err := newClient(true)
+		if err != nil {
+			return err
+		}
+		if sess == nil {
+			return fmt.Errorf("no saved session at %s — run `login` first", sessionFilePath())
+		}
+		if _, err := client.Auth.Restore(ctx); err != nil {
+			return err
+		}
+		if err := client.Devices.Refresh(ctx); err != nil {
+			return err
+		}
+
+		d, err := client.Devices.Get(ctx, args[0])
+		if err != nil {
+			return err
+		}
+		th := d.Thermostat()
+		if th == nil {
+			return fmt.Errorf("device %q does not expose Alexa.ThermostatController", d.SerialNumber)
+		}
+		return th.SetMode(ctx, mode)
+	},
+}
+
+// parseScaleArg accepts 'c' / 'C' / 'celsius' or 'f' / 'F' /
+// 'fahrenheit'. Returns TemperatureScaleCelsius by default; errors on
+// anything else.
+func parseScaleArg(s string) (amazondevices.TemperatureScale, error) {
+	switch strings.ToLower(s) {
+	case "c", "celsius":
+		return amazondevices.TemperatureScaleCelsius, nil
+	case "f", "fahrenheit":
+		return amazondevices.TemperatureScaleFahrenheit, nil
+	case "k", "kelvin":
+		return amazondevices.TemperatureScaleKelvin, nil
+	default:
+		return "", fmt.Errorf("invalid scale %q: want c|f|k", s)
+	}
+}
+
+func init() {
+	devicesThermostatCmd.AddCommand(devicesThermostatSetTargetCmd)
+	devicesThermostatCmd.AddCommand(devicesThermostatSetModeCmd)
+	devicesCmd.AddCommand(devicesThermostatCmd)
+}
