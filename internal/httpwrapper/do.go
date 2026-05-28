@@ -48,7 +48,10 @@ type Request struct {
 	// Form is sent as application/x-www-form-urlencoded.
 	Form map[string]string
 
-	// ExtraHeaders are appended on top of the defaults.
+	// ExtraHeaders override the defaults on a per-key basis. Setting a
+	// key here replaces any default value the wrapper would otherwise
+	// emit for that key (e.g. User-Agent), avoiding duplicate header
+	// lines.
 	ExtraHeaders http.Header
 }
 
@@ -131,10 +134,12 @@ func (w *Wrapper) Do(ctx context.Context, req Request) (*http.Response, error) {
 		headers.Set("Content-Type", "application/x-www-form-urlencoded")
 	}
 
+	// ExtraHeaders override the defaults — per-key replacement, not append.
+	// Using Add here would leave duplicate header lines (e.g. two User-Agent
+	// values), and net/http surfaces only the first to handlers, defeating
+	// the override intent.
 	for k, vs := range req.ExtraHeaders {
-		for _, v := range vs {
-			headers.Add(k, v)
-		}
+		headers[http.CanonicalHeaderKey(k)] = append([]string(nil), vs...)
 	}
 
 	logger := w.Logger(ctx)

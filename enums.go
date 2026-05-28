@@ -99,3 +99,11 @@ type ThermostatMode string
 //   LockStateJammed="JAMMED"
 // )
 type LockState string
+
+//go:generate go tool go-enum -f $GOFILE --marshal --names --values --nocase --noprefix
+//
+// ENUM(
+//   ListTypeShopping="SHOPPING_LIST",
+//   ListTypeCustom="LIST"
+// )
+type ListType string

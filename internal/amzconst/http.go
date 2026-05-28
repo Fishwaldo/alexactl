@@ -72,6 +72,21 @@ const (
 	URIBehaviorsPreview = "/api/behaviors/preview"
 )
 
+// URI paths on the www.amazon.<domain> host. These hit Amazon's legacy
+// shopping-list backend, which is separate from the alexa.amazon.<tld>
+// service host used by every other URI constant above. Used by the
+// ListsService (Phase 5).
+//
+// Endpoint stability: the /alexashoppinglists/api/ surface is
+// undocumented and could be deprecated by Amazon at any time. See
+// the Lists service GoDoc for the user-facing warning.
+const (
+	URIListsGetItems   = "/alexashoppinglists/api/getlistitems"
+	URIListsAddItem    = "/alexashoppinglists/api/addlistitem"
+	URIListsUpdateItem = "/alexashoppinglists/api/updatelistitem"
+	URIListsDeleteItem = "/alexashoppinglists/api/deletelistitem"
+)
+
 // HTTP/2 AVS gateway template (formatted with the home region).
 const (
 	HTTP2SiteTemplate      = "https://alexa.{region}.gateway.devices.a2z.com"

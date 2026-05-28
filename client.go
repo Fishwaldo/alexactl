@@ -24,6 +24,7 @@ type Client struct {
 	Notifications *NotificationsService
 	History       *HistoryService
 	Push          *PushService
+	Lists         *ListsService
 }
 
 // NewClient constructs a Client. It performs no I/O.
@@ -65,6 +66,7 @@ func NewClient(opts ...Option) (*Client, error) {
 		Sensors:       &SensorsService{wrapper: wr},
 		Notifications: &NotificationsService{wrapper: wr},
 		History:       &HistoryService{wrapper: wr},
+		Lists:         &ListsService{wrapper: wr},
 	}
 	// Phase 4b: smart-home write client. Same wrapper as Devices so
 	// auth refresh / retry / scrub carry over. Back-referenced on
@@ -82,7 +84,7 @@ func NewClient(opts ...Option) (*Client, error) {
 		return c.Media.DeviceVolumes(ctx)
 	}
 	c.Auth.consumers = []sessionConsumer{
-		c.Devices, c.Media, c.Sequence, c.DnD, c.Sensors, c.Notifications, c.History, c.Push,
+		c.Devices, c.Media, c.Sequence, c.DnD, c.Sensors, c.Notifications, c.History, c.Push, c.Lists,
 	}
 	c.Media.sequence = c.Sequence
 

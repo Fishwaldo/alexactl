@@ -157,6 +157,89 @@ func (x *Kind) AppendText(b []byte) ([]byte, error) {
 }
 
 const (
+	// ListTypeShopping is a ListType of type ListTypeShopping.
+	ListTypeShopping ListType = "SHOPPING_LIST"
+	// ListTypeCustom is a ListType of type ListTypeCustom.
+	ListTypeCustom ListType = "LIST"
+)
+
+var ErrInvalidListType = fmt.Errorf("not a valid ListType, try [%s]", strings.Join(_ListTypeNames, ", "))
+
+var _ListTypeNames = []string{
+	string(ListTypeShopping),
+	string(ListTypeCustom),
+}
+
+// ListTypeNames returns a list of possible string values of ListType.
+func ListTypeNames() []string {
+	tmp := make([]string, len(_ListTypeNames))
+	copy(tmp, _ListTypeNames)
+	return tmp
+}
+
+// ListTypeValues returns a list of the values for ListType
+func ListTypeValues() []ListType {
+	return []ListType{
+		ListTypeShopping,
+		ListTypeCustom,
+	}
+}
+
+// String implements the Stringer interface.
+func (x ListType) String() string {
+	return string(x)
+}
+
+// IsValid provides a quick way to determine if the typed value is
+// part of the allowed enumerated values
+func (x ListType) IsValid() bool {
+	_, err := ParseListType(string(x))
+	return err == nil
+}
+
+var _ListTypeValue = map[string]ListType{
+	"SHOPPING_LIST": ListTypeShopping,
+	"shopping_list": ListTypeShopping,
+	"LIST":          ListTypeCustom,
+	"list":          ListTypeCustom,
+}
+
+// ParseListType attempts to convert a string to a ListType.
+func ParseListType(name string) (ListType, error) {
+	if x, ok := _ListTypeValue[name]; ok {
+		return x, nil
+	}
+	// Case insensitive parse, do a separate lookup to prevent unnecessary cost of lowercasing a string if we don't need to.
+	if x, ok := _ListTypeValue[strings.ToLower(name)]; ok {
+		return x, nil
+	}
+	return ListType(""), fmt.Errorf("%s is %w", name, ErrInvalidListType)
+}
+
+// MarshalText implements the text marshaller method.
+func (x ListType) MarshalText() ([]byte, error) {
+	return []byte(string(x)), nil
+}
+
+// UnmarshalText implements the text unmarshaller method.
+func (x *ListType) UnmarshalText(text []byte) error {
+	tmp, err := ParseListType(string(text))
+	if err != nil {
+		return err
+	}
+	*x = tmp
+	return nil
+}
+
+// AppendText appends the textual representation of itself to the end of b
+// (allocating a larger slice if necessary) and returns the updated slice.
+//
+// Implementations must not retain b, nor mutate any bytes within b[:len(b)].
+func (x *ListType) AppendText(b []byte) ([]byte, error) {
+	return append(b, x.String()...), nil
+}
+
+const (
 	// LockStateLocked is a LockState of type LockStateLocked.
 	LockStateLocked LockState = "LOCKED"
 	// LockStateUnlocked is a LockState of type LockStateUnlocked.

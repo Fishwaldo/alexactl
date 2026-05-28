@@ -1,0 +1,87 @@
+{
+  "YW16bjEuYWNjb3VudC5URVNULVNIT1BQSU5H-SHOPPING_ITEM": {
+    "listInfo": {
+      "listId": "YW16bjEuYWNjb3VudC5URVNULVNIT1BQSU5H-SHOPPING_ITEM",
+      "listName": "",
+      "defaultList": true,
+      "listType": "SHOPPING_LIST",
+      "createAt": 1736928600000,
+      "updateAt": 1779000000000,
+      "version": 42,
+      "customerId": "S-CUSTOMER"
+    },
+    "listItems": [
+      {
+        "id": "item-shopping-1",
+        "value": "milk",
+        "categoryValue": "Dairy",
+        "completed": false,
+        "encryptedValue": "ENCRYPTED-MILK",
+        "version": 3,
+        "customerId": "S-CUSTOMER",
+        "createdDateTime": 1779000000000,
+        "updatedDateTime": 1779000000000,
+        "listItemMetadata": [
+          {
+            "categorizationProvider": "AMAZON_CATEGORIZATION_PROVIDER",
+            "categorizationConfidence": "HIGH"
+          }
+        ]
+      },
+      {
+        "id": "item-shopping-2",
+        "value": "bread",
+        "categoryValue": "Baking & Cooking",
+        "completed": true,
+        "encryptedValue": "ENCRYPTED-BREAD",
+        "version": 5,
+        "customerId": "S-CUSTOMER",
+        "createdDateTime": 1778900000000,
+        "updatedDateTime": 1778950000000,
+        "listItemMetadata": [
+          {
+            "categorizationProvider": "AMAZON_CATEGORIZATION_PROVIDER"
+          }
+        ]
+      }
+    ]
+  },
+  "017fa5ec-cadc-4c1c-81c1-1b241cc56992": {
+    "listInfo": {
+      "listId": "017fa5ec-cadc-4c1c-81c1-1b241cc56992",
+      "listName": "house to-do",
+      "defaultList": false,
+      "listType": "LIST",
+      "createAt": 1558784108836,
+      "updateAt": 1558784108836,
+      "version": 7,
+      "customerId": "S-CUSTOMER"
+    },
+    "listItems": [
+      {
+        "id": "item-todo-1",
+        "value": "fix the door",
+        "categoryValue": "Other",
+        "completed": false,
+        "encryptedValue": "ENCRYPTED-DOOR",
+        "version": 1,
+        "customerId": "S-CUSTOMER",
+        "createdDateTime": 1778800000000,
+        "updatedDateTime": 1778800000000,
+        "listItemMetadata": []
+      },
+      {
+        "id": "item-todo-2",
+        "value": "buy paint",
+        "categoryValue": "Other",
+        "completed": true,
+        "encryptedValue": "ENCRYPTED-PAINT",
+        "version": 2,
+        "customerId": "S-CUSTOMER",
+        "createdDateTime": 1778700000000,
+        "updatedDateTime": 1778750000000,
+        "listItemMetadata": []
+      }
+    ]
+  }
+}

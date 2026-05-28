@@ -56,6 +56,16 @@ var (
 	//	    // expected — Range write surface is HAR-capture-gated
 	//	}
 	ErrControllerNotImplemented = errors.New("amazondevices: typed controller not yet wired — HAR capture needed")
+
+	// ErrListItemNotFound is returned by *List write methods (Complete,
+	// Uncomplete, Delete, Rename) when the passed *ListItem is nil or
+	// belongs to a different *List than the receiver. Distinct from
+	// transport-level 4xx errors so callers can branch on it directly:
+	//
+	//	if errors.Is(err, ErrListItemNotFound) {
+	//	    // we passed the wrong item to the wrong list; reload and retry
+	//	}
+	ErrListItemNotFound = errors.New("amazondevices: list item not found")
 )
 
 // APIError carries HTTP-level detail about a failed request. Its Unwrap
