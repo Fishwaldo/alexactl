@@ -48,6 +48,13 @@ type Wrapper struct {
 	userAgent string
 	version   string
 
+	// Retry tunables. Zero values fall back to the package-level constants
+	// (retryMaxAttempts, retryWaitMin, retryWaitMax). Tests may override
+	// via Config to avoid slow backoff delays on error-path tests.
+	retryMax     int
+	retryWaitMin time.Duration
+	retryWaitMax time.Duration
+
 	// Transparent 401-refresh state. refreshFn is injected by the
 	// AuthService; when non-nil, Do will transparently refresh on a 401
 	// and retry the original request once. refreshMu serializes concurrent
@@ -148,6 +155,14 @@ type Config struct {
 	UserAgent  string       // optional override
 	Version    string       // version string emitted in x-amzn-build-version
 	RandReader io.Reader    // optional; used for initial cookies (tests inject)
+
+	// RetryMax, RetryWaitMin, RetryWaitMax are test-only escape hatches
+	// that override the package-level retry constants. Zero values mean
+	// "use the package default". Set RetryMax to -1 to disable retries
+	// entirely (one attempt only). Production code leaves these unset.
+	RetryMax     int
+	RetryWaitMin time.Duration
+	RetryWaitMax time.Duration
 }
 
 // New constructs a Wrapper with the given config. Performs no I/O.
@@ -171,10 +186,13 @@ func New(cfg Config) (*Wrapper, error) {
 	cfg.Logger = slog.New(scrub.Handler(cfg.Logger.Handler()))
 
 	w := &Wrapper{
-		httpClient: cfg.HTTPClient,
-		logger:     cfg.Logger,
-		userAgent:  cfg.UserAgent,
-		version:    cfg.Version,
+		httpClient:   cfg.HTTPClient,
+		logger:       cfg.Logger,
+		userAgent:    cfg.UserAgent,
+		version:      cfg.Version,
+		retryMax:     cfg.RetryMax,
+		retryWaitMin: cfg.RetryWaitMin,
+		retryWaitMax: cfg.RetryWaitMax,
 	}
 	if err := w.SetSite(cfg.Site); err != nil {
 		return nil, err

@@ -3,28 +3,17 @@ package amazondevices
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"os"
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
-
-func TestMedia_Sounds_ReturnsCopy(t *testing.T) {
-	ms, _ := newMediaTest(t, func(_ http.ResponseWriter, _ *http.Request) {
-		t.Fatal("must not call HTTP for list-only query")
-	})
-	a := ms.Sounds()
-	require.NotEmpty(t, a)
-	assert.Contains(t, a, "amzn_sfx_doorbell_01")
-	// Mutating the returned map must not affect the next call.
-	a["amzn_sfx_doorbell_01"] = "MUTATED"
-	b := ms.Sounds()
-	assert.Equal(t, "Doorbell 1", b["amzn_sfx_doorbell_01"])
-}
 
 func TestMedia_InfoSkills_ReturnsCopy(t *testing.T) {
 	ms, _ := newMediaTest(t, func(_ http.ResponseWriter, _ *http.Request) {
@@ -44,6 +33,8 @@ func TestMedia_PlaySound_PerClusterFanout(t *testing.T) {
 		require.NoError(t, json.NewDecoder(r.Body).Decode(&posted))
 		_, _ = w.Write([]byte(`{"ok":true}`))
 	})
+	ms.validateSoundFn = func(_ context.Context, _ string) error { return nil }
+
 	dev := &Device{
 		SerialNumber: "S-MAIN", DeviceType: "T-MAIN",
 		ClusterMembers: map[string]string{"S-LEFT": "T-PAIR", "S-RIGHT": "T-PAIR"},
@@ -51,7 +42,6 @@ func TestMedia_PlaySound_PerClusterFanout(t *testing.T) {
 	require.NoError(t, ms.PlaySound(context.Background(), dev, "alexa_sfx_bell"))
 	seqJSON, _ := posted["sequenceJson"].(string)
 	assert.Contains(t, seqJSON, `"soundStringId":"alexa_sfx_bell"`)
-	// Two members, identical op => ParallelNode wrap.
 	assert.Contains(t, seqJSON, "ParallelNode")
 }
 
@@ -226,4 +216,44 @@ func TestMedia_InfoSkill_UnknownRejected(t *testing.T) {
 	dev := &Device{SerialNumber: "S", DeviceType: "T"}
 	err := ms.InfoSkill(context.Background(), dev, "Alexa.NotARealInfoSkill")
 	require.Error(t, err)
+}
+
+func TestMedia_PlaySound_RejectsUnknownSound(t *testing.T) {
+	ms, _ := newMediaTest(t, func(_ http.ResponseWriter, _ *http.Request) {
+		t.Fatal("must not reach the server for an unknown sound")
+	})
+	ms.validateSoundFn = func(_ context.Context, soundID string) error {
+		return fmt.Errorf("amazondevices: sound %q not available", soundID)
+	}
+
+	dev := &Device{SerialNumber: "S", DeviceType: "T",
+		ClusterMembers: map[string]string{"S": "T"}}
+	err := ms.PlaySound(context.Background(), dev, "ghost_sound")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), `sound "ghost_sound" not available`)
+}
+
+func TestMedia_PlaySound_AcceptsCatalogSound(t *testing.T) {
+	body, err := os.ReadFile("testdata/media/sounds.json")
+	require.NoError(t, err)
+
+	var posted map[string]any
+	ms, _ := newMediaTest(t, func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case strings.Contains(r.URL.Path, "/api/behaviors/entities"):
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write(body)
+		default:
+			require.NoError(t, json.NewDecoder(r.Body).Decode(&posted))
+			_, _ = w.Write([]byte(`{"ok":true}`))
+		}
+	})
+	ms.soundsTTL = time.Hour
+
+	dev := &Device{SerialNumber: "S", DeviceType: "T",
+		ClusterMembers: map[string]string{"S": "T"}}
+	require.NoError(t,
+		ms.PlaySound(context.Background(), dev, "amzn_sfx_doorbell_01"))
+	seqJSON, _ := posted["sequenceJson"].(string)
+	assert.Contains(t, seqJSON, `"soundStringId":"amzn_sfx_doorbell_01"`)
 }

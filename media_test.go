@@ -27,6 +27,9 @@ func newMediaTest(t *testing.T, handler http.HandlerFunc) (*MediaService, *httpt
 		HTTPClient: hc,
 		Site:       srv.URL,
 		RandReader: bytes.NewReader(bytes.Repeat([]byte{0x42}, 1024)),
+		// Disable retries in tests so error-path tests (5xx, 4xx) return
+		// immediately without burning through the production backoff budget.
+		RetryMax: -1,
 	})
 	require.NoError(t, err)
 	sess := &Session{AccountCustomerID: "OWNER", Domain: "com"}

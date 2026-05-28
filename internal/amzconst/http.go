@@ -66,6 +66,7 @@ const (
 	URIMediaControl     = "/api/np/command"
 	URIMediaState       = "/api/np/list-media-sessions"
 	URIMusicProviders   = "/api/behaviors/entities?skillId=amzn1.ask.1p.music"
+	URISounds           = "/api/behaviors/entities?skillId=amzn1.ask.1p.sound"
 	URINexusGraphQL     = "/nexus/v1/graphql"
 	URISchedules        = "/api/notifications"
 	URISignin           = "/ap/signin"

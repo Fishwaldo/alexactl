@@ -42,3 +42,13 @@ type MusicProvider struct {
 	Availability    string
 	DefaultProvider bool
 }
+
+// Sound is a single Alexa sound effect from the routine sound catalogue.
+// Returned by MediaService.Sounds(ctx). Only entries with availability
+// "AVAILABLE" on the wire are surfaced.
+type Sound struct {
+	ID                  string // wire id, pass to PlaySound (e.g. "amzn_sfx_doorbell_01")
+	DisplayName         string // localized label (e.g. "Doorbell 1")
+	Category            string // wire category token (e.g. "bell_and_buzzers")
+	CategoryDisplayName string // localized category label (e.g. "Bells & Buzzers")
+}

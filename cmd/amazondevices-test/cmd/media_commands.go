@@ -27,20 +27,31 @@ func newSoundListCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "list",
 		Short: "List available sound effect IDs and labels",
-		RunE: func(_ *cobra.Command, _ []string) error {
-			client, _, err := newClient(false)
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			ctx := cmd.Context()
+			client, sess, err := newClient(true)
 			if err != nil {
 				return err
 			}
-			sounds := client.Media.Sounds()
+			if sess == nil {
+				return fmt.Errorf("no saved session at %s — run `login` first", sessionFilePath())
+			}
+			if _, err := client.Auth.Restore(ctx); err != nil {
+				return err
+			}
+			sounds, err := client.Media.Sounds(ctx)
+			if err != nil {
+				return err
+			}
 			ids := make([]string, 0, len(sounds))
 			for id := range sounds {
 				ids = append(ids, id)
 			}
 			sort.Strings(ids)
-			fmt.Fprintf(os.Stdout, "%-46s  %s\n", "ID", "LABEL")
+			fmt.Fprintf(os.Stdout, "%-46s  %-26s  %s\n", "ID", "CATEGORY", "LABEL")
 			for _, id := range ids {
-				fmt.Fprintf(os.Stdout, "%-46s  %s\n", id, sounds[id])
+				s := sounds[id]
+				fmt.Fprintf(os.Stdout, "%-46s  %-26s  %s\n", id, s.Category, s.DisplayName)
 			}
 			return nil
 		},

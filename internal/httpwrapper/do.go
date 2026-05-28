@@ -163,12 +163,28 @@ func (w *Wrapper) Do(ctx context.Context, req Request) (*http.Response, error) {
 	// remainder of the flow.
 	w.injectInitialCookies(req.URL)
 
+	retMax := w.retryMax
+	switch {
+	case retMax == 0:
+		retMax = retryMaxAttempts
+	case retMax < 0:
+		retMax = 0 // retryablehttp: RetryMax=0 means one attempt, no retries
+	}
+	retWaitMin := w.retryWaitMin
+	if retWaitMin == 0 {
+		retWaitMin = retryWaitMin
+	}
+	retWaitMax := w.retryWaitMax
+	if retWaitMax == 0 {
+		retWaitMax = retryWaitMax
+	}
+
 	rc := retryablehttp.NewClient()
 	rc.HTTPClient = w.httpClient
 	rc.Logger = nil
-	rc.RetryMax = retryMaxAttempts
-	rc.RetryWaitMin = retryWaitMin
-	rc.RetryWaitMax = retryWaitMax
+	rc.RetryMax = retMax
+	rc.RetryWaitMin = retWaitMin
+	rc.RetryWaitMax = retWaitMax
 	rc.CheckRetry = func(_ context.Context, resp *http.Response, err error) (bool, error) {
 		if err != nil {
 			return true, nil
@@ -178,6 +194,13 @@ func (w *Wrapper) Do(ctx context.Context, req Request) (*http.Response, error) {
 		}
 		return false, nil
 	}
+	// PassthroughErrorHandler returns the final response (and its status code)
+	// to the caller instead of discarding it when retries are exhausted.
+	// Without this, a GET that exhausts retries on a 500 returns (nil, error)
+	// and the caller cannot distinguish a transient network failure from a
+	// server-side error — leading to it being wrapped as ErrCannotConnect
+	// rather than APIError{ErrCannotRetrieveData, StatusCode: 500}.
+	rc.ErrorHandler = retryablehttp.PassthroughErrorHandler
 
 	rreq, err := retryablehttp.NewRequestWithContext(ctx, req.Method, req.URL, body)
 	if err != nil {

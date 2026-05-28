@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/Fishwaldo/goamazondevices/internal/amzconst"
 	"github.com/Fishwaldo/goamazondevices/internal/httpwrapper"
@@ -31,14 +32,33 @@ type MediaService struct {
 	// lookup; production leaves nil and PlayMusic calls MusicProviders()
 	// directly. Populated by media_commands_test.go for unit isolation.
 	validateMusicProviderFn func(ctx context.Context, providerID string) error
+
+	// validateSoundFn is a test seam for PlaySound's catalogue check;
+	// production leaves nil and PlaySound calls Sounds() directly.
+	validateSoundFn func(ctx context.Context, soundID string) error
+
+	// Sounds catalogue cache. soundsTTL <= 0 disables caching (every
+	// Sounds call hits the API). The mutex is held during fetch for
+	// single-flight; concurrent callers serialize on it.
+	soundsMu        sync.Mutex
+	soundsCache     map[string]Sound
+	soundsFetchedAt time.Time
+	soundsTTL       time.Duration
 }
 
 // setSession swaps in a fresh *Session pointer. Invoked by AuthService
-// via the broadcast pipeline.
+// via the broadcast pipeline. Also invalidates the sounds catalogue
+// cache so a locale change after account switch refetches localized
+// labels.
 func (s *MediaService) setSession(sess *Session) {
 	s.mu.Lock()
 	s.session = sess
 	s.mu.Unlock()
+
+	s.soundsMu.Lock()
+	s.soundsCache = nil
+	s.soundsFetchedAt = time.Time{}
+	s.soundsMu.Unlock()
 }
 
 // snapshotSession returns the current *Session pointer under the read

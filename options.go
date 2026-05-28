@@ -3,6 +3,7 @@ package amazondevices
 import (
 	"log/slog"
 	"net/http"
+	"time"
 )
 
 // Option configures a Client.
@@ -21,11 +22,13 @@ type config struct {
 	session    *Session
 	site       string
 	userAgent  string
+	soundsTTL  time.Duration // default 1h, set by WithSoundsTTL; 0 disables caching
 }
 
 func defaultConfig() *config {
 	return &config{
-		site: "https://www.amazon.com",
+		site:      "https://www.amazon.com",
+		soundsTTL: time.Hour,
 	}
 }
 
@@ -61,3 +64,9 @@ func WithUserAgent(ua string) Option {
 	return optionFunc(func(cfg *config) { cfg.userAgent = ua })
 }
 
+// WithSoundsTTL overrides the default 1-hour TTL for the per-client
+// sound-catalogue cache (MediaService.Sounds). Zero or negative disables
+// caching — every call hits the API.
+func WithSoundsTTL(d time.Duration) Option {
+	return optionFunc(func(cfg *config) { cfg.soundsTTL = d })
+}

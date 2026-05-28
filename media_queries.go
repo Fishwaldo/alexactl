@@ -182,6 +182,98 @@ func buildMediaState(session map[string]any, capturedAt time.Time) *MediaState {
 	return ms
 }
 
+// Sounds returns the live Alexa sound-effects catalogue keyed by Sound.ID.
+// Cached per MediaService for the configured TTL (default 1h, overridable
+// via WithSoundsTTL). Zero or negative TTL disables caching. Concurrent
+// callers serialize on the cache mutex; the second caller sees the
+// freshly populated cache.
+//
+// The returned map is a defensive copy — mutating it does not affect the
+// cached value.
+func (s *MediaService) Sounds(ctx context.Context) (map[string]Sound, error) {
+	s.soundsMu.Lock()
+	defer s.soundsMu.Unlock()
+
+	if s.soundsTTL > 0 && s.soundsCache != nil &&
+		time.Since(s.soundsFetchedAt) < s.soundsTTL {
+		return copySoundsMap(s.soundsCache), nil
+	}
+
+	fresh, err := s.fetchSounds(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	if s.soundsTTL > 0 {
+		s.soundsCache = fresh
+		s.soundsFetchedAt = time.Now()
+	} else {
+		s.soundsCache = nil
+		s.soundsFetchedAt = time.Time{}
+	}
+	return copySoundsMap(fresh), nil
+}
+
+func copySoundsMap(in map[string]Sound) map[string]Sound {
+	out := make(map[string]Sound, len(in))
+	for k, v := range in {
+		out[k] = v
+	}
+	return out
+}
+
+func (s *MediaService) fetchSounds(ctx context.Context) (map[string]Sound, error) {
+	url := fmt.Sprintf("https://alexa.amazon.%s%s",
+		s.wrapper.Domain(), amzconst.URISounds)
+	resp, err := s.wrapper.Do(ctx, httpwrapper.Request{
+		Method: http.MethodGet,
+		URL:    url,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("%w: %w", ErrCannotConnect, err)
+	}
+	if resp.StatusCode >= 400 {
+		defer resp.Body.Close()
+		return nil, &APIError{
+			Category:   ErrCannotRetrieveData,
+			Method:     http.MethodGet,
+			StatusCode: resp.StatusCode,
+			URL:        url,
+		}
+	}
+	data, err := httpwrapper.DecodeJSON(resp)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %w", ErrCannotRetrieveData, err)
+	}
+
+	out := map[string]Sound{}
+	arr, _ := data[amzconst.ArrayWrapper].([]any)
+	for _, entry := range arr {
+		row, _ := entry.(map[string]any)
+		if row == nil {
+			continue
+		}
+		if avail, _ := row["availability"].(string); avail != "AVAILABLE" {
+			continue
+		}
+		id, _ := row["id"].(string)
+		name, _ := row["displayName"].(string)
+		if id == "" || name == "" {
+			continue
+		}
+		pd, _ := row["providerData"].(map[string]any)
+		cat, _ := pd["categoryType"].(string)
+		catName, _ := pd["categoryDisplayName"].(string)
+		out[id] = Sound{
+			ID:                  id,
+			DisplayName:         name,
+			Category:            cat,
+			CategoryDisplayName: catName,
+		}
+	}
+	return out, nil
+}
+
 // MusicProviders returns the available music providers. Filters to
 // those whose supportedProperties include Alexa.Music.PlaySearchPhrase
 // AND whose availability is "AVAILABLE". DefaultProvider tracks the

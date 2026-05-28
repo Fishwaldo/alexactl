@@ -62,7 +62,7 @@ func NewClient(opts ...Option) (*Client, error) {
 		wrapper:       wr,
 		Auth:          &AuthService{wrapper: wr},
 		Devices:       &DevicesService{wrapper: wr},
-		Media:         &MediaService{wrapper: wr},
+		Media:         &MediaService{wrapper: wr, soundsTTL: cfg.soundsTTL},
 		Sequence:      &SequenceService{wrapper: wr},
 		DnD:           &DnDService{wrapper: wr},
 		Sensors:       &SensorsService{wrapper: wr},

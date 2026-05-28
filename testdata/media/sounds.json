@@ -1,0 +1,61 @@
+{
+  "generatedArrayWrapper": [
+    {
+      "id": "amzn_sfx_doorbell_01",
+      "displayName": "Doorbell 1",
+      "availability": "AVAILABLE",
+      "providerData": {
+        "categoryType": "bell_and_buzzers",
+        "categoryDisplayName": "Bells & Buzzers"
+      }
+    },
+    {
+      "id": "amzn_sfx_doorbell_chime_02",
+      "displayName": "Doorbell 3",
+      "availability": "AVAILABLE",
+      "providerData": {
+        "categoryType": "bell_and_buzzers",
+        "categoryDisplayName": "Bells & Buzzers"
+      }
+    },
+    {
+      "id": "amzn_sfx_cat_meow_1x_01",
+      "displayName": "Cat meow",
+      "availability": "AVAILABLE",
+      "providerData": {
+        "categoryType": "animals",
+        "categoryDisplayName": "Animals"
+      }
+    },
+    {
+      "id": "christmas_05",
+      "displayName": "Christmas bells",
+      "availability": "AVAILABLE",
+      "providerData": {
+        "categoryType": "holidays",
+        "categoryDisplayName": "Holidays"
+      }
+    },
+    {
+      "id": "deprecated_sound",
+      "displayName": "Old Sound",
+      "availability": "UNAVAILABLE",
+      "providerData": {
+        "categoryType": "misc",
+        "categoryDisplayName": "Miscellaneous"
+      }
+    },
+    {
+      "id": "",
+      "displayName": "Missing ID",
+      "availability": "AVAILABLE",
+      "providerData": {}
+    },
+    {
+      "id": "missing_name_sound",
+      "displayName": "",
+      "availability": "AVAILABLE",
+      "providerData": {}
+    }
+  ]
+}

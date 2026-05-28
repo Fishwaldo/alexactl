@@ -10,6 +10,7 @@ import (
 	"strings"
 	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -319,6 +320,40 @@ func TestDo_NoBody(t *testing.T) {
 	defer resp.Body.Close()
 	body, _ := io.ReadAll(resp.Body)
 	assert.Equal(t, "ok", strings.TrimSpace(string(body)))
+}
+
+// TestDo_ExhaustedRetriesReturnFinalResponse verifies that when all retry
+// attempts are exhausted the wrapper returns (response, nil) so callers
+// can inspect the status code, rather than (nil, error). This is the
+// load-bearing behavior of retryablehttp.PassthroughErrorHandler installed
+// in Do; without it, downstream "if resp.StatusCode >= 400" branches in
+// every service method would be unreachable on exhausted 5xx.
+func TestDo_ExhaustedRetriesReturnFinalResponse(t *testing.T) {
+	var count int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		atomic.AddInt32(&count, 1)
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer srv.Close()
+
+	wr, err := httpwrapper.New(httpwrapper.Config{
+		HTTPClient:   srv.Client(),
+		Site:         "https://www.amazon.com",
+		RetryMax:     1,
+		RetryWaitMin: time.Millisecond,
+		RetryWaitMax: time.Millisecond,
+		RandReader:   bytes.NewReader(bytes.Repeat([]byte{0x42}, 1024)),
+	})
+	require.NoError(t, err)
+
+	resp, err := wr.Do(context.Background(), httpwrapper.Request{
+		Method: http.MethodGet,
+		URL:    srv.URL + "/x",
+	})
+	require.NoError(t, err, "exhausted retries must return (resp, nil), not (nil, err)")
+	defer resp.Body.Close()
+	assert.Equal(t, http.StatusInternalServerError, resp.StatusCode)
+	assert.EqualValues(t, 2, atomic.LoadInt32(&count), "two total attempts: initial + 1 retry")
 }
 
 func TestDo_RawBody_NotReMarshaled(t *testing.T) {

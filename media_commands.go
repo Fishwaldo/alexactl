@@ -10,20 +10,29 @@ import (
 )
 
 // PlaySound triggers an Alexa sound on each cluster member of d.
+// soundID must be present in Sounds(ctx); unknown IDs return
+// "amazondevices: sound %q not available" without contacting Amazon.
 func (s *MediaService) PlaySound(ctx context.Context, d *Device, soundID string) error {
+	if err := s.validateSound(ctx, soundID); err != nil {
+		return err
+	}
 	return s.fanoutAndFlush(ctx, d, SeqSound, soundID, "")
 }
 
-// Sounds returns the catalogue of named Alexa sound effects accepted
-// by PlaySound, keyed by sound-id (e.g. "amzn_sfx_doorbell_01") with
-// human-friendly labels as values. The map is a fresh copy — mutating
-// it does not affect the package-level table.
-func (s *MediaService) Sounds() map[string]string {
-	out := make(map[string]string, len(amzconst.SoundsList))
-	for k, v := range amzconst.SoundsList {
-		out[k] = v
+// validateSound returns nil if soundID is present in Sounds(ctx).
+// Tests may override via validateSoundFn.
+func (s *MediaService) validateSound(ctx context.Context, soundID string) error {
+	if s.validateSoundFn != nil {
+		return s.validateSoundFn(ctx, soundID)
 	}
-	return out
+	sounds, err := s.Sounds(ctx)
+	if err != nil {
+		return err
+	}
+	if _, ok := sounds[soundID]; !ok {
+		return fmt.Errorf("amazondevices: sound %q not available", soundID)
+	}
+	return nil
 }
 
 // InfoSkills returns the canonical list of "Info" skill names accepted
