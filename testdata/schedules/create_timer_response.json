@@ -1,0 +1,15 @@
+{
+  "id": "A345JHMQDGG1M5-GSM427065425023K-new-timer_TIMER",
+  "type": "Timer",
+  "status": "ON",
+  "deviceSerialNumber": "GSM427065425023K",
+  "deviceType": "A345JHMQDGG1M5",
+  "timerLabel": "kettle",
+  "triggerTime": 1779979283041,
+  "originalDurationInMillis": 180000,
+  "createdDate": 1779979103041,
+  "lastUpdatedDate": 1779979103041,
+  "remainingTime": 0,
+  "version": 1,
+  "sound": {"id": "system_alerts_melodic_02", "providerId": "ECHO"}
+}

@@ -1,0 +1,16 @@
+{
+  "id": "A345JHMQDGG1M5-GSM427065425023K-new-reminder_REMINDER",
+  "type": "Reminder",
+  "status": "ON",
+  "deviceSerialNumber": "GSM427065425023K",
+  "deviceType": "A345JHMQDGG1M5",
+  "reminderLabel": "test reminder",
+  "alarmTime": 1779940200000,
+  "originalDate": "2026-05-29",
+  "originalTime": "08:30:00.000",
+  "createdDate": 1779850000000,
+  "lastUpdatedDate": 1779850000000,
+  "version": 1,
+  "followUpMetadata": {"followUpStatus": "UNACKNOWLEDGED", "requiresFollowUp": false},
+  "rRuleData": {"recurrenceRules": []}
+}

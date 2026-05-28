@@ -8,7 +8,6 @@ import (
 	"os"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -64,7 +63,7 @@ func TestSensorsService_Update_PostsCorrectEndpointIds(t *testing.T) {
 	}
 	endpoints := map[string]string{"ep-kitchen": "S-KITCHEN-001"}
 
-	err = c.Sensors.Update(context.Background(), devices, endpoints, nil, nil)
+	err = c.Sensors.Update(context.Background(), devices, endpoints, nil)
 	require.NoError(t, err)
 	assert.True(t, strings.HasSuffix(gotPath, "/nexus/v1/graphql"),
 		"unexpected path: %s", gotPath)
@@ -87,7 +86,7 @@ func TestSensorsService_Update_EmptyEndpointsSkipsHTTP(t *testing.T) {
 
 	c := newSensorsTestClient(t, srv)
 	err := c.Sensors.Update(context.Background(),
-		map[string]*Device{}, map[string]string{}, nil, nil)
+		map[string]*Device{}, map[string]string{}, nil)
 	require.NoError(t, err)
 	assert.False(t, called, "Update with empty endpoints should not call the GraphQL endpoint")
 }
@@ -121,7 +120,7 @@ func TestSensorsService_Update_AppliesTemperatureAndOnline(t *testing.T) {
 		"ep-kitchen": kitchen.SerialNumber,
 		"ep-bedroom": bedroom.SerialNumber,
 	}
-	require.NoError(t, c.Sensors.Update(context.Background(), devices, endpoints, nil, nil))
+	require.NoError(t, c.Sensors.Update(context.Background(), devices, endpoints, nil))
 
 	require.NotNil(t, kitchen.Sensors["reachability"])
 	assert.Equal(t, "OK", kitchen.Sensors["reachability"].Value)
@@ -152,7 +151,7 @@ func TestSensorsService_Update_ExpandsAQMRangeSubSensors(t *testing.T) {
 	devices := map[string]*Device{aqm.SerialNumber: aqm}
 	endpoints := map[string]string{"ep-aqm-1": aqm.SerialNumber}
 
-	require.NoError(t, c.Sensors.Update(context.Background(), devices, endpoints, nil, nil))
+	require.NoError(t, c.Sensors.Update(context.Background(), devices, endpoints, nil))
 
 	require.NotNil(t, aqm.Sensors["Humidity"], "Humidity (instance=4) should be present")
 	assert.Equal(t, 47.0, aqm.Sensors["Humidity"].Value)
@@ -181,7 +180,7 @@ func TestSensorsService_Update_OfflineWhenNoSensors(t *testing.T) {
 	devices := map[string]*Device{dvc.SerialNumber: dvc}
 	endpoints := map[string]string{"ep-kitchen": dvc.SerialNumber}
 
-	require.NoError(t, c.Sensors.Update(context.Background(), devices, endpoints, nil, nil))
+	require.NoError(t, c.Sensors.Update(context.Background(), devices, endpoints, nil))
 	assert.False(t, dvc.Online, "device with no sensors in response should be marked offline")
 	assert.True(t, dvc.Sensors["temperature"].Error, "stale sensor entries should be marked Error=true")
 }
@@ -204,7 +203,7 @@ func TestSensorsService_Update_FeatureErrorFlagsSensor(t *testing.T) {
 	devices := map[string]*Device{dvc.SerialNumber: dvc}
 	endpoints := map[string]string{"ep-aqm-error": dvc.SerialNumber}
 
-	require.NoError(t, c.Sensors.Update(context.Background(), devices, endpoints, nil, nil))
+	require.NoError(t, c.Sensors.Update(context.Background(), devices, endpoints, nil))
 	require.NotNil(t, dvc.Sensors["reachability"])
 	assert.True(t, dvc.Sensors["reachability"].Error)
 	assert.Equal(t, "INTERNAL_ERROR", dvc.Sensors["reachability"].ErrorType)
@@ -249,7 +248,7 @@ func TestDevicesRefresh_RunsSensorEnrichment(t *testing.T) {
 	require.NoError(t, err)
 	dndBody, err := os.ReadFile("testdata/dnd/status.json")
 	require.NoError(t, err)
-	notificationsBody, err := os.ReadFile("testdata/notifications/list.json")
+	notificationsBody, err := os.ReadFile("testdata/schedules/get_response.json")
 	require.NoError(t, err)
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -277,11 +276,6 @@ func TestDevicesRefresh_RunsSensorEnrichment(t *testing.T) {
 	t.Cleanup(srv.Close)
 
 	c := newSensorsTestClient(t, srv)
-	// Pin Notifications clock so the recurring-rule expansion is
-	// deterministic.
-	c.Notifications.now = func() time.Time {
-		return time.Date(2026, 5, 25, 12, 0, 0, 0, time.UTC)
-	}
 
 	require.NoError(t, c.Devices.Refresh(context.Background()))
 
@@ -294,8 +288,6 @@ func TestDevicesRefresh_RunsSensorEnrichment(t *testing.T) {
 	assert.Equal(t, 21.5, dvc.Sensors["temperature"].Value)
 	require.NotNil(t, dvc.Sensors["dnd"], "DnD entry should be plumbed in by sensorsHook")
 	assert.Equal(t, true, dvc.Sensors["dnd"].Value)
-	require.NotNil(t, dvc.Notifications["Alarm"],
-		"Alarm should be plumbed in by sensorsHook (TIMERS_AND_ALARMS cap)")
 }
 
 func TestDevicesRefresh_WithoutSensors_SkipsExtraCalls(t *testing.T) {
@@ -349,7 +341,7 @@ func TestSensorsService_Update_AppliesSmartHomePropertyTypes(t *testing.T) {
 		"ep-lock-001":       "S-LOCK-001",
 	}
 
-	require.NoError(t, c.Sensors.Update(context.Background(), devices, endpoints, nil, nil))
+	require.NoError(t, c.Sensors.Update(context.Background(), devices, endpoints, nil))
 
 	// Light: powerState + brightness + color.
 	light := devices["S-LIGHT-001"]
@@ -408,7 +400,7 @@ func TestSensorsService_Update_CanonicalRangeInstanceHumidity(t *testing.T) {
 	}
 	endpoints := map[string]string{"ep-ac-001": "S-AC-001"}
 
-	require.NoError(t, c.Sensors.Update(context.Background(), devices, endpoints, nil, nil))
+	require.NoError(t, c.Sensors.Update(context.Background(), devices, endpoints, nil))
 
 	ac := devices["S-AC-001"]
 	require.NotNil(t, ac.Sensors["humidity"], "Apparatus.Humidity should map to canonical 'humidity'")
@@ -433,7 +425,7 @@ func TestSensorsService_Update_UnknownRangeInstanceFallsThrough(t *testing.T) {
 	}
 	endpoints := map[string]string{"ep-weird-001": "S-WEIRD-001"}
 
-	require.NoError(t, c.Sensors.Update(context.Background(), devices, endpoints, nil, nil))
+	require.NoError(t, c.Sensors.Update(context.Background(), devices, endpoints, nil))
 
 	weird := devices["S-WEIRD-001"]
 	require.NotNil(t, weird.Sensors["range:Apparatus.WhateverNew"],
@@ -495,7 +487,7 @@ func TestSensorsService_Update_ModePropertyParsed(t *testing.T) {
 	}
 	endpoints := map[string]string{"ep-fan-001": "S-FAN-001"}
 
-	require.NoError(t, c.Sensors.Update(context.Background(), devices, endpoints, nil, nil))
+	require.NoError(t, c.Sensors.Update(context.Background(), devices, endpoints, nil))
 
 	fan := devices["S-FAN-001"]
 	// Apparatus.FanSpeed has a canonical mapping → "fanSpeed".
@@ -560,7 +552,7 @@ func TestSensorsService_Update_ToggleStatePropertyParsed(t *testing.T) {
 	}
 	endpoints := map[string]string{"ep-purifier-001": "S-PURIFIER-001"}
 
-	require.NoError(t, c.Sensors.Update(context.Background(), devices, endpoints, nil, nil))
+	require.NoError(t, c.Sensors.Update(context.Background(), devices, endpoints, nil))
 
 	purifier := devices["S-PURIFIER-001"]
 	require.NotNil(t, purifier.Sensors["toggle:Skill.Ionizer"])
@@ -607,7 +599,7 @@ func TestSensorsService_Update_MotionSensorSubProperties(t *testing.T) {
 	}
 	endpoints := map[string]string{"ep-echo-show": "S-SHOW-001"}
 
-	require.NoError(t, c.Sensors.Update(context.Background(), devices, endpoints, nil, nil))
+	require.NoError(t, c.Sensors.Update(context.Background(), devices, endpoints, nil))
 
 	show := devices["S-SHOW-001"]
 	require.NotNil(t, show.Sensors["detectionState"])
@@ -661,7 +653,7 @@ func TestSensorsService_Update_ModeConfigurationParsed(t *testing.T) {
 		"S-PUR-001": {SerialNumber: "S-PUR-001", Sensors: map[string]*DeviceSensor{}},
 	}
 	endpoints := map[string]string{"ep-purifier-001": "S-PUR-001"}
-	require.NoError(t, c.Sensors.Update(context.Background(), devices, endpoints, nil, nil))
+	require.NoError(t, c.Sensors.Update(context.Background(), devices, endpoints, nil))
 
 	s := devices["S-PUR-001"].Sensors["mode:Pure.FanSpeed"]
 	require.NotNil(t, s)
@@ -717,7 +709,7 @@ func TestSensorsService_Update_RangeConfigurationParsed(t *testing.T) {
 		"S-FAN-002": {SerialNumber: "S-FAN-002", Sensors: map[string]*DeviceSensor{}},
 	}
 	endpoints := map[string]string{"ep-fan-001": "S-FAN-002"}
-	require.NoError(t, c.Sensors.Update(context.Background(), devices, endpoints, nil, nil))
+	require.NoError(t, c.Sensors.Update(context.Background(), devices, endpoints, nil))
 
 	s := devices["S-FAN-002"].Sensors["range:Skill.FanSpeed"]
 	require.NotNil(t, s)
@@ -739,55 +731,3 @@ func TestSensorsService_Update_RangeConfigurationParsed(t *testing.T) {
 	assert.Equal(t, "Medium", presets[1]["friendlyName"])
 }
 
-func TestSensorsService_Update_NotificationsCapabilityFilter(t *testing.T) {
-	body, err := os.ReadFile("testdata/sensors/getEndpointState.json")
-	require.NoError(t, err)
-
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write(body)
-	}))
-	t.Cleanup(srv.Close)
-
-	c := newSensorsTestClient(t, srv)
-	kitchen := &Device{
-		SerialNumber: "S-KITCHEN-001",
-		DeviceType:   "A18O6U1U9KIYDM",
-		Capabilities: []string{"REMINDERS", "TIMERS_AND_ALARMS"},
-		Sensors:      map[string]*DeviceSensor{},
-	}
-	noCaps := &Device{
-		SerialNumber: "S-NOCAPS-001",
-		DeviceType:   "A18O6U1U9KIYDM",
-		Capabilities: nil,
-		Sensors:      map[string]*DeviceSensor{},
-	}
-	devices := map[string]*Device{
-		kitchen.SerialNumber: kitchen,
-		noCaps.SerialNumber:  noCaps,
-	}
-	endpoints := map[string]string{"ep-kitchen": kitchen.SerialNumber}
-
-	notifications := map[string]map[string]*Schedule{
-		kitchen.SerialNumber: {
-			"Alarm":    {Type: "Alarm", Status: "ON", Label: "wakeup"},
-			"Reminder": {Type: "Reminder", Status: "ON", Label: "call mom"},
-			"Timer":    {Type: "Timer", Status: "ON", Label: "tea"},
-		},
-		noCaps.SerialNumber: {
-			"Alarm": {Type: "Alarm", Status: "ON", Label: "should not appear"},
-		},
-	}
-
-	require.NoError(t, c.Sensors.Update(context.Background(), devices, endpoints, nil, notifications))
-
-	// Kitchen has both capabilities, so all three notification types pass.
-	assert.Len(t, kitchen.Notifications, 3)
-	assert.Equal(t, "wakeup", kitchen.Notifications["Alarm"].Label)
-	assert.Equal(t, "call mom", kitchen.Notifications["Reminder"].Label)
-	assert.Equal(t, "tea", kitchen.Notifications["Timer"].Label)
-
-	// noCaps has no capabilities, so nothing passes - even though the
-	// input map had an entry for it.
-	assert.Len(t, noCaps.Notifications, 0)
-}

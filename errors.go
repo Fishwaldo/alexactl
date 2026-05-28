@@ -66,6 +66,25 @@ var (
 	//	    // we passed the wrong item to the wrong list; reload and retry
 	//	}
 	ErrListItemNotFound = errors.New("amazondevices: list item not found")
+
+	// ErrAlarmNotFound is returned by *AlarmsService write methods
+	// (Update, Delete, Enable, Disable, Snooze) when the passed *Alarm
+	// is nil or belongs to a different *AlarmsService than the receiver.
+	// Distinct from transport-level 4xx errors so callers can branch
+	// on it directly:
+	//
+	//	if errors.Is(err, ErrAlarmNotFound) {
+	//	    // wrong item; reload and retry
+	//	}
+	ErrAlarmNotFound = errors.New("amazondevices: alarm not found")
+
+	// ErrReminderNotFound is the same sentinel as ErrAlarmNotFound but
+	// for *RemindersService write methods.
+	ErrReminderNotFound = errors.New("amazondevices: reminder not found")
+
+	// ErrTimerNotFound is the same sentinel as ErrAlarmNotFound but
+	// for *TimersService write methods.
+	ErrTimerNotFound = errors.New("amazondevices: timer not found")
 )
 
 // APIError carries HTTP-level detail about a failed request. Its Unwrap

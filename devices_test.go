@@ -45,7 +45,7 @@ func TestDevices_ListBase_FiltersIgnoredAndNoMicrophone(t *testing.T) {
 
 	kitchen := devs["S-KITCHEN-001"]
 	assert.True(t, kitchen.Online)
-	assert.True(t, kitchen.NotificationsSupported, "REMINDERS in capabilities → true")
+	assert.True(t, kitchen.SchedulesSupported, "REMINDERS in capabilities → true")
 	assert.True(t, kitchen.MediaPlayerSupported, "AUDIO_PLAYER in capabilities → true")
 	assert.True(t, kitchen.HouseholdDevice, "deviceOwnerCustomerId matches session")
 

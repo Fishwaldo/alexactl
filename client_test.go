@@ -170,19 +170,18 @@ func TestAuthService_ConcurrentRefreshDoesNotRace(t *testing.T) {
 	require.NoError(t, err)
 
 	c := &Client{
-		wrapper:       wr,
-		Auth:          &AuthService{wrapper: wr, tokenURL: tokenSrv.URL},
-		Devices:       &DevicesService{wrapper: wr},
-		Media:         &MediaService{wrapper: wr},
-		Sequence:      &SequenceService{wrapper: wr},
-		DnD:           &DnDService{wrapper: wr},
-		Sensors:       &SensorsService{wrapper: wr},
-		Notifications: &NotificationsService{wrapper: wr},
-		History:       &HistoryService{wrapper: wr},
-		Push:          &PushService{wrapper: wr},
+		wrapper:  wr,
+		Auth:     &AuthService{wrapper: wr, tokenURL: tokenSrv.URL},
+		Devices:  &DevicesService{wrapper: wr},
+		Media:    &MediaService{wrapper: wr},
+		Sequence: &SequenceService{wrapper: wr},
+		DnD:      &DnDService{wrapper: wr},
+		Sensors:  &SensorsService{wrapper: wr},
+		History:  &HistoryService{wrapper: wr},
+		Push:     &PushService{wrapper: wr},
 	}
 	c.Auth.consumers = []sessionConsumer{
-		c.Devices, c.Media, c.Sequence, c.DnD, c.Sensors, c.Notifications, c.History, c.Push,
+		c.Devices, c.Media, c.Sequence, c.DnD, c.Sensors, c.History, c.Push,
 	}
 	c.Auth.broadcast(&Session{
 		AccessToken:       "INITIAL-TOK",

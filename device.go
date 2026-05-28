@@ -1,31 +1,36 @@
 package amazondevices
 
-import "time"
-
 // Device describes one Amazon Echo (or Alexa-enabled) device. Returned by
 // DevicesService.List as a read-only snapshot — mutations on a *Device do
 // NOT update the client's internal cache. Call DevicesService.Refresh to
 // re-fetch.
 type Device struct {
-	AccountName            string
-	SerialNumber           string
-	DeviceType             string
-	DeviceFamily           string
-	DeviceOwnerCustomerID  string
-	HouseholdDevice        bool
-	Online                 bool
-	Capabilities           []string          // raw Amazon capability strings
-	ClusterMembers         map[string]string // serial -> device type ("" if unknown)
-	Manufacturer           string
-	Model                  string
-	SoftwareVersion        string
-	HardwareVersion        string
-	EntityID               string
-	EndpointID             string
-	Sensors                map[string]*DeviceSensor // populated in Phase 2
-	Notifications          map[string]*Schedule     // populated in Phase 2
-	NotificationsSupported bool
-	MediaPlayerSupported   bool
+	AccountName           string
+	SerialNumber          string
+	DeviceType            string
+	DeviceFamily          string
+	DeviceOwnerCustomerID string
+	HouseholdDevice       bool
+	Online                bool
+	Capabilities          []string          // raw Amazon capability strings
+	ClusterMembers        map[string]string // serial -> device type ("" if unknown)
+	Manufacturer          string
+	Model                 string
+	SoftwareVersion       string
+	HardwareVersion       string
+	EntityID              string
+	EndpointID            string
+	Sensors               map[string]*DeviceSensor // populated in Phase 2
+	SchedulesSupported    bool
+	MediaPlayerSupported  bool
+
+	// Phase 6: typed schedule slices populated by DevicesService.Refresh's
+	// sensors-enrichment hook (one shared /api/notifications fetch routed
+	// across all devices). Slice is nil for devices that don't support
+	// schedules (SchedulesSupported == false).
+	Alarms    []*Alarm
+	Reminders []*Reminder
+	Timers    []*Timer
 
 	// Phase 4a additions — classify and describe smart-home endpoints.
 	//
@@ -107,12 +112,3 @@ type DeviceSensor struct {
 	Operations []string
 }
 
-// Schedule is a single timer/alarm/reminder occurrence. Populated by
-// NotificationsService.Get (and onto Device.Notifications via the
-// sensors-enrichment step of DevicesService.Refresh).
-type Schedule struct {
-	Type           string    // "Alarm" | "Reminder" | "Timer" (MusicAlarm normalized to Alarm)
-	Status         string    // "ON" when surfaced
-	Label          string
-	NextOccurrence time.Time // earliest occurrence >= now-1m; zero value if unparseable
-}

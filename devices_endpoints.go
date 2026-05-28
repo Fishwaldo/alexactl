@@ -53,6 +53,24 @@ func (s *DevicesService) Get(ctx context.Context, serial string) (*Device, error
 	return d, nil
 }
 
+// getCached returns the device from the cache without triggering a
+// refresh. Used by Phase 6 schedule services to resolve DeviceType
+// from a SerialNumber during Create. Returns nil if not present.
+func (s *DevicesService) getCached(serial string) *Device {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.cache[serial]
+}
+
+// setCacheForTest replaces the cache atomically. ONLY used by tests
+// in the same package to seed device state without going through
+// Refresh.
+func (s *DevicesService) setCacheForTest(cache map[string]*Device) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.cache = cache
+}
+
 // Default returns the user-set default device, or the first online device
 // (by sorted serial number) if not set. Iteration is deterministic across
 // calls because Go's map range order is randomized.
@@ -301,7 +319,6 @@ func (s *DevicesService) fetchEndpoints(
 				SoftwareVersion:       softwareVersion,
 				EndpointID:            endpointID,
 				Sensors:               map[string]*DeviceSensor{},
-				Notifications:         map[string]*Schedule{},
 				// Phase 4a: AQM is its own kind regardless of DisplayCategory.
 				Kind:              KindAQM,
 				DisplayCategories: extractDisplayCategories(ep),
@@ -387,7 +404,6 @@ func (s *DevicesService) fetchEndpoints(
 				SoftwareVersion:       softwareVersion,
 				EndpointID:            endpointID,
 				Sensors:               map[string]*DeviceSensor{},
-				Notifications:         map[string]*Schedule{},
 
 				Kind:              Kind(amzconst.DisplayCategoryToKind(primaryCategory)),
 				DisplayCategories: extractDisplayCategories(ep),

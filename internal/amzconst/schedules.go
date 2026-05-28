@@ -1,21 +1,25 @@
 package amzconst
 
-// Notification type names returned by Amazon's /api/notifications endpoint.
+// Schedule type names returned by Amazon's /api/notifications endpoint.
+// "Schedule" is our internal umbrella term for alarms / reminders /
+// timers — Amazon's URL family is /api/notifications/ but in user-facing
+// vocabulary "notifications" means inbound messages (shipping updates,
+// news, etc.), which are a separate concept.
 // Values are exact wire strings.
 const (
-	NotificationAlarm      = "Alarm"
-	NotificationMusicAlarm = "MusicAlarm"
-	NotificationReminder   = "Reminder"
-	NotificationTimer      = "Timer"
+	ScheduleKindAlarm      = "Alarm"
+	ScheduleKindMusicAlarm = "MusicAlarm"
+	ScheduleKindReminder   = "Reminder"
+	ScheduleKindTimer      = "Timer"
 )
 
-// NotificationsSupported is the set of notification types we surface.
+// SchedulesSupported is the set of schedule kinds we surface.
 // MusicAlarm is normalized to Alarm at parse time (same shape, different label).
-var NotificationsSupported = map[string]struct{}{
-	NotificationAlarm:      {},
-	NotificationMusicAlarm: {},
-	NotificationReminder:   {},
-	NotificationTimer:      {},
+var SchedulesSupported = map[string]struct{}{
+	ScheduleKindAlarm:      {},
+	ScheduleKindMusicAlarm: {},
+	ScheduleKindReminder:   {},
+	ScheduleKindTimer:      {},
 }
 
 // RecurringPatterns is the canonical mapping from Amazon's compact rule
@@ -66,7 +70,7 @@ var CountryGroups = map[string][]string{
 	},
 }
 
-// Capability strings used to filter notification types onto devices.
+// Capability strings used to filter schedule kinds onto devices.
 // Mirrors the per-type capability filter in upstream sensor.py
 // _update_sensor_data.
 const (

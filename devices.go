@@ -150,22 +150,21 @@ func (s *DevicesService) fetchBase(ctx context.Context, sitePrefix string) (map[
 		deviceFamily, _ := stringOf(raw["deviceFamily"])
 		model, _ := stringOf(raw["deviceTypeFriendlyName"])
 		d := &Device{
-			AccountName:            accountName,
-			SerialNumber:           serial,
-			DeviceType:             dt,
-			DeviceFamily:           deviceFamily,
-			DeviceOwnerCustomerID:  ownerID,
-			HouseholdDevice:        household,
-			Online:                 boolOf(raw["online"]),
-			Capabilities:           caps,
-			ClusterMembers:         cluster,
-			Model:                  model,
-			SoftwareVersion:        swVer,
-			Sensors:                map[string]*DeviceSensor{},
-			Notifications:          map[string]*Schedule{},
-			NotificationsSupported: sliceContains(caps, "REMINDERS") || sliceContains(caps, "TIMERS_AND_ALARMS"),
-			MediaPlayerSupported:   sliceContains(caps, "AUDIO_PLAYER"),
-			controller:             s.smartHome,
+			AccountName:           accountName,
+			SerialNumber:          serial,
+			DeviceType:            dt,
+			DeviceFamily:          deviceFamily,
+			DeviceOwnerCustomerID: ownerID,
+			HouseholdDevice:       household,
+			Online:                boolOf(raw["online"]),
+			Capabilities:          caps,
+			ClusterMembers:        cluster,
+			Model:                 model,
+			SoftwareVersion:       swVer,
+			Sensors:               map[string]*DeviceSensor{},
+			SchedulesSupported:    sliceContains(caps, "REMINDERS") || sliceContains(caps, "TIMERS_AND_ALARMS"),
+			MediaPlayerSupported:  sliceContains(caps, "AUDIO_PLAYER"),
+			controller:            s.smartHome,
 		}
 		out[serial] = d
 		serialToType[serial] = dt

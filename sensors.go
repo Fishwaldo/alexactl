@@ -71,9 +71,6 @@ func (s *SensorsService) fetchEndpointStates(
 //     online is the AND of every cluster member's Online value.
 //   - If dnd is non-nil, copies each matching DnD entry onto
 //     device.Sensors["dnd"] for non-speaker-group devices.
-//   - If notifications is non-nil, copies each device's notification map
-//     onto device.Notifications. (Phase 2a passes nil — sub-plan 2b wires
-//     this.)
 //
 // devices and endpoints are the maps populated by DevicesService earlier
 // in the refresh pipeline (devices keyed by serial; endpoints keyed by
@@ -85,7 +82,6 @@ func (s *SensorsService) Update(
 	devices map[string]*Device,
 	endpoints map[string]string,
 	dnd map[string]*DeviceSensor,
-	notifications map[string]map[string]*Schedule,
 ) error {
 	resp, err := s.fetchEndpointStates(ctx, endpoints)
 	if err != nil {
@@ -117,16 +113,6 @@ func (s *SensorsService) Update(
 			}
 		}
 
-		if notifications != nil {
-			dvc.Notifications = map[string]*Schedule{}
-			if n, ok := notifications[dvc.SerialNumber]; ok {
-				for _, allow := range allowedNotificationTypes(dvc) {
-					if sched, present := n[allow]; present {
-						dvc.Notifications[allow] = sched
-					}
-				}
-			}
-		}
 	}
 
 	// Speaker-group online status = AND of every member's Online.
@@ -577,25 +563,3 @@ func extractFeatureConfiguration(feature *epFeature) map[string]any {
 	}
 }
 
-// allowedNotificationTypes returns the notification types the device's
-// capabilities allow us to surface. Mirrors upstream Python's
-// implementation/sensor.py (capability, notification_type) filter:
-//
-//	REMINDERS         -> Reminder
-//	TIMERS_AND_ALARMS -> Alarm, Timer
-//
-// Devices without the capability silently get no notifications of the
-// corresponding type. Devices with no capabilities (e.g., AQMs surfaced
-// by Phase-1 enrichment) get nothing.
-func allowedNotificationTypes(dvc *Device) []string {
-	var out []string
-	for _, c := range dvc.Capabilities {
-		switch c {
-		case amzconst.CapabilityReminders:
-			out = append(out, amzconst.NotificationReminder)
-		case amzconst.CapabilityTimersAndAlarms:
-			out = append(out, amzconst.NotificationAlarm, amzconst.NotificationTimer)
-		}
-	}
-	return out
-}

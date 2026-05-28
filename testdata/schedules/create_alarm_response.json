@@ -1,0 +1,16 @@
+{
+  "id": "AWZZ5CVHX2CD-G000RA0991330DAS-new-alarm",
+  "type": "Alarm",
+  "status": "ON",
+  "deviceSerialNumber": "G000RA0991330DAS",
+  "deviceType": "AWZZ5CVHX2CD",
+  "alarmLabel": "test alarm",
+  "alarmTime": 1779937800000,
+  "originalDate": "2026-05-29",
+  "originalTime": "07:30:00.000",
+  "createdDate": 1779850000000,
+  "lastUpdatedDate": 1779850000000,
+  "version": 1,
+  "sound": {"id": "system_alerts_melodic_01", "providerId": "ECHO"},
+  "rRuleData": {"recurrenceRules": []}
+}

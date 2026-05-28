@@ -1,0 +1,131 @@
+{
+  "notifications": [
+    {
+      "id": "AWZZ5CVHX2CD-G000RA0991330DAS-alarm-one-shot",
+      "type": "Alarm",
+      "status": "ON",
+      "deviceSerialNumber": "G000RA0991330DAS",
+      "deviceType": "AWZZ5CVHX2CD",
+      "alarmLabel": "wake up",
+      "alarmTime": 1779937800000,
+      "originalDate": "2026-05-29",
+      "originalTime": "07:30:00.000",
+      "createdDate": 1779850000000,
+      "lastUpdatedDate": 1779850000000,
+      "version": 1,
+      "sound": {"id": "system_alerts_melodic_01", "providerId": "ECHO", "displayName": "Simple Alarm"},
+      "rRuleData": {
+        "byMonthDays": [],
+        "byMonths": [],
+        "byWeekDays": [],
+        "frequency": null,
+        "intervals": [],
+        "recurrenceRules": []
+      }
+    },
+    {
+      "id": "AWZZ5CVHX2CD-G000RA0991330DAS-alarm-recurring",
+      "type": "Alarm",
+      "status": "ON",
+      "deviceSerialNumber": "G000RA0991330DAS",
+      "deviceType": "AWZZ5CVHX2CD",
+      "alarmLabel": "morning workout",
+      "alarmTime": 1779945000000,
+      "originalDate": "2026-05-29",
+      "originalTime": "09:30:00.000",
+      "createdDate": 1779850000000,
+      "lastUpdatedDate": 1779850000000,
+      "version": 2,
+      "sound": {"id": "system_alerts_melodic_01", "providerId": "ECHO", "displayName": "Simple Alarm"},
+      "rRuleData": {
+        "byWeekDays": ["MO", "TU", "WE", "TH", "FR"],
+        "flexibleRecurringPatternType": "EVERY_X_WEEKS",
+        "intervals": [1],
+        "recurrenceRules": ["FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR;BYHOUR=9;BYMINUTE=30;BYSECOND=0;INTERVAL=1;"]
+      }
+    },
+    {
+      "id": "A2O2CEO9STBQID-GSM4CW03532600SJ-alarm-paused",
+      "type": "Alarm",
+      "status": "OFF",
+      "deviceSerialNumber": "GSM4CW03532600SJ",
+      "deviceType": "A2O2CEO9STBQID",
+      "alarmLabel": "snoozed alarm",
+      "alarmTime": 1779937800000,
+      "originalDate": "2026-05-29",
+      "originalTime": "07:30:00.000",
+      "createdDate": 1779850000000,
+      "lastUpdatedDate": 1779850000000,
+      "version": 1,
+      "sound": null,
+      "rRuleData": {"recurrenceRules": []}
+    },
+    {
+      "id": "A345JHMQDGG1M5-GSM427065425023K-meeting-recurring_REMINDER",
+      "type": "Reminder",
+      "status": "ON",
+      "deviceSerialNumber": "GSM427065425023K",
+      "deviceType": "A345JHMQDGG1M5",
+      "reminderLabel": "Meeting",
+      "alarmTime": 1779977100000,
+      "originalDate": "2026-06-02",
+      "originalTime": "17:25:00.000",
+      "createdDate": 1779700000000,
+      "lastUpdatedDate": 1779700000000,
+      "version": 1,
+      "followUpMetadata": {"followUpStatus": "UNACKNOWLEDGED", "requiresFollowUp": false},
+      "rRuleData": {
+        "byWeekDays": ["TU"],
+        "flexibleRecurringPatternType": "EVERY_X_WEEKS",
+        "intervals": [1],
+        "recurrenceRules": ["FREQ=WEEKLY;BYDAY=TU;BYHOUR=17;BYMINUTE=25;BYSECOND=0;INTERVAL=1;"]
+      }
+    },
+    {
+      "id": "A345JHMQDGG1M5-GSM427065425023K-feed-cat-one-shot_REMINDER",
+      "type": "Reminder",
+      "status": "ON",
+      "deviceSerialNumber": "GSM427065425023K",
+      "deviceType": "A345JHMQDGG1M5",
+      "reminderLabel": "feed the cat",
+      "alarmTime": 1779940200000,
+      "originalDate": "2026-05-29",
+      "originalTime": "08:30:00.000",
+      "createdDate": 1779850000000,
+      "lastUpdatedDate": 1779850000000,
+      "version": 1,
+      "followUpMetadata": {"followUpStatus": "ACKNOWLEDGED", "requiresFollowUp": false},
+      "rRuleData": {"recurrenceRules": []}
+    },
+    {
+      "id": "A345JHMQDGG1M5-GSM427065425023K-pasta_TIMER",
+      "type": "Timer",
+      "status": "ON",
+      "deviceSerialNumber": "GSM427065425023K",
+      "deviceType": "A345JHMQDGG1M5",
+      "timerLabel": "pasta",
+      "triggerTime": 1779979283041,
+      "originalDurationInMillis": 600000,
+      "createdDate": 1779978683041,
+      "lastUpdatedDate": 1779978683041,
+      "remainingTime": 0,
+      "version": 1,
+      "sound": {"id": "system_alerts_melodic_02", "providerId": "ECHO", "displayName": "Simple Timer"}
+    },
+    {
+      "id": "AWZZ5CVHX2CD-G000RA0991330DAS-music-alarm",
+      "type": "MusicAlarm",
+      "status": "ON",
+      "deviceSerialNumber": "G000RA0991330DAS",
+      "deviceType": "AWZZ5CVHX2CD",
+      "musicAlarmLabel": "Spotify alarm",
+      "alarmTime": 1779937800000,
+      "originalDate": "2026-05-29",
+      "originalTime": "07:30:00.000",
+      "createdDate": 1779850000000,
+      "lastUpdatedDate": 1779850000000,
+      "version": 1,
+      "rRuleData": {"recurrenceRules": []}
+    }
+  ]
+}
