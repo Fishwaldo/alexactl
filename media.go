@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 	"sync"
-	"time"
 
 	"github.com/Fishwaldo/goamazondevices/internal/amzconst"
+	"github.com/Fishwaldo/goamazondevices/internal/cache"
 	"github.com/Fishwaldo/goamazondevices/internal/httpwrapper"
 )
 
@@ -37,13 +37,31 @@ type MediaService struct {
 	// production leaves nil and PlaySound calls Sounds() directly.
 	validateSoundFn func(ctx context.Context, soundID string) error
 
-	// Sounds catalogue cache. soundsTTL <= 0 disables caching (every
-	// Sounds call hits the API). The mutex is held during fetch for
-	// single-flight; concurrent callers serialize on it.
-	soundsMu        sync.Mutex
-	soundsCache     map[string]Sound
-	soundsFetchedAt time.Time
-	soundsTTL       time.Duration
+	// soundsCache is the engine-managed sounds catalogue cache. Constructed
+	// by NewClient (or by test helpers for unit tests). Nil means uncached.
+	soundsCache *cache.Cache[map[string]Sound]
+
+	// musicProvidersCache caches MusicProviders() for the Long-class TTL,
+	// tagged "session". Constructed by NewClient.
+	musicProvidersCache *cache.Cache[map[string]MusicProvider]
+
+	// deviceVolumesCache caches DeviceVolumes() for the Realtime-class TTL.
+	// Account-wide endpoint; sentinel key "".
+	deviceVolumesCache *cache.Cache[map[string]*VolumeState]
+
+	// mediaStatesCache caches the raw account-wide media-sessions response
+	// (indexed by serial) for the Realtime-class TTL. MediaStates applies
+	// the caller's device filter on read. Sentinel key "".
+	mediaStatesCache *cache.Cache[map[string]map[string]any]
+
+	// mediaStatesQuerySerial / mediaStatesQueryType hold the last caller-
+	// supplied device used as the wire query params for the media-sessions
+	// endpoint. Amazon rejects requests without a real (serial, type) pair
+	// even though the response is account-wide. Updated by MediaStates on
+	// every call; read by the cache loader.
+	mediaStatesQueryMu     sync.RWMutex
+	mediaStatesQuerySerial string
+	mediaStatesQueryType   string
 }
 
 // setSession swaps in a fresh *Session pointer. Invoked by AuthService
@@ -54,11 +72,9 @@ func (s *MediaService) setSession(sess *Session) {
 	s.mu.Lock()
 	s.session = sess
 	s.mu.Unlock()
-
-	s.soundsMu.Lock()
-	s.soundsCache = nil
-	s.soundsFetchedAt = time.Time{}
-	s.soundsMu.Unlock()
+	if s.soundsCache != nil {
+		s.soundsCache.InvalidateAll()
+	}
 }
 
 // snapshotSession returns the current *Session pointer under the read

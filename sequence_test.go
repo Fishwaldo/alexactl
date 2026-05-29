@@ -16,6 +16,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/Fishwaldo/goamazondevices/internal/amzconst"
+	"github.com/Fishwaldo/goamazondevices/internal/cache"
 	"github.com/Fishwaldo/goamazondevices/internal/httpwrapper"
 )
 
@@ -31,12 +32,19 @@ func newSequenceTest(t *testing.T, handler http.HandlerFunc) (*SequenceService, 
 		RandReader: bytes.NewReader(bytes.Repeat([]byte{0x42}, 1024)),
 	})
 	require.NoError(t, err)
-	return &SequenceService{
+	s := &SequenceService{
 		wrapper: wr,
 		session: &Session{AccountCustomerID: "OWNER", Domain: "com"},
 		// no-op sleep so tests don't actually wait
 		sleepFn: func(_ context.Context, _ time.Duration) error { return nil },
-	}, srv
+	}
+	s.routinesCache = cache.NewCache[map[string]map[string]any](
+		cache.Config{Name: "sequence.routines", TTL: time.Hour},
+		func(ctx context.Context, _ string) (map[string]map[string]any, error) {
+			return s.fetchRoutines(ctx)
+		},
+	)
+	return s, srv
 }
 
 func TestSequence_buildOperationNode_Speak(t *testing.T) {
@@ -44,7 +52,7 @@ func TestSequence_buildOperationNode_Speak(t *testing.T) {
 		t.Fatal("must not call HTTP for build-only test")
 	})
 	dev := &Device{SerialNumber: "S-1", DeviceType: "T-1"}
-	node, err := s.buildOperationNode(dev, string(SeqSpeak), "hello", "")
+	node, err := s.buildOperationNode(context.Background(), dev, string(SeqSpeak), "hello", "")
 	require.NoError(t, err)
 	assert.Equal(t, amzconst.OperationNodeAttr, node["@type"])
 	assert.Equal(t, string(SeqSpeak), node["type"])
@@ -73,7 +81,7 @@ func TestSequence_buildOperationNode_Announce_ClusterFanoutInTarget(t *testing.T
 			"S-RIGHT": "T-PAIR",
 		},
 	}
-	node, err := s.buildOperationNode(dev, string(SeqAnnouncement), "dinner", "")
+	node, err := s.buildOperationNode(context.Background(), dev, string(SeqAnnouncement), "dinner", "")
 	require.NoError(t, err)
 	payload, _ := node["operationPayload"].(map[string]any)
 	assert.Equal(t, "PT5S", payload["expireAfter"])
@@ -124,7 +132,7 @@ func TestSequence_buildOperationNode_VolumeStopSoundMusicTextSkill(t *testing.T)
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			node, err := s.buildOperationNode(dev, string(c.kind), c.body, c.providerID)
+			node, err := s.buildOperationNode(context.Background(), dev, string(c.kind), c.body, c.providerID)
 			require.NoError(t, err)
 			payload, _ := node["operationPayload"].(map[string]any)
 			c.assertions(t, payload)
@@ -135,7 +143,7 @@ func TestSequence_buildOperationNode_VolumeStopSoundMusicTextSkill(t *testing.T)
 func TestSequence_buildOperationNode_InfoSkill(t *testing.T) {
 	s, _ := newSequenceTest(t, func(_ http.ResponseWriter, _ *http.Request) {})
 	dev := &Device{SerialNumber: "S", DeviceType: "T"}
-	node, err := s.buildOperationNode(dev, "Alexa.Weather.Play", "", "")
+	node, err := s.buildOperationNode(context.Background(), dev, "Alexa.Weather.Play", "", "")
 	require.NoError(t, err)
 	payload, _ := node["operationPayload"].(map[string]any)
 	// Info-skill bodies are the base payload only — no message-specific keys.
@@ -147,7 +155,7 @@ func TestSequence_buildOperationNode_InfoSkill(t *testing.T) {
 func TestSequence_buildOperationNode_Unknown(t *testing.T) {
 	s, _ := newSequenceTest(t, func(_ http.ResponseWriter, _ *http.Request) {})
 	dev := &Device{SerialNumber: "S", DeviceType: "T"}
-	_, err := s.buildOperationNode(dev, "Alexa.NotAThing", "", "")
+	_, err := s.buildOperationNode(context.Background(), dev, "Alexa.NotAThing", "", "")
 	require.Error(t, err)
 }
 
@@ -155,7 +163,7 @@ func TestSequence_buildOperationNode_NoSession(t *testing.T) {
 	s, _ := newSequenceTest(t, func(_ http.ResponseWriter, _ *http.Request) {})
 	s.session = nil
 	dev := &Device{SerialNumber: "S", DeviceType: "T"}
-	_, err := s.buildOperationNode(dev, string(SeqSpeak), "hi", "")
+	_, err := s.buildOperationNode(context.Background(), dev, string(SeqSpeak), "hi", "")
 	require.ErrorIs(t, err, ErrCannotAuthenticate)
 }
 
@@ -461,7 +469,7 @@ func TestSequence_buildOperationNode_Routines(t *testing.T) {
 	require.NoError(t, err)
 
 	dev := &Device{SerialNumber: "REAL-S", DeviceType: "REAL-T"}
-	node, err := s.buildOperationNode(dev, string(SeqRoutine), "Good Morning", "")
+	node, err := s.buildOperationNode(context.Background(), dev, string(SeqRoutine), "Good Morning", "")
 	require.NoError(t, err)
 
 	// The returned node IS the routine's startNode with placeholders
@@ -482,7 +490,7 @@ func TestSequence_buildOperationNode_Routines_Unknown(t *testing.T) {
 	require.NoError(t, err)
 
 	dev := &Device{SerialNumber: "S", DeviceType: "T"}
-	_, err = s.buildOperationNode(dev, string(SeqRoutine), "Nonexistent", "")
+	_, err = s.buildOperationNode(context.Background(), dev, string(SeqRoutine), "Nonexistent", "")
 	require.Error(t, err)
 }
 

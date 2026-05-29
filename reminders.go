@@ -29,7 +29,8 @@ type RemindersService struct {
 	mu      sync.RWMutex
 	session *Session
 
-	devicesLookup func(serial string) (*Device, bool)
+	devicesLookup  func(serial string) (*Device, bool)
+	schedulesFetch func(ctx context.Context) (*schedulesFetchResult, error)
 }
 
 // Reminder is a labeled one-shot or recurring event Alexa speaks.
@@ -59,7 +60,7 @@ func (s *RemindersService) setSession(sess *Session) {
 // Get fetches every active reminder on the account, sorted by FireAt
 // ascending. Entries with status != "ON" are dropped.
 func (s *RemindersService) Get(ctx context.Context) ([]*Reminder, error) {
-	res, err := fetchSchedules(ctx, s.wrapper)
+	res, err := s.schedulesFetch(ctx)
 	if err != nil {
 		return nil, err
 	}

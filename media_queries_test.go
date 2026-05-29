@@ -44,6 +44,9 @@ func TestMedia_MediaStates_HappyPath(t *testing.T) {
 	require.NoError(t, err)
 	ms, _ := newMediaTest(t, func(w http.ResponseWriter, r *http.Request) {
 		assert.Equal(t, amzconst.URIMediaState, r.URL.Path)
+		// Loader records the first caller-supplied (serial, type) pair —
+		// the wire response is account-wide regardless of which device
+		// is queried.
 		assert.Contains(t, r.URL.RawQuery, "deviceSerialNumber=S-A")
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write(body)

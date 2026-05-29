@@ -9,7 +9,6 @@ import (
 	"strings"
 	"sync"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -248,8 +247,6 @@ func TestMedia_PlaySound_AcceptsCatalogSound(t *testing.T) {
 			_, _ = w.Write([]byte(`{"ok":true}`))
 		}
 	})
-	ms.soundsTTL = time.Hour
-
 	dev := &Device{SerialNumber: "S", DeviceType: "T",
 		ClusterMembers: map[string]string{"S": "T"}}
 	require.NoError(t,

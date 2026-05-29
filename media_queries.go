@@ -2,18 +2,33 @@ package amazondevices
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"time"
 
 	"github.com/Fishwaldo/goamazondevices/internal/amzconst"
+	"github.com/Fishwaldo/goamazondevices/internal/cache"
 	"github.com/Fishwaldo/goamazondevices/internal/httpwrapper"
 )
 
 // DeviceVolumes returns the current per-device volume + mute state.
-// Fresh snapshot — no internal cache. Returned map is keyed by device
-// serial number; missing devices are simply absent.
+// Cached for the Realtime-class TTL. Returned map is a defensive copy.
 func (s *MediaService) DeviceVolumes(ctx context.Context) (map[string]*VolumeState, error) {
+	got, _, err := s.deviceVolumesCache.Get(ctx, "")
+	if err != nil {
+		return nil, err
+	}
+	out := make(map[string]*VolumeState, len(got))
+	for k, v := range got {
+		cp := *v
+		out[k] = &cp
+	}
+	return out, nil
+}
+
+// fetchDeviceVolumes is the loader for media.deviceVolumes.
+func (s *MediaService) fetchDeviceVolumes(ctx context.Context) (map[string]*VolumeState, error) {
 	url := fmt.Sprintf("https://alexa.amazon.%s%s",
 		s.wrapper.Domain(), amzconst.URIDeviceVolumes)
 	resp, err := s.wrapper.Do(ctx, httpwrapper.Request{
@@ -58,18 +73,68 @@ func (s *MediaService) DeviceVolumes(ctx context.Context) (map[string]*VolumeSta
 // MediaStates returns the current playback state for each device that
 // has MediaPlayerSupported=true. The /api/np/list-media-sessions
 // endpoint takes one (serial, type) as the query string but returns
-// snapshots for the whole account — so devices is the *filter*, not
-// the query. If devices is empty, MediaStates returns an empty map
-// without contacting Amazon.
+// snapshots for the whole account — so the raw response is cached under
+// sentinel key "" for the Realtime-class TTL, and the caller's devices
+// list filters the cached snapshot on read. If devices is empty,
+// MediaStates returns an empty map without contacting Amazon.
+//
+// The wire endpoint validates (serial, type) even though the response is
+// account-wide, so the first caller's device is recorded and used as the
+// loader's query parameters on subsequent cache misses.
 func (s *MediaService) MediaStates(ctx context.Context, devices []*Device) (map[string]*MediaState, error) {
 	if len(devices) == 0 {
 		return map[string]*MediaState{}, nil
 	}
+	// Record any valid (serial, type) pair for the loader's wire query.
+	// Prefer a MediaPlayerSupported device but fall back to the first
+	// entry — Amazon validates these against the account, not the device's
+	// capabilities.
 	queryDevice := devices[0]
+	for _, d := range devices {
+		if d.MediaPlayerSupported {
+			queryDevice = d
+			break
+		}
+	}
+	s.mediaStatesQueryMu.Lock()
+	s.mediaStatesQuerySerial = queryDevice.SerialNumber
+	s.mediaStatesQueryType = queryDevice.DeviceType
+	s.mediaStatesQueryMu.Unlock()
+
+	sessions, _, err := s.mediaStatesCache.Get(ctx, "")
+	if err != nil {
+		return nil, err
+	}
+	now := time.Now().UTC()
+	out := map[string]*MediaState{}
+	for _, d := range devices {
+		if !d.MediaPlayerSupported {
+			continue
+		}
+		session, ok := sessions[d.SerialNumber]
+		if !ok {
+			continue
+		}
+		out[d.SerialNumber] = buildMediaState(session, now)
+	}
+	return out, nil
+}
+
+// fetchMediaStates is the loader for media.mediaStates. Uses the most
+// recently recorded (serial, type) pair from MediaStates as the wire
+// query — the response is account-wide regardless of the query device.
+func (s *MediaService) fetchMediaStates(ctx context.Context) (map[string]map[string]any, error) {
+	s.mediaStatesQueryMu.RLock()
+	serial := s.mediaStatesQuerySerial
+	devType := s.mediaStatesQueryType
+	s.mediaStatesQueryMu.RUnlock()
+	if serial == "" || devType == "" {
+		return nil, fmt.Errorf("%w: media.mediaStates loader has no recorded query device — call MediaStates with at least one device first", ErrCannotRetrieveData)
+	}
 	url := fmt.Sprintf(
 		"https://alexa.amazon.%s%s?deviceSerialNumber=%s&deviceType=%s",
 		s.wrapper.Domain(), amzconst.URIMediaState,
-		queryDevice.SerialNumber, queryDevice.DeviceType,
+		serial, devType,
 	)
 	resp, err := s.wrapper.Do(ctx, httpwrapper.Request{
 		Method: http.MethodGet,
@@ -92,21 +157,7 @@ func (s *MediaService) MediaStates(ctx context.Context, devices []*Device) (map[
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", ErrCannotRetrieveData, err)
 	}
-
-	sessions := indexMediaSessions(data)
-	now := time.Now().UTC()
-	out := map[string]*MediaState{}
-	for _, d := range devices {
-		if !d.MediaPlayerSupported {
-			continue
-		}
-		session, ok := sessions[d.SerialNumber]
-		if !ok {
-			continue
-		}
-		out[d.SerialNumber] = buildMediaState(session, now)
-	}
-	return out, nil
+	return indexMediaSessions(data), nil
 }
 
 func indexMediaSessions(data map[string]any) map[string]map[string]any {
@@ -183,35 +234,40 @@ func buildMediaState(session map[string]any, capturedAt time.Time) *MediaState {
 }
 
 // Sounds returns the live Alexa sound-effects catalogue keyed by Sound.ID.
-// Cached per MediaService for the configured TTL (default 1h, overridable
-// via WithSoundsTTL). Zero or negative TTL disables caching. Concurrent
-// callers serialize on the cache mutex; the second caller sees the
-// freshly populated cache.
+// Cached per MediaService for the configured Long-class TTL (overridable
+// via WithSoundsTTL). Concurrent callers share the in-flight fetch.
 //
-// The returned map is a defensive copy — mutating it does not affect the
-// cached value.
+// The returned map is a defensive copy.
 func (s *MediaService) Sounds(ctx context.Context) (map[string]Sound, error) {
-	s.soundsMu.Lock()
-	defer s.soundsMu.Unlock()
-
-	if s.soundsTTL > 0 && s.soundsCache != nil &&
-		time.Since(s.soundsFetchedAt) < s.soundsTTL {
-		return copySoundsMap(s.soundsCache), nil
-	}
-
-	fresh, err := s.fetchSounds(ctx)
+	got, _, err := s.soundsCache.Get(ctx, "")
 	if err != nil {
 		return nil, err
 	}
+	return copySoundsMap(got), nil
+}
 
-	if s.soundsTTL > 0 {
-		s.soundsCache = fresh
-		s.soundsFetchedAt = time.Now()
-	} else {
-		s.soundsCache = nil
-		s.soundsFetchedAt = time.Time{}
-	}
-	return copySoundsMap(fresh), nil
+// marshalSoundsEntries / unmarshalSoundsEntries persist the
+// media.sounds cache via the engine's Persistence adapter.
+func marshalSoundsEntries(in map[string]cache.Entry[map[string]Sound]) ([]byte, error) {
+	return json.Marshal(in)
+}
+
+func unmarshalSoundsEntries(b []byte) (map[string]cache.Entry[map[string]Sound], error) {
+	out := map[string]cache.Entry[map[string]Sound]{}
+	err := json.Unmarshal(b, &out)
+	return out, err
+}
+
+// marshalMusicProvidersEntries / unmarshalMusicProvidersEntries persist
+// the media.musicProviders cache via the engine's Persistence adapter.
+func marshalMusicProvidersEntries(in map[string]cache.Entry[map[string]MusicProvider]) ([]byte, error) {
+	return json.Marshal(in)
+}
+
+func unmarshalMusicProvidersEntries(b []byte) (map[string]cache.Entry[map[string]MusicProvider], error) {
+	out := map[string]cache.Entry[map[string]MusicProvider]{}
+	err := json.Unmarshal(b, &out)
+	return out, err
 }
 
 func copySoundsMap(in map[string]Sound) map[string]Sound {
@@ -274,11 +330,26 @@ func (s *MediaService) fetchSounds(ctx context.Context) (map[string]Sound, error
 	return out, nil
 }
 
-// MusicProviders returns the available music providers. Filters to
-// those whose supportedProperties include Alexa.Music.PlaySearchPhrase
+// MusicProviders returns the available music providers. Cached for the
+// Long-class TTL and tagged "session" — account switches drop the cache
+// automatically. Returned map is a defensive copy.
+func (s *MediaService) MusicProviders(ctx context.Context) (map[string]MusicProvider, error) {
+	got, _, err := s.musicProvidersCache.Get(ctx, "")
+	if err != nil {
+		return nil, err
+	}
+	out := make(map[string]MusicProvider, len(got))
+	for k, v := range got {
+		out[k] = v
+	}
+	return out, nil
+}
+
+// fetchMusicProviders is the loader for media.musicProviders. Filters to
+// providers whose supportedProperties include Alexa.Music.PlaySearchPhrase
 // AND whose availability is "AVAILABLE". DefaultProvider tracks the
 // providerData.isDefaultMusicProvider flag.
-func (s *MediaService) MusicProviders(ctx context.Context) (map[string]MusicProvider, error) {
+func (s *MediaService) fetchMusicProviders(ctx context.Context) (map[string]MusicProvider, error) {
 	url := fmt.Sprintf("https://alexa.amazon.%s%s",
 		s.wrapper.Domain(), amzconst.URIMusicProviders)
 	resp, err := s.wrapper.Do(ctx, httpwrapper.Request{

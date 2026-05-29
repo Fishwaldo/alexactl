@@ -7,9 +7,8 @@ import (
 	"sync"
 	"time"
 
-	"golang.org/x/sync/singleflight"
-
 	"github.com/Fishwaldo/goamazondevices/internal/amzconst"
+	"github.com/Fishwaldo/goamazondevices/internal/cache"
 	"github.com/Fishwaldo/goamazondevices/internal/httpwrapper"
 )
 
@@ -18,23 +17,21 @@ import (
 type DevicesService struct {
 	wrapper *httpwrapper.Wrapper
 
-	// mu guards session, cache, endpoints, timestamps, and defaultDevice.
-	mu              sync.RWMutex
-	session         *Session
-	cache           map[string]*Device // serial -> device
-	endpoints       map[string]string  // endpoint ID -> serial
-	lastDailyFetch  time.Time
-	lastEndpointFix time.Time
-	defaultDevice   *Device
+	// mu guards session and defaultDevice.
+	mu            sync.RWMutex
+	session       *Session
+	defaultDevice *Device
 
-	// refreshGroup dedupes concurrent refresh calls. The key is a constant
-	// ("refresh") so at most one refresh is in flight per DevicesService.
-	refreshGroup singleflight.Group
+	// listCache caches the full enriched device map keyed by serial under
+	// sentinel key "". TTL = Long class. Loader runs fetchBase +
+	// fetchEndpoints + sensorsHook. Concurrent refresh callers share the
+	// single in-flight load via the engine's singleflight.
+	listCache *cache.Cache[map[string]*Device]
 
-	// sensorsHook, if non-nil, is invoked at the end of refresh to enrich
-	// devices with sensor state and DnD. Wired by NewClient; nil when the
-	// service is constructed bare in tests. Failures from the hook are
-	// logged at WARN level and do NOT fail the refresh.
+	// sensorsHook, if non-nil, is invoked at the end of the cache loader
+	// to enrich devices with sensor state and DnD. Wired by NewClient;
+	// nil when the service is constructed bare in tests. Failures from
+	// the hook are logged at WARN level and do NOT fail the load.
 	sensorsHook func(ctx context.Context, devices map[string]*Device, endpoints map[string]string) error
 
 	// smartHome is the per-Client write helper; non-nil after NewClient
@@ -208,4 +205,18 @@ func sliceContains(haystack []string, needle string) bool {
 func boolOf(v any) bool {
 	b, _ := v.(bool)
 	return b
+}
+
+// initListCacheForTest wires a listCache on the receiver and pre-populates
+// it with `seed`. ONLY for tests that construct DevicesService bare.
+func (s *DevicesService) initListCacheForTest(seed map[string]*Device) {
+	s.listCache = cache.NewCache[map[string]*Device](
+		cache.Config{Name: "devices.list", TTL: 24 * time.Hour},
+		func(ctx context.Context, _ string) (map[string]*Device, error) {
+			return s.fetchAndEnrichDevices(ctx)
+		},
+	)
+	if seed != nil {
+		s.listCache.Set("", seed)
+	}
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"net/http/httptest"
 	"os"
 	"sync"
 	"sync/atomic"
@@ -12,6 +13,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/Fishwaldo/goamazondevices/internal/cache"
 )
 
 func TestMedia_Sounds_DecodesEntities(t *testing.T) {
@@ -57,9 +60,7 @@ func TestMedia_Sounds_CacheReturnsWithoutSecondCall(t *testing.T) {
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write(body)
 	})
-	// newMediaTest constructs the MediaService bare, so soundsTTL is zero
-	// (no cache). Explicitly set a non-zero TTL for this test.
-	ms.soundsTTL = time.Hour
+	// newMediaTest already wires a 1h TTL cache; leave it.
 
 	_, err = ms.Sounds(context.Background())
 	require.NoError(t, err)
@@ -78,7 +79,11 @@ func TestMedia_Sounds_CacheExpiresAfterTTL(t *testing.T) {
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write(body)
 	})
-	ms.soundsTTL = 50 * time.Millisecond
+	// Override the cache TTL to a short window for expiry verification.
+	ms.soundsCache = cache.NewCache[map[string]Sound](
+		cache.Config{Name: "media.sounds", TTL: 50 * time.Millisecond},
+		func(ctx context.Context, _ string) (map[string]Sound, error) { return ms.fetchSounds(ctx) },
+	)
 
 	_, err = ms.Sounds(context.Background())
 	require.NoError(t, err)
@@ -99,7 +104,11 @@ func TestMedia_Sounds_NoCacheWhenTTLZero(t *testing.T) {
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write(body)
 	})
-	ms.soundsTTL = 0 // explicit no-cache
+	// Override with a TTL=0 cache to disable caching.
+	ms.soundsCache = cache.NewCache[map[string]Sound](
+		cache.Config{Name: "media.sounds", TTL: 0},
+		func(ctx context.Context, _ string) (map[string]Sound, error) { return ms.fetchSounds(ctx) },
+	)
 
 	for i := 0; i < 3; i++ {
 		_, err := ms.Sounds(context.Background())
@@ -115,8 +124,6 @@ func TestMedia_Sounds_ReturnedMapIsDefensiveCopy(t *testing.T) {
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write(body)
 	})
-	ms.soundsTTL = time.Hour
-
 	first, err := ms.Sounds(context.Background())
 	require.NoError(t, err)
 	// Mutate the returned map.
@@ -139,8 +146,6 @@ func TestMedia_Sounds_SessionRefreshInvalidatesCache(t *testing.T) {
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write(body)
 	})
-	ms.soundsTTL = time.Hour
-
 	_, err = ms.Sounds(context.Background())
 	require.NoError(t, err)
 	assert.Equal(t, int32(1), atomic.LoadInt32(&hits))
@@ -204,8 +209,6 @@ func TestMedia_Sounds_ConcurrentCallersShareFlight(t *testing.T) {
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write(body)
 	})
-	ms.soundsTTL = time.Hour
-
 	var wg sync.WaitGroup
 	for i := 0; i < 4; i++ {
 		wg.Add(1)
@@ -219,4 +222,41 @@ func TestMedia_Sounds_ConcurrentCallersShareFlight(t *testing.T) {
 
 	// First caller fetches; the other three see the cached value.
 	assert.Equal(t, int32(1), atomic.LoadInt32(&hits))
+}
+
+func TestMedia_Sounds_SessionTagClearsCache(t *testing.T) {
+	body, err := os.ReadFile("testdata/media/sounds.json")
+	require.NoError(t, err)
+	var hits int32
+	c, srv := newClientForSoundsTest(t, func(w http.ResponseWriter, _ *http.Request) {
+		atomic.AddInt32(&hits, 1)
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write(body)
+	})
+	defer srv.Close()
+
+	_, err = c.Media.Sounds(context.Background())
+	require.NoError(t, err)
+
+	// Swap session → manager's session-tag invalidation fires.
+	c.Auth.broadcast(&Session{AccountCustomerID: "OTHER", Domain: "com"})
+
+	_, err = c.Media.Sounds(context.Background())
+	require.NoError(t, err)
+	assert.Equal(t, int32(2), atomic.LoadInt32(&hits))
+}
+
+// newClientForSoundsTest stands up a real Client wired to a test server.
+func newClientForSoundsTest(t *testing.T, handler http.HandlerFunc) (*Client, *httptest.Server) {
+	t.Helper()
+	srv := httptest.NewServer(handler)
+	hc := srv.Client()
+	hc.Transport = &hostRewriter{base: srv.URL, inner: srv.Client().Transport}
+	c, err := NewClient(
+		WithHTTPClient(hc),
+		WithSite(srv.URL),
+		WithSession(&Session{AccountCustomerID: "OWNER", Domain: "com"}),
+	)
+	require.NoError(t, err)
+	return c, srv
 }

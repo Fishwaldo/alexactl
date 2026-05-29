@@ -2,11 +2,13 @@ package amazondevices
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"sync"
 
 	"github.com/Fishwaldo/goamazondevices/internal/amzconst"
+	"github.com/Fishwaldo/goamazondevices/internal/cache"
 	"github.com/Fishwaldo/goamazondevices/internal/httpwrapper"
 )
 
@@ -22,6 +24,10 @@ type DnDService struct {
 
 	mu      sync.RWMutex
 	session *Session
+
+	// statusCache caches Status() for the Short-class TTL. Set() invalidates
+	// it on successful write.
+	statusCache *cache.Cache[map[string]*DeviceSensor]
 }
 
 // setSession swaps in a fresh *Session pointer. Invoked by AuthService
@@ -33,11 +39,23 @@ func (s *DnDService) setSession(sess *Session) {
 }
 
 // Status returns the Do Not Disturb state for every device on the
-// account, keyed by device serial number. Each entry is a *DeviceSensor
-// named "dnd" whose Value is a bool. Devices not present in the result
-// map are silently treated as DnD-off by callers (e.g.,
-// SensorsService.Update).
+// account, keyed by device serial number. Cached for the Short-class TTL.
+// Returned map is a defensive copy.
 func (s *DnDService) Status(ctx context.Context) (map[string]*DeviceSensor, error) {
+	got, _, err := s.statusCache.Get(ctx, "")
+	if err != nil {
+		return nil, err
+	}
+	out := make(map[string]*DeviceSensor, len(got))
+	for k, v := range got {
+		cp := *v
+		out[k] = &cp
+	}
+	return out, nil
+}
+
+// fetchStatus is the loader for dnd.status.
+func (s *DnDService) fetchStatus(ctx context.Context) (map[string]*DeviceSensor, error) {
 	url := fmt.Sprintf("https://alexa.amazon.%s%s",
 		s.wrapper.Domain(), amzconst.URIDnDStatusAll)
 
@@ -117,5 +135,20 @@ func (s *DnDService) Set(ctx context.Context, d *Device, enabled bool) error {
 			URL:        url,
 		}
 	}
+	// Drop the cached snapshot so the next Status reflects the change.
+	if s.statusCache != nil {
+		s.statusCache.InvalidateAll()
+	}
 	return nil
+}
+
+// marshalDnDEntries / unmarshalDnDEntries persist the dnd.status cache.
+func marshalDnDEntries(in map[string]cache.Entry[map[string]*DeviceSensor]) ([]byte, error) {
+	return json.Marshal(in)
+}
+
+func unmarshalDnDEntries(b []byte) (map[string]cache.Entry[map[string]*DeviceSensor], error) {
+	out := map[string]cache.Entry[map[string]*DeviceSensor]{}
+	err := json.Unmarshal(b, &out)
+	return out, err
 }

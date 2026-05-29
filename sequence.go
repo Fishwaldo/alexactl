@@ -10,8 +10,21 @@ import (
 	"time"
 
 	"github.com/Fishwaldo/goamazondevices/internal/amzconst"
+	"github.com/Fishwaldo/goamazondevices/internal/cache"
 	"github.com/Fishwaldo/goamazondevices/internal/httpwrapper"
 )
+
+// marshalRoutinesEntries / unmarshalRoutinesEntries persist the
+// sequence.routines cache via the engine's Persistence adapter.
+func marshalRoutinesEntries(in map[string]cache.Entry[map[string]map[string]any]) ([]byte, error) {
+	return json.Marshal(in)
+}
+
+func unmarshalRoutinesEntries(b []byte) (map[string]cache.Entry[map[string]map[string]any], error) {
+	out := map[string]cache.Entry[map[string]map[string]any]{}
+	err := json.Unmarshal(b, &out)
+	return out, err
+}
 
 // SequenceService dispatches Alexa sequence operations (Speak,
 // Announcement, Sound, Music, TextCommand, LaunchSkill, Volume, Stop,
@@ -43,9 +56,10 @@ type SequenceService struct {
 	// processBatch goroutine that hasn't woken yet.
 	batchGen uint64
 
-	// routines cache: name -> sequence object (the full sequence map,
-	// indexed for "startNode" lookup by buildOperationNode).
-	routines map[string]map[string]any
+	// routinesCache: name -> sequence object (the full sequence map,
+	// indexed for "startNode" lookup by buildOperationNode). Engine-managed
+	// (single sentinel key "").
+	routinesCache *cache.Cache[map[string]map[string]any]
 
 	// Test seam — overridden by tests for deterministic timing.
 	// Production leaves nil; processBatch uses time.NewTimer.
@@ -101,7 +115,7 @@ func (s *SequenceService) sleep(ctx context.Context, d time.Duration) error {
 // for one (device, messageType, messageBody, providerID) tuple. Port of
 // the Python sequence.py _build_operation_node — all branches except
 // Routines (which lands in Task 10).
-func (s *SequenceService) buildOperationNode(d *Device, messageType string, messageBody any, providerID string) (map[string]any, error) {
+func (s *SequenceService) buildOperationNode(ctx context.Context, d *Device, messageType string, messageBody any, providerID string) (map[string]any, error) {
 	sess := s.snapshotSession()
 	if sess == nil || sess.AccountCustomerID == "" {
 		return nil, fmt.Errorf("%w: missing customer ID", ErrCannotAuthenticate)
@@ -209,9 +223,11 @@ func (s *SequenceService) buildOperationNode(d *Device, messageType string, mess
 		if !ok {
 			return nil, fmt.Errorf("amazondevices: sequence: routine name must be a string")
 		}
-		s.mu.Lock()
-		seq, found := s.routines[name]
-		s.mu.Unlock()
+		cached, _, gerr := s.routinesCache.Get(ctx, "")
+		if gerr != nil {
+			return nil, gerr
+		}
+		seq, found := cached[name]
 		if !found {
 			return nil, fmt.Errorf("amazondevices: sequence: unknown routine %q (run Routines first)", name)
 		}
@@ -318,7 +334,7 @@ func (s *SequenceService) postSequences(ctx context.Context, ops []sequenceOp) e
 // async failures are logged at WARN level. Callers wanting sync
 // semantics call Flush after Send.
 func (s *SequenceService) Send(ctx context.Context, d *Device, kind SequenceType, body any, providerID string) error {
-	node, err := s.buildOperationNode(d, string(kind), body, providerID)
+	node, err := s.buildOperationNode(ctx, d, string(kind), body, providerID)
 	if err != nil {
 		return err
 	}
@@ -444,20 +460,13 @@ func sameOpKey(a, b sequenceOp) bool {
 		fmt.Sprintf("%v", a.messageBody) == fmt.Sprintf("%v", b.messageBody)
 }
 
-// Routines returns the names of ENABLED routines on the account. The
-// first call fetches and caches; subsequent calls return the cached
-// names until RefreshRoutines is invoked.
+// Routines returns the names of ENABLED routines on the account.
+// First call fetches; subsequent calls within TTL return the cached
+// names. Use RefreshRoutines to force a re-fetch.
 func (s *SequenceService) Routines(ctx context.Context) ([]string, error) {
-	s.mu.Lock()
-	cached := s.routines
-	s.mu.Unlock()
-	if cached == nil {
-		if err := s.fetchRoutines(ctx); err != nil {
-			return nil, err
-		}
-		s.mu.Lock()
-		cached = s.routines
-		s.mu.Unlock()
+	cached, _, err := s.routinesCache.Get(ctx, "")
+	if err != nil {
+		return nil, err
 	}
 	names := make([]string, 0, len(cached))
 	for name := range cached {
@@ -469,10 +478,9 @@ func (s *SequenceService) Routines(ctx context.Context) ([]string, error) {
 
 // RefreshRoutines forces a re-fetch on the next Routines/CallRoutine.
 func (s *SequenceService) RefreshRoutines(ctx context.Context) error {
-	s.mu.Lock()
-	s.routines = nil
-	s.mu.Unlock()
-	return s.fetchRoutines(ctx)
+	s.routinesCache.InvalidateAll()
+	_, _, err := s.routinesCache.Get(ctx, "")
+	return err
 }
 
 // replaceRoutinePlaceholders walks obj recursively, substituting the
@@ -538,22 +546,22 @@ func deepCopyValue(v any) any {
 	}
 }
 
-// fetchRoutines populates s.routines from
-// GET /api/behaviors/v2/automations. Only entries with status=ENABLED
-// are cached.
-func (s *SequenceService) fetchRoutines(ctx context.Context) error {
+// fetchRoutines is the loader for the sequence.routines cache. It calls
+// GET /api/behaviors/v2/automations and returns the map of ENABLED
+// routines keyed by name.
+func (s *SequenceService) fetchRoutines(ctx context.Context) (map[string]map[string]any, error) {
 	url := fmt.Sprintf("https://alexa.amazon.%s%s", s.wrapper.Domain(), amzconst.URIAutomations)
 	resp, err := s.wrapper.Do(ctx, httpwrapper.Request{
 		Method: http.MethodGet,
 		URL:    url,
 	})
 	if err != nil {
-		return fmt.Errorf("%w: %w", ErrCannotConnect, err)
+		return nil, fmt.Errorf("%w: %w", ErrCannotConnect, err)
 	}
 	if resp.StatusCode >= 400 {
 		body := resp.Body
 		defer body.Close()
-		return &APIError{
+		return nil, &APIError{
 			Category:   ErrCannotRetrieveData,
 			Method:     http.MethodGet,
 			StatusCode: resp.StatusCode,
@@ -562,10 +570,10 @@ func (s *SequenceService) fetchRoutines(ctx context.Context) error {
 	}
 	data, err := httpwrapper.DecodeJSON(resp)
 	if err != nil {
-		return fmt.Errorf("%w: %w", ErrCannotRetrieveData, err)
+		return nil, fmt.Errorf("%w: %w", ErrCannotRetrieveData, err)
 	}
 	arr, _ := data[amzconst.ArrayWrapper].([]any)
-	cache := map[string]map[string]any{}
+	out := map[string]map[string]any{}
 	for _, entry := range arr {
 		row, _ := entry.(map[string]any)
 		if row == nil {
@@ -580,10 +588,7 @@ func (s *SequenceService) fetchRoutines(ctx context.Context) error {
 		if name == "" || sequence == nil {
 			continue
 		}
-		cache[name] = sequence
+		out[name] = sequence
 	}
-	s.mu.Lock()
-	s.routines = cache
-	s.mu.Unlock()
-	return nil
+	return out, nil
 }

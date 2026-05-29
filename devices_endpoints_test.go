@@ -64,6 +64,7 @@ func TestDevices_Enrichment(t *testing.T) {
 		wrapper: wr,
 		session: &Session{AccountCustomerID: "OWNER", Domain: "com"},
 	}
+	ds.initListCacheForTest(nil)
 
 	devs, err := ds.List(context.Background())
 	require.NoError(t, err)
@@ -114,14 +115,12 @@ func TestDefault_DeterministicAcrossCalls(t *testing.T) {
 	ds := &DevicesService{
 		wrapper: wr,
 		session: &Session{AccountCustomerID: "OWNER", Domain: "com"},
-		cache: map[string]*Device{
-			"S-MIDDLE": {SerialNumber: "S-MIDDLE", Online: true},
-			"S-AAA":    {SerialNumber: "S-AAA", Online: true},
-			"S-ZZZ":    {SerialNumber: "S-ZZZ", Online: true},
-		},
-		// Non-zero so refreshIfStale doesn't try to hit the network.
-		lastDailyFetch: time.Now(),
 	}
+	ds.initListCacheForTest(map[string]*Device{
+		"S-MIDDLE": {SerialNumber: "S-MIDDLE", Online: true},
+		"S-AAA":    {SerialNumber: "S-AAA", Online: true},
+		"S-ZZZ":    {SerialNumber: "S-ZZZ", Online: true},
+	})
 
 	first, err := ds.Default(context.Background())
 	require.NoError(t, err)
@@ -150,13 +149,12 @@ func TestDefault_RespectsUserSet(t *testing.T) {
 	ds := &DevicesService{
 		wrapper: wr,
 		session: &Session{AccountCustomerID: "OWNER", Domain: "com"},
-		cache: map[string]*Device{
-			"S-AAA":  {SerialNumber: "S-AAA", Online: true},
-			"S-ZZZ":  userPick,
-			"S-MMMM": {SerialNumber: "S-MMMM", Online: true},
-		},
-		lastDailyFetch: time.Now(),
 	}
+	ds.initListCacheForTest(map[string]*Device{
+		"S-AAA":  {SerialNumber: "S-AAA", Online: true},
+		"S-ZZZ":  userPick,
+		"S-MMMM": {SerialNumber: "S-MMMM", Online: true},
+	})
 	require.NoError(t, ds.SetDefault(userPick))
 
 	got, err := ds.Default(context.Background())
@@ -204,8 +202,8 @@ func TestRefresh_Singleflight(t *testing.T) {
 	ds := &DevicesService{
 		wrapper: wr,
 		session: &Session{AccountCustomerID: "OWNER", Domain: "com"},
-		// lastDailyFetch zero-value -> stale.
 	}
+	ds.initListCacheForTest(nil)
 
 	const N = 10
 	var wg sync.WaitGroup
@@ -262,6 +260,7 @@ func TestRefresh_SurfacesNonAmazonAQM(t *testing.T) {
 		wrapper: wr,
 		session: &Session{AccountCustomerID: "OWNER", Domain: "com"},
 	}
+	ds.initListCacheForTest(nil)
 
 	devs, err := ds.List(context.Background())
 	require.NoError(t, err)
@@ -326,6 +325,7 @@ func TestRefresh_SurfacesSerialLessSmartHomeEndpoint(t *testing.T) {
 		wrapper: wr,
 		session: &Session{AccountCustomerID: "OWNER", Domain: "com"},
 	}
+	ds.initListCacheForTest(nil)
 
 	devs, err := ds.List(context.Background())
 	require.NoError(t, err)
@@ -548,11 +548,8 @@ func TestSetDefault_NilReturnsError(t *testing.T) {
 		RandReader: bytes.NewReader(bytes.Repeat([]byte{0x42}, 1024)),
 	})
 	require.NoError(t, err)
-	ds := &DevicesService{
-		wrapper:        wr,
-		cache:          map[string]*Device{},
-		lastDailyFetch: time.Now(),
-	}
+	ds := &DevicesService{wrapper: wr}
+	ds.initListCacheForTest(map[string]*Device{})
 	err = ds.SetDefault(nil)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "nil device")
@@ -567,13 +564,10 @@ func TestSetDefault_NotInCacheReturnsError(t *testing.T) {
 		RandReader: bytes.NewReader(bytes.Repeat([]byte{0x42}, 1024)),
 	})
 	require.NoError(t, err)
-	ds := &DevicesService{
-		wrapper: wr,
-		cache: map[string]*Device{
-			"S-AAA": {SerialNumber: "S-AAA", Online: true},
-		},
-		lastDailyFetch: time.Now(),
-	}
+	ds := &DevicesService{wrapper: wr}
+	ds.initListCacheForTest(map[string]*Device{
+		"S-AAA": {SerialNumber: "S-AAA", Online: true},
+	})
 	stranger := &Device{SerialNumber: "S-NOT-IN-CACHE", Online: true}
 	err = ds.SetDefault(stranger)
 	require.Error(t, err)
@@ -591,14 +585,11 @@ func TestSetDefault_ValidDevicePersisted(t *testing.T) {
 	})
 	require.NoError(t, err)
 	pick := &Device{SerialNumber: "S-PICK", Online: true}
-	ds := &DevicesService{
-		wrapper: wr,
-		cache: map[string]*Device{
-			"S-AAA":  {SerialNumber: "S-AAA", Online: true},
-			"S-PICK": pick,
-		},
-		lastDailyFetch: time.Now(),
-	}
+	ds := &DevicesService{wrapper: wr}
+	ds.initListCacheForTest(map[string]*Device{
+		"S-AAA":  {SerialNumber: "S-AAA", Online: true},
+		"S-PICK": pick,
+	})
 	require.NoError(t, ds.SetDefault(pick))
 	got, err := ds.Default(context.Background())
 	require.NoError(t, err)
@@ -692,6 +683,7 @@ func TestFetchEndpoints_PopulatesPhase4aFields(t *testing.T) {
 		wrapper: wr,
 		session: &Session{AccountCustomerID: "OWNER", Domain: "com"},
 	}
+	ds.initListCacheForTest(nil)
 
 	devs, err := ds.List(context.Background())
 	require.NoError(t, err)

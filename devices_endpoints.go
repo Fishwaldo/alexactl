@@ -5,11 +5,10 @@ import (
 	"fmt"
 	"sort"
 	"strings"
-	"time"
 
-	"github.com/Khan/genqlient/graphql"
 	"github.com/Fishwaldo/goamazondevices/internal/alexagraphql"
 	"github.com/Fishwaldo/goamazondevices/internal/amzconst"
+	"github.com/Khan/genqlient/graphql"
 )
 
 type (
@@ -20,17 +19,14 @@ type (
 // Air Quality Monitors. The result is sorted by serial number and is a
 // fresh slice; mutations don't affect the cache.
 //
-// Caches results for ~24h; call Refresh to force a re-fetch.
+// Cached for the Long-class TTL; call Refresh to force a re-fetch.
 func (s *DevicesService) List(ctx context.Context) ([]*Device, error) {
-	if err := s.refreshIfStale(ctx); err != nil {
+	devices, _, err := s.listCache.Get(ctx, "")
+	if err != nil {
 		return nil, err
 	}
-
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-
-	out := make([]*Device, 0, len(s.cache))
-	for _, d := range s.cache {
+	out := make([]*Device, 0, len(devices))
+	for _, d := range devices {
 		out = append(out, d)
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].SerialNumber < out[j].SerialNumber })
@@ -41,12 +37,11 @@ func (s *DevicesService) List(ctx context.Context) ([]*Device, error) {
 // stale. Returns nil and an error wrapping ErrCannotRetrieveData if not
 // found after a refresh.
 func (s *DevicesService) Get(ctx context.Context, serial string) (*Device, error) {
-	if err := s.refreshIfStale(ctx); err != nil {
+	devices, _, err := s.listCache.Get(ctx, "")
+	if err != nil {
 		return nil, err
 	}
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	d, ok := s.cache[serial]
+	d, ok := devices[serial]
 	if !ok {
 		return nil, fmt.Errorf("%w: no such device: %s", ErrCannotRetrieveData, serial)
 	}
@@ -55,41 +50,47 @@ func (s *DevicesService) Get(ctx context.Context, serial string) (*Device, error
 
 // getCached returns the device from the cache without triggering a
 // refresh. Used by Phase 6 schedule services to resolve DeviceType
-// from a SerialNumber during Create. Returns nil if not present.
+// from a SerialNumber during Create. Returns nil if not present or if
+// the cache is empty.
 func (s *DevicesService) getCached(serial string) *Device {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	return s.cache[serial]
+	if s.listCache == nil {
+		return nil
+	}
+	devices, hit, _ := s.listCache.Get(context.Background(), "")
+	if !hit {
+		return nil
+	}
+	return devices[serial]
 }
 
 // setCacheForTest replaces the cache atomically. ONLY used by tests
 // in the same package to seed device state without going through
 // Refresh.
-func (s *DevicesService) setCacheForTest(cache map[string]*Device) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.cache = cache
+func (s *DevicesService) setCacheForTest(c map[string]*Device) {
+	s.listCache.Set("", c)
 }
 
 // Default returns the user-set default device, or the first online device
 // (by sorted serial number) if not set. Iteration is deterministic across
 // calls because Go's map range order is randomized.
 func (s *DevicesService) Default(ctx context.Context) (*Device, error) {
-	if err := s.refreshIfStale(ctx); err != nil {
+	devices, _, err := s.listCache.Get(ctx, "")
+	if err != nil {
 		return nil, err
 	}
 	s.mu.RLock()
-	defer s.mu.RUnlock()
-	if s.defaultDevice != nil {
-		return s.defaultDevice, nil
+	def := s.defaultDevice
+	s.mu.RUnlock()
+	if def != nil {
+		return def, nil
 	}
-	serials := make([]string, 0, len(s.cache))
-	for serial := range s.cache {
+	serials := make([]string, 0, len(devices))
+	for serial := range devices {
 		serials = append(serials, serial)
 	}
 	sort.Strings(serials)
 	for _, serial := range serials {
-		if d := s.cache[serial]; d.Online {
+		if d := devices[serial]; d.Online {
 			return d, nil
 		}
 	}
@@ -106,66 +107,82 @@ func (s *DevicesService) SetDefault(d *Device) error {
 	if d == nil {
 		return fmt.Errorf("amazondevices: SetDefault: nil device")
 	}
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	if _, ok := s.cache[d.SerialNumber]; !ok {
+	devices, hit, _ := s.listCache.Get(context.Background(), "")
+	if !hit {
+		return fmt.Errorf("%w: device cache empty; call Refresh first", ErrDeviceNotFound)
+	}
+	if _, ok := devices[d.SerialNumber]; !ok {
 		return fmt.Errorf("%w: device %q not in cache", ErrDeviceNotFound, d.SerialNumber)
 	}
+	s.mu.Lock()
 	s.defaultDevice = d
+	s.mu.Unlock()
 	return nil
 }
 
 // Refresh forces a re-fetch of the device list, including the GraphQL
-// endpoint enrichment.
+// endpoint enrichment. WithoutSensors bypasses the cache loader (which
+// always runs sensors) and writes the no-sensors result straight into
+// the cache.
 func (s *DevicesService) Refresh(ctx context.Context, opts ...RefreshOption) error {
 	cfg := refreshConfig{}
 	for _, o := range opts {
 		o.apply(&cfg)
 	}
-	return s.refresh(ctx, cfg)
-}
-
-// refreshIfStale calls refresh if the cache is older than the daily window.
-// Concurrent callers are coalesced via singleflight: only one HTTP refresh
-// happens; every caller sees the same result.
-func (s *DevicesService) refreshIfStale(ctx context.Context) error {
-	s.mu.RLock()
-	stale := s.cache == nil || time.Since(s.lastDailyFetch) >= 24*time.Hour
-	s.mu.RUnlock()
-	if !stale {
-		return nil
+	if cfg.skipSensors {
+		_, err := s.refreshSkipSensors(ctx)
+		return err
 	}
-	_, err, _ := s.refreshGroup.Do("refresh", func() (any, error) {
-		return nil, s.refresh(ctx, refreshConfig{})
-	})
+	// Default path: force fresh by invalidating, then Get to fire the
+	// loader (which runs sensors enrichment).
+	s.listCache.InvalidateAll()
+	_, _, err := s.listCache.Get(ctx, "")
 	return err
 }
 
-func (s *DevicesService) refresh(ctx context.Context, cfg refreshConfig) error {
+// refreshSkipSensors is the WithoutSensors fast-path. Fetches base +
+// endpoints without sensors enrichment, writes the result into
+// listCache, and returns the map.
+func (s *DevicesService) refreshSkipSensors(ctx context.Context) (map[string]*Device, error) {
+	sitePrefix := s.alexaHost()
+	base, err := s.fetchBase(ctx, sitePrefix)
+	if err != nil {
+		return nil, err
+	}
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	if _, err := s.fetchEndpoints(ctx, sitePrefix, base); err != nil {
+		return nil, err
+	}
+	s.listCache.Set("", base)
+	return base, nil
+}
+
+// fetchAndEnrichDevices is the loader for the devices.list cache. Runs
+// fetchBase + fetchEndpoints + sensorsHook (when set) and returns the
+// enriched device map.
+func (s *DevicesService) fetchAndEnrichDevices(ctx context.Context) (map[string]*Device, error) {
 	s.wrapper.Logger(ctx).DebugContext(ctx, "amazondevices: refreshing devices")
 	sitePrefix := s.alexaHost()
 
 	base, err := s.fetchBase(ctx, sitePrefix)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	// Cheap insurance: if the caller cancelled between sub-fetches, bail
-	// out before issuing the GraphQL request.
 	if err := ctx.Err(); err != nil {
-		return err
+		return nil, err
 	}
 	endpoints, err := s.fetchEndpoints(ctx, sitePrefix, base)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	// Sensors enrichment — best-effort. Failures (network, malformed
-	// GraphQL response) log a WARN and do NOT fail Refresh. Callers that
-	// don't care about sensors can pass WithoutSensors() to skip the
-	// extra HTTP roundtrip entirely.
-	if !cfg.skipSensors && s.sensorsHook != nil {
+	// Sensors enrichment — best-effort. Failures log WARN and do NOT
+	// fail the load.
+	if s.sensorsHook != nil {
 		if err := ctx.Err(); err != nil {
-			return err
+			return nil, err
 		}
 		if hookErr := s.sensorsHook(ctx, base, endpoints); hookErr != nil {
 			s.wrapper.Logger(ctx).WarnContext(ctx,
@@ -173,24 +190,14 @@ func (s *DevicesService) refresh(ctx context.Context, cfg refreshConfig) error {
 				"err", hookErr)
 		}
 		// Derive AlexaInterfaces from each device's populated sensor
-		// keys and merge into d.AlexaInterfaces. Skill-discovered
-		// third-party devices have empty alexaEnabledMetadata.
-		// capabilities; this step is what makes their typed accessors
-		// (d.Power(), d.Brightness(), d.Lock(), ...) return non-nil.
+		// keys and merge into d.AlexaInterfaces.
 		for _, d := range base {
 			if derived := inferAlexaInterfacesFromSensors(d.Sensors); len(derived) > 0 {
 				d.AlexaInterfaces = mergeAlexaInterfaces(d.AlexaInterfaces, derived)
 			}
 		}
 	}
-
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.cache = base
-	s.endpoints = endpoints
-	s.lastDailyFetch = time.Now()
-	s.lastEndpointFix = time.Now()
-	return nil
+	return base, nil
 }
 
 func (s *DevicesService) alexaHost() string {
@@ -636,9 +643,11 @@ func extractEndpointOperations(ep *listEndpointsEndpoint) []string {
 // If serial is not in the cache, Inspect returns an error wrapping
 // ErrDeviceNotFound; the caller should call Refresh first.
 func (s *DevicesService) Inspect(ctx context.Context, serial string) (*Device, error) {
-	s.mu.RLock()
-	d, ok := s.cache[serial]
-	s.mu.RUnlock()
+	devices, hit, _ := s.listCache.Get(ctx, "")
+	if !hit {
+		return nil, fmt.Errorf("%w: device cache empty; call Refresh first", ErrDeviceNotFound)
+	}
+	d, ok := devices[serial]
 	if !ok {
 		return nil, fmt.Errorf("%w: device %q not in cache", ErrDeviceNotFound, serial)
 	}

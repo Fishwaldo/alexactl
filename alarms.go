@@ -36,6 +36,11 @@ type AlarmsService struct {
 	// can resolve DeviceType from a SerialNumber. Returns (nil, false)
 	// when the cache doesn't contain the serial.
 	devicesLookup func(serial string) (*Device, bool)
+
+	// schedulesFetch is injected by NewClient; routes Get() through the
+	// shared schedules.notifications cache so Alarms/Reminders/Timers
+	// share one fetch.
+	schedulesFetch func(ctx context.Context) (*schedulesFetchResult, error)
 }
 
 // Alarm is a clock-time wake event tied to a specific device.
@@ -65,7 +70,7 @@ func (s *AlarmsService) setSession(sess *Session) {
 // Get fetches every active alarm on the account, sorted by FireAt
 // ascending. Entries with status != "ON" are dropped.
 func (s *AlarmsService) Get(ctx context.Context) ([]*Alarm, error) {
-	res, err := fetchSchedules(ctx, s.wrapper)
+	res, err := s.schedulesFetch(ctx)
 	if err != nil {
 		return nil, err
 	}

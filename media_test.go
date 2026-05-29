@@ -14,6 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/Fishwaldo/goamazondevices/internal/amzconst"
+	"github.com/Fishwaldo/goamazondevices/internal/cache"
 	"github.com/Fishwaldo/goamazondevices/internal/httpwrapper"
 )
 
@@ -50,11 +51,41 @@ func newMediaTest(t *testing.T, handler http.HandlerFunc) (*MediaService, *httpt
 			return nil
 		},
 	}
+	seq.routinesCache = cache.NewCache[map[string]map[string]any](
+		cache.Config{Name: "sequence.routines", TTL: time.Hour},
+		func(ctx context.Context, _ string) (map[string]map[string]any, error) {
+			return seq.fetchRoutines(ctx)
+		},
+	)
 	ms := &MediaService{
 		wrapper:  wr,
 		sequence: seq,
 		session:  sess,
 	}
+	ms.soundsCache = cache.NewCache[map[string]Sound](
+		cache.Config{Name: "media.sounds", TTL: time.Hour, Tags: []string{"session"}},
+		func(ctx context.Context, _ string) (map[string]Sound, error) {
+			return ms.fetchSounds(ctx)
+		},
+	)
+	ms.musicProvidersCache = cache.NewCache[map[string]MusicProvider](
+		cache.Config{Name: "media.musicProviders", TTL: time.Hour, Tags: []string{"session"}},
+		func(ctx context.Context, _ string) (map[string]MusicProvider, error) {
+			return ms.fetchMusicProviders(ctx)
+		},
+	)
+	ms.deviceVolumesCache = cache.NewCache[map[string]*VolumeState](
+		cache.Config{Name: "media.deviceVolumes", TTL: 15 * time.Second},
+		func(ctx context.Context, _ string) (map[string]*VolumeState, error) {
+			return ms.fetchDeviceVolumes(ctx)
+		},
+	)
+	ms.mediaStatesCache = cache.NewCache[map[string]map[string]any](
+		cache.Config{Name: "media.mediaStates", TTL: 15 * time.Second},
+		func(ctx context.Context, _ string) (map[string]map[string]any, error) {
+			return ms.fetchMediaStates(ctx)
+		},
+	)
 	return ms, srv
 }
 

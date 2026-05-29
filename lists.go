@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/Fishwaldo/goamazondevices/internal/amzconst"
+	"github.com/Fishwaldo/goamazondevices/internal/cache"
 	"github.com/Fishwaldo/goamazondevices/internal/httpwrapper"
 )
 
@@ -41,6 +42,11 @@ type ListsService struct {
 
 	mu      sync.RWMutex
 	session *Session
+
+	// itemsCache caches Get() for the Short-class TTL. Item-mutation
+	// methods on *List/*Item invalidate it; callers needing strictly-fresh
+	// data invoke Invalidate() before Get().
+	itemsCache *cache.Cache[[]*List]
 }
 
 // setSession is called by AuthService.broadcast on Login/Restore.
@@ -112,9 +118,29 @@ func (i *ListItem) ServerShape() map[string]any {
 // Lists are sorted by (Type, Name); items within each list are
 // sorted by (Completed, -CreatedAt) so active entries come first.
 //
-// Every call is a fresh fetch — no caching. Callers wanting a
-// stable view should cache the returned slice.
+// Cached for the Short-class TTL. Callers needing strictly-fresh data
+// either pass DisableCache(ClassShort) at construction or invoke
+// Invalidate() before Get().
 func (s *ListsService) Get(ctx context.Context) ([]*List, error) {
+	got, _, err := s.itemsCache.Get(ctx, "")
+	if err != nil {
+		return nil, err
+	}
+	out := make([]*List, len(got))
+	copy(out, got)
+	return out, nil
+}
+
+// Invalidate drops the cached lists snapshot. The next Get triggers a
+// fresh fetch.
+func (s *ListsService) Invalidate() {
+	if s.itemsCache != nil {
+		s.itemsCache.InvalidateAll()
+	}
+}
+
+// fetchItems is the loader for lists.items.
+func (s *ListsService) fetchItems(ctx context.Context) ([]*List, error) {
 	url := fmt.Sprintf("https://www.amazon.%s%s",
 		s.wrapper.Domain(), amzconst.URIListsGetItems)
 

@@ -2,12 +2,14 @@ package amazondevices
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"sync"
 	"time"
 
 	"github.com/Fishwaldo/goamazondevices/internal/amzconst"
+	"github.com/Fishwaldo/goamazondevices/internal/cache"
 	"github.com/Fishwaldo/goamazondevices/internal/httpwrapper"
 )
 
@@ -37,6 +39,20 @@ type AuthService struct {
 	// Wired by NewClient at construction time; not mutated afterwards.
 	consumers []sessionConsumer
 
+	// cacheManager is wired by NewClient so broadcast can clear
+	// session-tagged caches on session swap.
+	cacheManager *cache.Manager
+
+	// customerIDCache caches obtainCustomerIDForSerial lookups keyed by
+	// device serial. Long class, session-tagged. No loader — the lookup
+	// path writes directly via Set.
+	customerIDCache *cache.Cache[string]
+
+	// postBroadcastHook is invoked after every successful broadcast.
+	// Wired by NewClient when WithPushCacheBridge is set — the hook
+	// itself is gated with sync.Once so it runs once per Client.
+	postBroadcastHook func()
+
 	// Test seams. Production leaves these nil.
 	sleepFn     func(ctx context.Context, seconds int)
 	tokenURL    string // for refresh_data; defaults to api.amazon.com
@@ -54,13 +70,23 @@ func (s *AuthService) Session() *Session {
 
 // broadcast atomically swaps AuthService's session pointer to sess and
 // pushes sess to every registered consumer. Callers MUST NOT hold s.mu.
+// If a cache Manager is wired, session-tagged caches are cleared before
+// the consumer fan-out.
 func (s *AuthService) broadcast(sess *Session) {
 	s.mu.Lock()
 	s.session = sess
 	consumers := s.consumers // immutable after construction
+	mgr := s.cacheManager
+	hook := s.postBroadcastHook
 	s.mu.Unlock()
+	if mgr != nil {
+		mgr.InvalidateTag("session")
+	}
 	for _, c := range consumers {
 		c.setSession(sess)
+	}
+	if hook != nil {
+		hook()
 	}
 }
 
@@ -234,4 +260,16 @@ func mapRefreshError(err error) error {
 		return fmt.Errorf("%w: %w", ErrCannotAuthenticate, err)
 	}
 	return fmt.Errorf("%w: %w", ErrCannotConnect, err)
+}
+
+// marshalCustomerIDEntries / unmarshalCustomerIDEntries persist the
+// auth.customerID cache via the engine's Persistence adapter.
+func marshalCustomerIDEntries(in map[string]cache.Entry[string]) ([]byte, error) {
+	return json.Marshal(in)
+}
+
+func unmarshalCustomerIDEntries(b []byte) (map[string]cache.Entry[string], error) {
+	out := map[string]cache.Entry[string]{}
+	err := json.Unmarshal(b, &out)
+	return out, err
 }

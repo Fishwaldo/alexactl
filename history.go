@@ -2,6 +2,7 @@ package amazondevices
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"sync"
@@ -10,6 +11,7 @@ import (
 	"github.com/PuerkitoBio/goquery"
 
 	"github.com/Fishwaldo/goamazondevices/internal/amzconst"
+	"github.com/Fishwaldo/goamazondevices/internal/cache"
 	"github.com/Fishwaldo/goamazondevices/internal/httpwrapper"
 )
 
@@ -26,9 +28,12 @@ const backendRefreshWait = 2 * time.Second
 type HistoryService struct {
 	wrapper *httpwrapper.Wrapper
 
-	mu        sync.RWMutex
-	session   *Session
-	csrfToken string
+	mu      sync.RWMutex
+	session *Session
+
+	// csrfCache holds the scraped anti-csrftoken-a2z under sentinel key "".
+	// Engine-managed; tagged "session" so account switches drop it.
+	csrfCache *cache.Cache[string]
 
 	// Test seams. Production leaves these nil.
 	now   func() time.Time
@@ -38,10 +43,12 @@ type HistoryService struct {
 func (s *HistoryService) setSession(sess *Session) {
 	s.mu.Lock()
 	s.session = sess
-	// Clear any cached CSRF token - a new session implies a new
-	// website-cookies set, so the old CSRF may be invalid.
-	s.csrfToken = ""
 	s.mu.Unlock()
+	// Session-tag invalidation also clears this via the manager; the
+	// explicit drop is harmless belt-and-braces.
+	if s.csrfCache != nil {
+		s.csrfCache.InvalidateAll()
+	}
 }
 
 // nowFn returns the current time, honoring the test seam if set.
@@ -129,13 +136,13 @@ func (s *HistoryService) Vocal(ctx context.Context) (map[string]*VocalRecord, er
 // vocalHistoryJSON does the CSRF + bearer-POST dance and returns the
 // decoded JSON body.
 func (s *HistoryService) vocalHistoryJSON(ctx context.Context) (map[string]any, error) {
-	if err := s.ensureCSRFToken(ctx); err != nil {
+	csrf, _, err := s.csrfCache.Get(ctx, "")
+	if err != nil {
 		return nil, err
 	}
 
 	s.mu.RLock()
 	sess := s.session
-	csrf := s.csrfToken
 	s.mu.RUnlock()
 
 	if sess == nil || sess.AccessToken == "" {
@@ -184,26 +191,8 @@ func (s *HistoryService) vocalHistoryJSON(ctx context.Context) (map[string]any, 
 	return data, nil
 }
 
-// ensureCSRFToken populates s.csrfToken if it is empty. Idempotent.
-func (s *HistoryService) ensureCSRFToken(ctx context.Context) error {
-	s.mu.RLock()
-	have := s.csrfToken != ""
-	s.mu.RUnlock()
-	if have {
-		return nil
-	}
-	tok, err := s.fetchCSRFToken(ctx)
-	if err != nil {
-		return err
-	}
-	s.mu.Lock()
-	s.csrfToken = tok
-	s.mu.Unlock()
-	return nil
-}
-
 // fetchCSRFToken scrapes <meta name="csrf-token" content="..."> from the
-// alexa-privacy frontend HTML page.
+// alexa-privacy frontend HTML page. Used as the loader for history.csrf.
 func (s *HistoryService) fetchCSRFToken(ctx context.Context) (string, error) {
 	url := fmt.Sprintf("https://www.amazon.%s%s",
 		s.wrapper.Domain(), amzconst.URIHistoryFrontend)
@@ -234,4 +223,16 @@ func (s *HistoryService) fetchCSRFToken(ctx context.Context) (string, error) {
 			ErrCannotRetrieveData)
 	}
 	return tok, nil
+}
+
+// marshalCSRFEntries / unmarshalCSRFEntries persist the history.csrf
+// cache via the engine's Persistence adapter.
+func marshalCSRFEntries(in map[string]cache.Entry[string]) ([]byte, error) {
+	return json.Marshal(in)
+}
+
+func unmarshalCSRFEntries(b []byte) (map[string]cache.Entry[string], error) {
+	out := map[string]cache.Entry[string]{}
+	err := json.Unmarshal(b, &out)
+	return out, err
 }

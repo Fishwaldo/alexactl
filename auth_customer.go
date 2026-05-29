@@ -39,6 +39,11 @@ func (s *AuthService) obtainCustomerID(ctx context.Context, sitePrefix string) (
 func (s *AuthService) obtainCustomerIDForSerial(
 	ctx context.Context, sitePrefix, deviceSerial string,
 ) (string, error) {
+	if s.customerIDCache != nil {
+		if v, hit, _ := s.customerIDCache.Get(ctx, deviceSerial); hit {
+			return v, nil
+		}
+	}
 	url := fmt.Sprintf("%s%s", strings.TrimSuffix(sitePrefix, "/"), amzconst.URIDevices)
 	logger := s.wrapper.Logger(ctx)
 
@@ -70,6 +75,9 @@ func (s *AuthService) obtainCustomerIDForSerial(
 				sn, _ := stringOf(sm["serialNumber"])
 				if sn == deviceSerial {
 					owner, _ := stringOf(dm["deviceOwnerCustomerId"])
+					if owner != "" && s.customerIDCache != nil {
+						s.customerIDCache.Set(deviceSerial, owner)
+					}
 					return owner, nil
 				}
 			}

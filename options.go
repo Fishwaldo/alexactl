@@ -23,6 +23,10 @@ type config struct {
 	site       string
 	userAgent  string
 	soundsTTL  time.Duration // default 1h, set by WithSoundsTTL; 0 disables caching
+
+	cacheTTLOverrides map[CacheClass]time.Duration
+	cachePersistence  Persistence
+	pushCacheBridge   bool
 }
 
 func defaultConfig() *config {
@@ -64,9 +68,12 @@ func WithUserAgent(ua string) Option {
 	return optionFunc(func(cfg *config) { cfg.userAgent = ua })
 }
 
-// WithSoundsTTL overrides the default 1-hour TTL for the per-client
-// sound-catalogue cache (MediaService.Sounds). Zero or negative disables
-// caching — every call hits the API.
+// WithSoundsTTL overrides the TTL for the media.sounds cache only.
+// Other Long-class caches use the class default (or WithCacheTTL value).
+// Zero or negative disables caching — every call hits the API.
+//
+// Deprecated: prefer WithCacheTTL(ClassLong, d) when tuning the broader
+// long-cache class. Removed at v3.0.0.
 func WithSoundsTTL(d time.Duration) Option {
 	return optionFunc(func(cfg *config) { cfg.soundsTTL = d })
 }

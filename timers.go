@@ -31,7 +31,8 @@ type TimersService struct {
 	mu      sync.RWMutex
 	session *Session
 
-	devicesLookup func(serial string) (*Device, bool)
+	devicesLookup  func(serial string) (*Device, bool)
+	schedulesFetch func(ctx context.Context) (*schedulesFetchResult, error)
 }
 
 // Timer is a countdown-from-creation event. Always one-shot —
@@ -63,7 +64,7 @@ func (s *TimersService) setSession(sess *Session) {
 // Get fetches every active timer on the account, sorted by FireAt
 // ascending. Entries with status != "ON" are dropped.
 func (s *TimersService) Get(ctx context.Context) ([]*Timer, error) {
-	res, err := fetchSchedules(ctx, s.wrapper)
+	res, err := s.schedulesFetch(ctx)
 	if err != nil {
 		return nil, err
 	}
