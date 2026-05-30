@@ -295,8 +295,8 @@ type FeatureControlError = setEndpointFeaturesSetEndpointFeaturesSetEndpointFeat
 // SetEndpointFeatures calls the setEndpointFeatures GraphQL mutation
 // (used by smartHomeClient). The wire operationName is
 // "setEndpointFeatures" (matches what the live web UI sends). Pass an
-// arbitrary number of FeatureControlRequest entries; Phase 4b only
-// ever sends one. The generated FeatureControlRequest input type and
+// arbitrary number of FeatureControlRequest entries; smartHomeClient
+// only ever sends one. The generated FeatureControlRequest input type and
 // the FeatureName / FeatureOperationName enums are re-exported below
 // for service-layer use.
 func SetEndpointFeatures(ctx context.Context, client graphql.Client, requests []FeatureControlRequest) (*SetEndpointFeaturesResponse, error) {

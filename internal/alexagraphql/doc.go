@@ -3,10 +3,10 @@
 // /nexus/v1/graphql endpoint.
 //
 // The generated client (generated.go) is produced by genqlient from
-// queries/*.graphql against the introspected schema vendored at
-// docs/superpowers/research/2026-05-25-alexa-graphql-schema.json.
-// Run `go generate ./internal/alexagraphql/...` to regenerate after
-// editing any .graphql file.
+// queries/*.graphql against a vendored introspection of the Alexa
+// GraphQL schema (see genqlient.yaml for the schema path). Run
+// `go generate ./internal/alexagraphql/...` to regenerate after editing
+// any .graphql file.
 //
 // The Doer adapter (doer.go) routes generated-client requests through
 // internal/httpwrapper so auth refresh, retry, scrub, and body logging

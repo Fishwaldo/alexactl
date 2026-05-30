@@ -8,7 +8,7 @@ import (
 
 // ToggleControl is the typed accessor returned by Device.Toggle(
 // instance) for devices that expose Alexa.ToggleController. The
-// write path is INTENTIONALLY STUBBED in Phase 4e — the toggle
+// write path is INTENTIONALLY STUBBED — the toggle
 // On/Off wire payload + operation-name shape has not been confirmed
 // against real hardware (no devices on any test account expose a
 // callable ToggleController). Rather than ship a best-guess shape,
@@ -68,7 +68,7 @@ func (c *ToggleControl) warn(ctx context.Context, op string) {
 			"not been confirmed against real hardware. Please file an issue at "+
 			"https://github.com/Fishwaldo/alexactl/issues with a HAR "+
 			"capture of the Alexa web UI sending the directive against your "+
-			"device — see issue template 'Phase 4e wire capture'.",
+			"device.",
 		"interface", amzconst.InterfaceToggleController,
 		"operation", op,
 		"device", c.device.SerialNumber,

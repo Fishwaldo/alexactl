@@ -70,7 +70,7 @@ var Sensors = map[string]SensorTemplate{
 		Scale:  "",
 	},
 
-	// Phase 4a additions — smart-home property types.
+	// Smart-home property types.
 	"power": {
 		Name:   "powerState",
 		Key:    "powerStateValue",

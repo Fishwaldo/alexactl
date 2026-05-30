@@ -99,7 +99,7 @@ func NewClient(opts ...Option) (*Client, error) {
 		Reminders:    &RemindersService{wrapper: wr},
 		Timers:       &TimersService{wrapper: wr},
 	}
-	// Phase 4b: smart-home write client. Same wrapper as Devices so
+	// Smart-home write client. Same wrapper as Devices so
 	// auth refresh / retry / scrub carry over. Back-referenced on
 	// every cached *Device so accessors can route writes without a
 	// global.
@@ -236,7 +236,7 @@ func NewClient(opts ...Option) (*Client, error) {
 		c.Devices, c.Media, c.Sequence, c.DnD, c.Sensors, c.History, c.Push, c.Lists,
 		c.Alarms, c.Reminders, c.Timers,
 	}
-	// Phase 6: wire devicesLookup closures so Create methods can
+	// Wire devicesLookup closures so Create methods can
 	// resolve DeviceType from a SerialNumber via the Devices cache.
 	c.Alarms.devicesLookup = func(serial string) (*Device, bool) {
 		dvc := c.Devices.getCached(serial)
@@ -263,7 +263,7 @@ func NewClient(opts ...Option) (*Client, error) {
 				"err", dndErr)
 			dnd = nil
 		}
-		// Phase 6: populate per-device typed slices via the shared
+		// Populate per-device typed slices via the shared
 		// schedules fetcher. Routes through the engine cache so
 		// Alarms/Reminders/Timers and this hook share one fetch.
 		sched, sErr := schedulesGet(ctx)

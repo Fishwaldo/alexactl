@@ -76,7 +76,7 @@ const (
 // URI paths on the www.amazon.<domain> host. These hit Amazon's legacy
 // shopping-list backend, which is separate from the alexa.amazon.<tld>
 // service host used by every other URI constant above. Used by the
-// ListsService (Phase 5).
+// ListsService.
 //
 // Endpoint stability: the /alexashoppinglists/api/ surface is
 // undocumented and could be deprecated by Amazon at any time. See

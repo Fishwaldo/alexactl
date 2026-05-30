@@ -20,11 +20,11 @@ type Device struct {
 	HardwareVersion       string
 	EntityID              string
 	EndpointID            string
-	Sensors               map[string]*DeviceSensor // populated in Phase 2
+	Sensors               map[string]*DeviceSensor // populated by SensorsService during Refresh
 	SchedulesSupported    bool
 	MediaPlayerSupported  bool
 
-	// Phase 6: typed schedule slices populated by DevicesService.Refresh's
+	// Typed schedule slices populated by DevicesService.Refresh's
 	// sensors-enrichment hook (one shared /api/notifications fetch routed
 	// across all devices). Slice is nil for devices that don't support
 	// schedules (SchedulesSupported == false).
@@ -32,7 +32,7 @@ type Device struct {
 	Reminders []*Reminder
 	Timers    []*Timer
 
-	// Phase 4a additions — classify and describe smart-home endpoints.
+	// Smart-home endpoint classification and description fields.
 	//
 	// Kind is the canonical device-class (KindLight, KindThermostat, …).
 	// Derived from DisplayCategories.primary via amzconst.DisplayCategoryToKind
@@ -57,8 +57,8 @@ type Device struct {
 	// Operations lists the operation names Amazon's directive system
 	// accepts for this endpoint (e.g. ["turnOn", "turnOff",
 	// "setBrightness"]). The schema-level manifest of what the
-	// setEndpointFeatures mutation would accept. Phase 4a populates this
-	// from Endpoint.operations; Phase 4b uses it to drive typed control
+	// setEndpointFeatures mutation would accept. The discovery query
+	// populates this from Endpoint.operations; it drives typed control
 	// surfaces.
 	Operations []string
 
@@ -87,7 +87,7 @@ func (d *Device) IsCluster() bool {
 	return len(d.ClusterMembers) > 1
 }
 
-// DeviceSensor is a single sensor reading. Populated in Phase 2.
+// DeviceSensor is a single sensor reading. Populated by SensorsService during Refresh.
 type DeviceSensor struct {
 	Name      string
 	Value     any // string | int | float64
@@ -96,7 +96,7 @@ type DeviceSensor struct {
 	ErrorMsg  string
 	Scale     string
 
-	// Phase 4a additions — surface the feature's action space.
+	// Fields that surface the feature's action space.
 	//
 	// Configuration carries the typed Feature.configuration values
 	// (e.g. ThermostatConfiguration.supportedModes). Map keys are

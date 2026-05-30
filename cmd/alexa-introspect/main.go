@@ -6,10 +6,10 @@
 // Usage:
 //
 //	go run ./cmd/alexa-introspect -session ./session.json > schema.json
-//	diff -u docs/superpowers/research/2026-05-25-alexa-graphql-schema.json schema.json
 //
-// Use this to detect schema drift after a long gap, or before adding
-// new operations that may depend on schema additions.
+// Diff the output against an earlier saved schema.json to detect schema
+// drift after a long gap, or before adding new operations that may depend
+// on schema additions.
 package main
 
 import (

@@ -8,7 +8,7 @@ import (
 // SendDirective issues an arbitrary feature-control directive via the
 // same setEndpointFeatures mutation the typed accessors use. Useful
 // for Alexa interfaces we haven't shipped a typed accessor for and
-// for exploring unverified wire shapes (Phase 4e Range/Mode/Toggle
+// for exploring unverified wire shapes (Range/Mode/Toggle
 // payloads pre-typed-accessor).
 //
 // instance is the feature's instance identifier when the feature

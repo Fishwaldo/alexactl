@@ -16,7 +16,7 @@ var devicesSendDirectiveCmd = &cobra.Command{
 	Use:   "send-directive <featureName> <operationName> [json-payload]",
 	Short: "Send an arbitrary smart-home directive via the V2 mutation (escape hatch)",
 	Long: `Issues any setEndpointFeaturesV2 directive against the target device.
-Mirrors Device.SendDirective for Phase 4e exploratory testing — call
+Mirrors Device.SendDirective for exploratory testing of unverified directives — call
 any featureName / operationName / payload to see what Amazon accepts.
 
 The target device is the --device flag (serial or name) or the configured

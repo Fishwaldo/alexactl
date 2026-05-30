@@ -49,7 +49,7 @@ func (s *DevicesService) Get(ctx context.Context, serial string) (*Device, error
 }
 
 // getCached returns the device from the cache without triggering a
-// refresh. Used by Phase 6 schedule services to resolve DeviceType
+// refresh. Used by the schedule services to resolve DeviceType
 // from a SerialNumber during Create. Returns nil if not present or if
 // the cache is empty.
 func (s *DevicesService) getCached(serial string) *Device {
@@ -276,7 +276,7 @@ func (s *DevicesService) fetchEndpoints(
 				SoftwareVersion:       softwareVersion,
 				EndpointID:            endpointID,
 				Sensors:               map[string]*DeviceSensor{},
-				// Phase 4a: AQM is its own kind regardless of DisplayCategory.
+				// AQM is its own kind regardless of DisplayCategory.
 				Kind:              KindAQM,
 				DisplayCategories: extractDisplayCategories(ep),
 				AlexaInterfaces:   extractAlexaInterfaces(ep),
@@ -298,7 +298,7 @@ func (s *DevicesService) fetchEndpoints(
 			baseSerial = lookupByName(friendlyName)
 		}
 		if baseSerial == "" {
-			// Phase 4a Task 4: surface smart-home endpoints as their own
+			// Surface smart-home endpoints as their own
 			// *Device. Echos always match through the GraphQL-serial or
 			// friendlyName fallback above, so this branch only fires for
 			// non-Echo endpoints (lights, switches, thermostats, locks,
@@ -378,7 +378,7 @@ func (s *DevicesService) fetchEndpoints(
 			d.EntityID = ep.LegacyIdentifiers.ChrsIdentifier.EntityId
 		}
 
-		// Populate new Phase 4a fields.
+		// Populate the smart-home classification fields.
 		d.Kind = KindEcho
 		d.DisplayCategories = extractDisplayCategories(ep)
 		d.AlexaInterfaces = extractAlexaInterfaces(ep)
@@ -481,7 +481,7 @@ func extractAlexaInterfaces(ep *listEndpointsEndpoint) []string {
 // skill-discovered devices.
 //
 // Range / Toggle / Mode (generic controllers) are intentionally
-// excluded for now — Phase 4e will add InterfaceRangeController etc.
+// excluded for now — InterfaceRangeController etc. will be added
 // when the wire payloads are HAR-captured and the typed accessors
 // are wired up.
 func inferAlexaInterfacesFromSensors(sensors map[string]*DeviceSensor) []string {

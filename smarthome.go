@@ -35,8 +35,8 @@ func newSmartHomeClient(w *httpwrapper.Wrapper) *smartHomeClient {
 // setColor).
 //
 // Instance is the optional feature instance discriminator (e.g.
-// "Apparatus.FanSpeed" for a fan-speed mode). Phase 4b leaves it
-// empty for Power and Brightness; Phase 4c+ may populate it for
+// "Apparatus.FanSpeed" for a fan-speed mode). Left
+// empty for Power and Brightness; may be populated for
 // Range/Mode generic controllers.
 type FeatureControl struct {
 	EndpointID           string

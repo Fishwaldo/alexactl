@@ -13,7 +13,7 @@ var devicesLockCmd = &cobra.Command{
 	Short: "Lock a smart lock",
 	Long: `Issues an Alexa.LockController lock directive against the given
 device. The device must advertise Alexa.LockController in its
-AlexaInterfaces (Phase 4a populates this from the discovery query) and
+AlexaInterfaces (the discovery query populates this) and
 have a non-empty EndpointID. Run 'devices list' first to confirm.
 
 Example:

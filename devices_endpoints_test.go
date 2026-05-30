@@ -586,7 +586,7 @@ func TestFetchEndpoints_PopulatesPhase4aFields(t *testing.T) {
 	}
 	require.NotNil(t, aqm, "fixture should yield the AQM entry tagged KindAQM")
 
-	// Phase 4a Task 4: smart-home endpoints now surface as *Device.
+	// Smart-home endpoints surface as *Device.
 	var smartPlug *Device
 	for _, d := range devs {
 		if d.SerialNumber == "TESTPLUG001" {

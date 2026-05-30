@@ -14,7 +14,7 @@ import (
 //
 // Per-device support varies — not every thermostat supports every
 // mode. Querying the configuration first (Sensors["thermostatMode"].
-// Configuration["supportedModes"], populated by Phase 4a's deep query)
+// Configuration["supportedModes"], populated by the deep inspect query)
 // is the recommended way to discover supported modes before calling
 // SetMode.
 type ThermostatControl struct {

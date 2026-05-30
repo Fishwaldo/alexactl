@@ -13,7 +13,7 @@ import (
 
 // TestParseAllFeaturesEndpoint_PopulatesSensors uses the
 // endpoint_all_features.json fixture (the captured Sideroom
-// Airconditioner response from Phase 4a Task 8) and asserts the
+// Airconditioner response) and asserts the
 // parser produces the expected Device.Sensors map without going
 // through sensorsHook.
 //

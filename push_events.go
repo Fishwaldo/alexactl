@@ -17,7 +17,7 @@ type PushEvent interface {
 
 	// RawPayload returns the parsed JSON object that produced this
 	// event. Callers MUST NOT mutate it — the decoder shares the
-	// underlying map across all subscribers in Phase 3b.
+	// underlying map across all subscribers.
 	RawPayload() map[string]any
 }
 
@@ -45,10 +45,10 @@ func (e *UnknownPushEvent) SerialNumber() string { return e.Serial }
 // RawPayload implements PushEvent.
 func (e *UnknownPushEvent) RawPayload() map[string]any { return e.Payload }
 
-// ReauthRequiredEvent is delivered by PushService (in Phase 3b) as the
+// ReauthRequiredEvent is delivered by PushService as the
 // final event before the subscriber's channel closes whenever the stream
-// returns 401/403 even after a token refresh attempt. Phase 3a defines
-// the type so callers can already write `switch evt.(type)` against it.
+// returns 401/403 even after a token refresh attempt. The type is defined
+// so callers can write `switch evt.(type)` against it.
 type ReauthRequiredEvent struct{}
 
 // Type implements PushEvent.
@@ -85,9 +85,8 @@ type VolumeChangeEvent struct {
 	Muted  bool
 }
 
-// All remaining concrete events expose only the interface methods in
-// Phase 3a. Add typed fields incrementally in later phases as
-// use-cases emerge.
+// All remaining concrete events expose only the interface methods.
+// Add typed fields incrementally as use-cases emerge.
 
 // GenericActivityEvent reports a generic device activity (PUSH_ACTIVITY).
 type GenericActivityEvent struct{ pushEventBase }

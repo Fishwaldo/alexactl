@@ -15,7 +15,7 @@ var devicesPowerCmd = &cobra.Command{
 	Short: "Turn a smart-home device on/off or toggle its current state",
 	Long: `Issues an Alexa.PowerController directive against the given
 device. The device must advertise Alexa.PowerController in its
-AlexaInterfaces (Phase 4a populates this from the discovery query) and
+AlexaInterfaces (the discovery query populates this) and
 have a non-empty EndpointID. Run 'devices list' first to confirm.
 
 Examples:

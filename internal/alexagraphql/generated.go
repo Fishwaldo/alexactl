@@ -11069,8 +11069,8 @@ query getEndpointState ($endpointIds: [String]) {
 // IDs. Port of amzconst.QuerySensorState; the same response feeds
 // SensorsService.fetchEndpointStates and parseSensorResponse.
 //
-// Phase 4a extends the query to cover every smart-home property
-// typename plus per-feature operations and configuration. The wire
+// The query covers every smart-home property typename plus per-feature
+// operations and configuration. The wire
 // operationName is "getEndpointState" (matches what upstream Python used
 // and what sensors_test.go asserts). The Go-side function is exported
 // as GetEndpointState via the shim in exports.go.
@@ -11122,11 +11122,10 @@ mutation setEndpointFeatures ($requests: [FeatureControlRequest!]!) {
 }
 `
 
-// setEndpointFeatures issues the mutation captured from the Alexa+ web
-// UI (see docs/superpowers/research/2026-05-25-alexa-web-graphql.md
-// §"Mutation: setPower" / "Mutation: setBrightness"). One mutation can
-// carry multiple FeatureControl entries; Phase 4b only ever sends one
-// at a time (batching is a Phase 4c-or-later refinement).
+// setEndpointFeatures issues the smart-home feature-control mutation that
+// the Alexa web UI sends. One mutation can carry multiple FeatureControl
+// entries; this client sends a single entry per call (batching is a
+// possible future refinement).
 //
 // The wire operationName is "setEndpointFeatures" — match what the
 // server expects and what smarthome_test.go asserts.

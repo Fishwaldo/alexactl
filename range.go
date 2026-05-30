@@ -8,7 +8,7 @@ import (
 
 // RangeControl is the typed accessor returned by Device.Range(
 // instance) for devices that expose Alexa.RangeController. The
-// write path is INTENTIONALLY STUBBED in Phase 4e — the
+// write path is INTENTIONALLY STUBBED — the
 // setRangeValue / adjustRangeValue wire payload shape has not been
 // confirmed against real hardware, and shipping a best-guess shape
 // would silently fail or behave unexpectedly on real devices.
@@ -70,7 +70,7 @@ func (c *RangeControl) warn(ctx context.Context, op string) {
 			"not been confirmed against real hardware. Please file an issue "+
 			"at https://github.com/Fishwaldo/alexactl/issues with a "+
 			"HAR capture of the Alexa web UI sending the directive against "+
-			"your device — see issue template 'Phase 4e wire capture'.",
+			"your device.",
 		"interface", amzconst.InterfaceRangeController,
 		"operation", op,
 		"device", c.device.SerialNumber,

@@ -2,8 +2,8 @@
 # IDs. Port of amzconst.QuerySensorState; the same response feeds
 # SensorsService.fetchEndpointStates and parseSensorResponse.
 #
-# Phase 4a extends the query to cover every smart-home property
-# typename plus per-feature operations and configuration. The wire
+# The query covers every smart-home property typename plus per-feature
+# operations and configuration. The wire
 # operationName is "getEndpointState" (matches what upstream Python used
 # and what sensors_test.go asserts). The Go-side function is exported
 # as GetEndpointState via the shim in exports.go.

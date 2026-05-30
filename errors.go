@@ -47,8 +47,8 @@ var (
 
 	// ErrControllerNotImplemented is returned by typed control accessors
 	// whose wire payload shape has not yet been confirmed against real
-	// hardware. Phase 4e ships stub Device.Range / Device.Toggle
-	// accessors that return this sentinel — when callers see it, the
+	// hardware. The stub Device.Range / Device.Toggle
+	// accessors return this sentinel — when callers see it, the
 	// stub also emits a WARN log directing them to file an issue with a
 	// HAR capture so we can wire the real path.
 	//

@@ -48,7 +48,7 @@ func WithPushChannelCapacity(n int) SubscribeOption {
 // state without waiting for users to interact with each device.
 //
 // History.Vocal sync is documented in the spec but not wired in this
-// release — Phase 2 ships History without exposing Vocal-grouped
+// release — History is available without exposing Vocal-grouped
 // records.
 func WithInitialSyncOnFirstEvent() SubscribeOption {
 	return subscribeOptionFunc(func(c *subscribeConfig) {
