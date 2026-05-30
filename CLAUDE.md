@@ -41,6 +41,22 @@ all wire-vocabulary.
    capture) + a decode round-trip test in `push_decode_test.go`.
 5. Document the new event in `CHANGELOG.md` under `### Added`.
 
+## Commit message format
+
+Conventional Commits: `type(scope): summary` — imperative mood, lowercase
+summary, no trailing period, ≤72 chars. Append `!` before the colon for a
+breaking change (e.g. `feat(cli)!: drop --serial flag`).
+
+- **Types:** `feat`, `fix`, `docs`, `refactor`, `test`, `chore`, `ci`,
+  `style`, `port` (an upstream-delta port). Scope is the area touched
+  (`media`, `devices`, `push`, `cli`, `cache`, `httpwrapper`, …) and is
+  optional for repo-wide changes.
+- Body (optional, after a blank line) explains the *what* and *why*,
+  wrapped at ~72 cols; let the diff show the *how*.
+- **No trailers.** Never add `Co-Authored-By`, `Signed-off-by`, or any
+  AI-attribution line.
+- A user-visible change lands its CHANGELOG entry in the same commit.
+
 ## Release process
 
 1. Promote `[Unreleased]` to `[X.Y.Z] - YYYY-MM-DD` in `CHANGELOG.md`.
@@ -75,5 +91,3 @@ all wire-vocabulary.
   accessors (`d.Power().On(ctx)`, `d.Brightness().Set(ctx, 80)`, etc.).
 - Tests that hit live Amazon endpoints. Always `httptest` + `testdata/`
   fixtures.
-- Reorganizing package layout without updating
-  `docs/superpowers/specs/2026-05-24-alexactl-design.md` first.
