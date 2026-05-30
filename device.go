@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Justin Hammond
+// SPDX-License-Identifier: MIT
+
 package alexactl
 
 // Device describes one Amazon Echo (or Alexa-enabled) device. Returned by

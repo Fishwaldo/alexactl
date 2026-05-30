@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Justin Hammond
+// SPDX-License-Identifier: MIT
+
 package alexactl
 
 // SubscribeOption configures a single Subscribe call. Options are

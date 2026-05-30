@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Justin Hammond
+// SPDX-License-Identifier: MIT
+
 package amzconst
 
 // DisplayCategoryToKind maps Amazon's `DisplayCategory` strings (the

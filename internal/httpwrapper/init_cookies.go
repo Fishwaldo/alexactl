@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Justin Hammond
+// SPDX-License-Identifier: MIT
+
 package httpwrapper
 
 import (
@@ -14,7 +17,7 @@ import (
 // avoid serving a captcha on the password page. If r is nil,
 // crypto/rand.Reader is used.
 //
-// Ported from aioamazondevices http_wrapper._build_init_cookies.
+// Modeled on aioamazondevices http_wrapper._build_init_cookies.
 func BuildInitialCookies(r io.Reader) (map[string]string, error) {
 	if r == nil {
 		r = rand.Reader

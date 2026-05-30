@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Justin Hammond
+// SPDX-License-Identifier: MIT
+
 // Package http2stream parses Amazon's AVS directives stream. The stream
 // is delivered as a single HTTP response body with Content-Type
 // "multipart/related; boundary=...". Each part is a JSON object whose

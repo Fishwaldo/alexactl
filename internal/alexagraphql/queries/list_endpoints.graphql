@@ -1,5 +1,5 @@
 # getDevicesBaseData fetches every endpoint linked to the account (Echo
-# devices, AQMs, smart-home accessories). Port of QueryDeviceData;
+# devices, AQMs, smart-home accessories). Modeled on QueryDeviceData;
 # the same response feeds DevicesService.fetchEndpoints.
 query getDevicesBaseData {
   allDevices: listEndpoints(

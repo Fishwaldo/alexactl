@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Justin Hammond
+// SPDX-License-Identifier: MIT
+
 // Package locale maps an Amazon country code (e.g., "US", "JP", "GB") to a
 // BCP-47 language tag (e.g., "en-US", "ja-JP", "en-GB"). Replaces the
 // Python langcodes call in aioamazondevices http_wrapper.

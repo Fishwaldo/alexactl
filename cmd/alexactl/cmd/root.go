@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Justin Hammond
+// SPDX-License-Identifier: MIT
+
 // Package cmd implements the cobra commands for the alexactl CLI,
 // a manual exercise harness for the alexactl library.
 package cmd

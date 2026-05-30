@@ -1,5 +1,5 @@
 # GetEndpointState fetches sensor feature data for a batch of endpoint
-# IDs. Port of amzconst.QuerySensorState; the same response feeds
+# IDs. Modeled on amzconst.QuerySensorState; the same response feeds
 # SensorsService.fetchEndpointStates and parseSensorResponse.
 #
 # The query covers every smart-home property typename plus per-feature

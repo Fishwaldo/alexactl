@@ -1,5 +1,8 @@
+// SPDX-FileCopyrightText: 2026 Justin Hammond
+// SPDX-License-Identifier: MIT
+
 // Package scrub redacts sensitive fields from log payloads before they are
-// emitted via slog. Field list is the Go port of aioamazondevices'
+// emitted via slog. Field list is modeled on aioamazondevices'
 // utils.scrub_fields TO_REDACT set.
 package scrub
 

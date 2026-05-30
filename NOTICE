@@ -1,7 +1,7 @@
 alexactl
-Copyright 2026 Fishwaldo
+Copyright 2026 Justin Hammond
 
-This product is a Go port of aioamazondevices
+This product is heavily inspired by aioamazondevices
 (https://github.com/chemelli74/aioamazondevices),
 Copyright Simone Chemelli and contributors,
 licensed under the Apache License, Version 2.0.

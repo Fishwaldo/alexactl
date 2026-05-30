@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Justin Hammond
+// SPDX-License-Identifier: MIT
+
 // Command alexactl is the manual CLI smoke-test harness for
 // alexactl. It mirrors the Python library_test.py: log in,
 // optionally save the session, list devices, and exercise media commands.

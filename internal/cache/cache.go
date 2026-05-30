@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Justin Hammond
+// SPDX-License-Identifier: MIT
+
 // Package cache provides a generic, in-memory cache with class-based
 // TTLs, single-flight loader semantics, tag invalidation, and a
 // persistence-adapter contract for save/restore between runs.

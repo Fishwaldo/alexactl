@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Justin Hammond
+// SPDX-License-Identifier: MIT
+
 package amzconst
 
 // Schedule type names returned by Amazon's /api/notifications endpoint.
@@ -24,7 +27,7 @@ var SchedulesSupported = map[string]struct{}{
 
 // RecurringPatterns is the canonical mapping from Amazon's compact rule
 // shorthand (XXXX-WD = weekdays, XXXX-WE = weekend, XXXX-WXX-N = weekly on
-// weekday N) to its RFC 5545 expansion. Port of upstream
+// weekday N) to its RFC 5545 expansion. Modeled on upstream
 // const/schedules.py RECURRING_PATTERNS.
 //
 // Country-specific weekend redefinitions are overlayed via WeekendExceptions.

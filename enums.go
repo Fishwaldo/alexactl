@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Justin Hammond
+// SPDX-License-Identifier: MIT
+
 package alexactl
 
 // SequenceType is an Alexa sequence command name as it appears on the wire.

@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/Fishwaldo/alexactl/actions/workflows/ci.yml/badge.svg)](https://github.com/Fishwaldo/alexactl/actions/workflows/ci.yml)
 [![Go Reference](https://pkg.go.dev/badge/github.com/Fishwaldo/alexactl.svg)](https://pkg.go.dev/github.com/Fishwaldo/alexactl)
-[![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 A Go library for controlling Amazon Echo / Alexa devices and skill-discovered
 smart-home endpoints (lights, switches, locks, thermostats, fans, …).
@@ -158,4 +158,8 @@ a HAR if you have a device that exposes either controller.
 
 ## License
 
-Apache 2.0. See [LICENSE](LICENSE) and [NOTICE](NOTICE).
+MIT. See [LICENSE](LICENSE).
+
+This library is heavily inspired by
+[aioamazondevices](https://github.com/chemelli74/aioamazondevices), which is
+licensed under Apache-2.0. See [NOTICE](NOTICE) for attribution.

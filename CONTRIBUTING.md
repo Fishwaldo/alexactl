@@ -1,9 +1,8 @@
 # Contributing to alexactl
 
-Thanks for your interest! This project is a Go port of
-[aioamazondevices](https://github.com/chemelli74/aioamazondevices). During
-the port (phases 1–3) we follow upstream's behavior; once at v1.0 we track
-upstream releases.
+Thanks for your interest! This project is a Go library heavily inspired by
+[aioamazondevices](https://github.com/chemelli74/aioamazondevices). It tracks
+upstream releases for behavioral parity with Amazon's services.
 
 ## Prerequisites
 

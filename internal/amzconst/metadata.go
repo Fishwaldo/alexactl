@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Justin Hammond
+// SPDX-License-Identifier: MIT
+
 package amzconst
 
 // Volume range supported by Amazon devices.
@@ -34,7 +37,7 @@ type SensorTemplate struct {
 }
 
 // Sensors maps a GraphQL feature.name to the SensorTemplate describing how
-// to extract its value. Port of aioamazondevices const/metadata.py SENSORS.
+// to extract its value. Modeled on aioamazondevices const/metadata.py SENSORS.
 //
 // Names match the canonical wire values Amazon returns under
 // alexaEnabledMetadata.capabilities[].name in getEndpointState responses.
@@ -140,7 +143,7 @@ type AQMRangeSensor struct {
 }
 
 // AQMRangeSensors maps the AQM range-feature instance (a string identifier
-// like "4", "5", ...) to the sub-sensor it represents. Port of
+// like "4", "5", ...) to the sub-sensor it represents. Modeled on
 // aioamazondevices const/metadata.py AQM_RANGE_SENSORS.
 var AQMRangeSensors = map[string]AQMRangeSensor{
 	"4": {Name: "Humidity", Scale: "%"},

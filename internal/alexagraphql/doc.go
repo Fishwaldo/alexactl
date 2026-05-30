@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Justin Hammond
+// SPDX-License-Identifier: MIT
+
 // Package alexagraphql contains the auto-generated typed GraphQL client
 // used by alexactl to talk to alexa.amazon.com's
 // /nexus/v1/graphql endpoint.

@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Justin Hammond
+// SPDX-License-Identifier: MIT
+
 package amzconst
 
 import "time"
@@ -8,7 +11,7 @@ import "time"
 const SequenceBatchDelay = 300 * time.Millisecond
 
 // JSON @type discriminator strings used in the sequence wire format.
-// Ported from upstream sequence.py.
+// Modeled on upstream sequence.py.
 const (
 	SequenceTypeAttr  = "com.amazon.alexa.behaviors.model.Sequence"
 	SerialNodeAttr    = "com.amazon.alexa.behaviors.model.SerialNode"
@@ -18,7 +21,7 @@ const (
 
 // AlexaInfoSkills is the canonical list of "Info" skill names that
 // MediaService.InfoSkill accepts. Each is a SequenceType-shaped wire
-// value (Alexa.Calendar.PlayToday, Alexa.Weather.Play, ...). Ported from
+// value (Alexa.Calendar.PlayToday, Alexa.Weather.Play, ...). Modeled on
 // upstream const/metadata.py ALEXA_INFO_SKILLS.
 var AlexaInfoSkills = []string{
 	"Alexa.Calendar.PlayToday",

@@ -1,4 +1,7 @@
-// Package amzconst holds constants ported from aioamazondevices' const/
+// SPDX-FileCopyrightText: 2026 Justin Hammond
+// SPDX-License-Identifier: MIT
+
+// Package amzconst holds constants modeled on aioamazondevices' const/
 // subpackage. Pure data — no logic.
 package amzconst
 

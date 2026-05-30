@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Justin Hammond
+// SPDX-License-Identifier: MIT
+
 // Command alexa-introspect runs the standard GraphQL introspection
 // query against alexa.amazon.com/nexus/v1/graphql using a logged-in
 // session loaded from session.json. The result is written to stdout

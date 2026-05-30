@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Justin Hammond
+// SPDX-License-Identifier: MIT
+
 package alexactl
 
 import (
@@ -21,7 +24,7 @@ var (
 //	"Fire TV Stick 4K (2nd Generation)" -> ("Fire TV Stick 4K", "2nd Gen")
 //	"2021 Samsung UHD TV" -> ("Samsung UHD TV", "2021")
 //
-// Ported from aioamazondevices utils.parse_device_details.
+// Modeled on aioamazondevices utils.parse_device_details.
 func parseDeviceDetails(model string) (string, string) {
 	if model == "" {
 		return "", ""

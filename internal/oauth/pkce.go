@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Justin Hammond
+// SPDX-License-Identifier: MIT
+
 // Package oauth holds helpers used by the AuthService to perform the
 // Amazon iOS-app OAuth flow: PKCE verifier/challenge generation and
 // HTML form scraping for the login pages.

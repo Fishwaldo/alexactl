@@ -1,6 +1,6 @@
 # alexactl — maintenance phase
 
-Go port of the Python library **aioamazondevices**
+Heavily inspired by the Python library **aioamazondevices**
 (https://github.com/chemelli74/aioamazondevices), API frozen at v1.0.0.
 The porting-phase guide lives at `docs/history/CLAUDE-porting-phase.md`
 and may still help when reading older commits.
@@ -23,11 +23,11 @@ all wire-vocabulary.
 ## Upstream tracking workflow
 
 1. Watch upstream tags at https://github.com/chemelli74/aioamazondevices/tags.
-2. Diff `<last-ported-tag>..<new-tag>` in the upstream repo.
+2. Diff `<last-synced-tag>..<new-tag>` in the upstream repo.
 3. Map changed Python files → Go files (`media.py` ↔ `media.go`,
    `sensors.py` ↔ `sensors.go`, etc.); port the delta.
 4. Bump `UpstreamVersion` in `version.go`, add a CHANGELOG entry under
-   `[Unreleased]` mentioning the upstream tag + commit hash ported from.
+   `[Unreleased]` mentioning the upstream tag + commit hash adapted from.
 5. Cut a Go semver release independent of upstream's numbering — additive
    ports go in `MINOR`, bugfixes in `PATCH`, signature changes in `MAJOR`.
 
@@ -48,7 +48,7 @@ summary, no trailing period, ≤72 chars. Append `!` before the colon for a
 breaking change (e.g. `feat(cli)!: drop --serial flag`).
 
 - **Types:** `feat`, `fix`, `docs`, `refactor`, `test`, `chore`, `ci`,
-  `style`, `port` (an upstream-delta port). Scope is the area touched
+  `style`. Scope is the area touched
   (`media`, `devices`, `push`, `cli`, `cache`, `httpwrapper`, …) and is
   optional for repo-wide changes.
 - Body (optional, after a blank line) explains the *what* and *why*,

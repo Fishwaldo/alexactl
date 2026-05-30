@@ -10852,7 +10852,7 @@ query getDevicesBaseData {
 `
 
 // getDevicesBaseData fetches every endpoint linked to the account (Echo
-// devices, AQMs, smart-home accessories). Port of QueryDeviceData;
+// devices, AQMs, smart-home accessories). Modeled on QueryDeviceData;
 // the same response feeds DevicesService.fetchEndpoints.
 func getDevicesBaseData(
 	ctx_ context.Context,
@@ -11066,7 +11066,7 @@ query getEndpointState ($endpointIds: [String]) {
 `
 
 // GetEndpointState fetches sensor feature data for a batch of endpoint
-// IDs. Port of amzconst.QuerySensorState; the same response feeds
+// IDs. Modeled on amzconst.QuerySensorState; the same response feeds
 // SensorsService.fetchEndpointStates and parseSensorResponse.
 //
 // The query covers every smart-home property typename plus per-feature

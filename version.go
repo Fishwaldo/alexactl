@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Justin Hammond
+// SPDX-License-Identifier: MIT
+
 // Package alexactl is a Go client for Amazon Echo / Alexa devices.
 //
 // It provides functional parity with the Python aioamazondevices library
@@ -8,5 +11,5 @@ package alexactl
 const Version = "0.10.0"
 
 // UpstreamVersion records the version of aioamazondevices whose behavior
-// this library mirrors. Bumped when a port catches up to a new upstream tag.
+// this library mirrors. Bumped when this library catches up to a new upstream tag.
 const UpstreamVersion = "13.7.2"

@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Justin Hammond
+// SPDX-License-Identifier: MIT
+
 // Package httpwrapper provides the authenticated HTTP request layer used
 // by all public services in the alexactl package. It owns the
 // session cookies, CSRF token, retry behavior, and token refresh.

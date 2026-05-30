@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Justin Hammond
+// SPDX-License-Identifier: MIT
+
 package alexactl
 
 import (
@@ -112,7 +115,7 @@ func (s *SequenceService) sleep(ctx context.Context, d time.Duration) error {
 }
 
 // buildOperationNode constructs the OpaquePayloadOperationNode envelope
-// for one (device, messageType, messageBody, providerID) tuple. Port of
+// for one (device, messageType, messageBody, providerID) tuple. Modeled on
 // the Python sequence.py _build_operation_node — all branches except
 // Routines (which lands in Task 10).
 func (s *SequenceService) buildOperationNode(ctx context.Context, d *Device, messageType string, messageBody any, providerID string) (map[string]any, error) {
@@ -422,7 +425,7 @@ func (s *SequenceService) Flush(ctx context.Context) error {
 // messageBody, providerID); when a group hits >=2 distinct devices it
 // is wrapped in a ParallelNode so Amazon executes them concurrently.
 // Otherwise each op's operationNode is emitted inline, in original
-// order. Port of upstream sequence.py _optimise_sequence_nodes.
+// order. Modeled on upstream sequence.py _optimise_sequence_nodes.
 func (s *SequenceService) optimiseSequenceNodes(ops []sequenceOp) []any {
 	out := make([]any, 0, len(ops))
 	i := 0
@@ -486,7 +489,7 @@ func (s *SequenceService) RefreshRoutines(ctx context.Context) error {
 
 // replaceRoutinePlaceholders walks obj recursively, substituting the
 // per-call device identifiers for the placeholder strings upstream
-// uses in stored routine bodies. Port of upstream
+// uses in stored routine bodies. Modeled on upstream
 // utils.py replace_routine_placeholders.
 func replaceRoutinePlaceholders(obj map[string]any, d *Device) map[string]any {
 	for k, v := range obj {

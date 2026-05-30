@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Justin Hammond
+// SPDX-License-Identifier: MIT
+
 package amzconst
 
 // Special device types referenced by the device handler.
@@ -12,7 +15,7 @@ const (
 const SpeakerGroupFamily = "WHA"
 
 // DeviceTypeHardcodedMetadata supplies model/manufacturer for device types
-// that don't carry it in the GraphQL response. Port of
+// that don't carry it in the GraphQL response. Modeled on
 // aioamazondevices const/devices.py DEVICE_TYPES_HARDCODED_METADATA.
 var DeviceTypeHardcodedMetadata = map[string]struct {
 	Model        string
@@ -43,7 +46,7 @@ const (
 )
 
 // DeviceTypesToIgnore lists device types we strip from List responses
-// because they're known non-controllable or buggy. Port of
+// because they're known non-controllable or buggy. Modeled on
 // aioamazondevices DEVICE_TYPES_TO_IGNORE.
 var DeviceTypesToIgnore = map[string]struct{}{
 	AmazonDeviceType: {}, // Alexa App for iOS (we ARE this device)
