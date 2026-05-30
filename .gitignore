@@ -24,3 +24,6 @@ config.yaml
 
 # HTTP traffic captures — contain session cookies, never commit
 *.har
+
+# Superpowers planning docs — kept locally, not tracked in git history
+/docs/superpowers/
