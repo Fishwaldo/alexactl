@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 
 	amazondevices "github.com/Fishwaldo/goamazondevices"
 )
@@ -38,26 +37,26 @@ var devicesListCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		fmt.Fprintf(os.Stdout, "%-32s  %-20s  %-16s  %-7s  %s\n",
+		_, _ = fmt.Fprintf(os.Stdout, "%-32s  %-20s  %-16s  %-7s  %s\n",
 			"SERIAL", "KIND", "TYPE", "ONLINE", "NAME")
 		for _, d := range devs {
-			fmt.Fprintf(os.Stdout, "%-32s  %-20s  %-16s  %-7v  %s\n",
+			_, _ = fmt.Fprintf(os.Stdout, "%-32s  %-20s  %-16s  %-7v  %s\n",
 				d.SerialNumber, kindOrUnknown(d.Kind), d.DeviceType, d.Online, d.AccountName)
 			if hw := summarizeHardware(d); hw != "" {
-				fmt.Fprintf(os.Stdout, "  %s\n", hw)
+				_, _ = fmt.Fprintf(os.Stdout, "  %s\n", hw)
 			}
 			if summary := summarizeDevice(d); summary != "" {
-				fmt.Fprintf(os.Stdout, "  %s\n", summary)
+				_, _ = fmt.Fprintf(os.Stdout, "  %s\n", summary)
 			}
 			if detailFlag {
 				if len(d.DisplayCategories) > 0 {
-					fmt.Fprintf(os.Stdout, "    categories=%v\n", d.DisplayCategories)
+					_, _ = fmt.Fprintf(os.Stdout, "    categories=%v\n", d.DisplayCategories)
 				}
 				if len(d.AlexaInterfaces) > 0 {
-					fmt.Fprintf(os.Stdout, "    interfaces=%v\n", d.AlexaInterfaces)
+					_, _ = fmt.Fprintf(os.Stdout, "    interfaces=%v\n", d.AlexaInterfaces)
 				}
 				if d.SoftwareVersion != "" {
-					fmt.Fprintf(os.Stdout, "    software=%q\n", d.SoftwareVersion)
+					_, _ = fmt.Fprintf(os.Stdout, "    software=%q\n", d.SoftwareVersion)
 				}
 			}
 		}
@@ -65,12 +64,9 @@ var devicesListCmd = &cobra.Command{
 	},
 }
 
-// sessionFilePath returns the resolved session file path (or default).
+// sessionFilePath returns the resolved session file path.
 func sessionFilePath() string {
-	if v := viper.GetString("session_file"); v != "" {
-		return v
-	}
-	return "session.json"
+	return store.SessionPath()
 }
 
 func init() {

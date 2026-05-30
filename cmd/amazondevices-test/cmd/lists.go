@@ -8,7 +8,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/Fishwaldo/goamazondevices"
+	amazondevices "github.com/Fishwaldo/goamazondevices"
 )
 
 var listsListFlag string

@@ -63,9 +63,8 @@ func fetchSchedules(ctx context.Context, wrapper *httpwrapper.Wrapper) (*schedul
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", ErrCannotConnect, err)
 	}
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode >= 400 {
-		body := resp.Body
-		defer body.Close()
 		return nil, &APIError{
 			Category:   ErrCannotRetrieveData,
 			Method:     http.MethodGet,

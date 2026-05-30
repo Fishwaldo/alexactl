@@ -27,7 +27,7 @@ func (s *AuthService) doOAuthDance(
 	otpProvider OTPProvider,
 	language string,
 	urlBuilder oauthURLBuilder,
-) (authcode string, codeVerifier string, serial string, _ error) {
+) (authcode, codeVerifier, serial string, _ error) {
 	if urlBuilder == nil {
 		urlBuilder = buildOAuthURL
 	}
@@ -128,7 +128,7 @@ func (s *AuthService) getForm(
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", ErrCannotConnect, err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode >= 400 && resp.StatusCode != http.StatusNotFound {
 		return nil, &APIError{
 			Category:   ErrCannotRetrieveData,
@@ -155,7 +155,7 @@ func (s *AuthService) submitAndGetFinalURL(
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	_, _ = io.Copy(io.Discard, resp.Body)
 	if resp.Request == nil || resp.Request.URL == nil {
 		return nil, errors.New("auth: response has no request URL")

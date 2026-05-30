@@ -17,10 +17,9 @@ import (
 type DevicesService struct {
 	wrapper *httpwrapper.Wrapper
 
-	// mu guards session and defaultDevice.
-	mu            sync.RWMutex
-	session       *Session
-	defaultDevice *Device
+	// mu guards session.
+	mu      sync.RWMutex
+	session *Session
 
 	// listCache caches the full enriched device map keyed by serial under
 	// sentinel key "". TTL = Long class. Loader runs fetchBase +
@@ -92,6 +91,7 @@ func (s *DevicesService) fetchBase(ctx context.Context, sitePrefix string) (map[
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", ErrCannotConnect, err)
 	}
+	defer func() { _ = resp.Body.Close() }()
 	data, err := httpwrapper.DecodeJSON(resp)
 	if err != nil {
 		return nil, err

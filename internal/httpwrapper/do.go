@@ -304,6 +304,7 @@ func (w *Wrapper) injectInitialCookies(rawURL string) {
 	}
 	var cs []*http.Cookie
 	for name, val := range cookies {
+		// #nosec G124 -- outbound request cookies replayed into the jar; Secure/HttpOnly/SameSite are server-response attributes that do not apply here.
 		cs = append(cs, &http.Cookie{
 			Name:   name,
 			Value:  val,

@@ -84,7 +84,7 @@ func TestDoer_PropagatesContext(t *testing.T) {
 		cancel()
 	}()
 
-	_, err = doer.Do(req)
+	_, err = doer.Do(req) //nolint:bodyclose // error path: Do returns a nil response, nothing to close.
 	require.Error(t, err)
 	assert.ErrorContains(t, err, "context")
 }

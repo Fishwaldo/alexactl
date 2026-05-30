@@ -17,15 +17,15 @@ const SensorStateOff = "NOT_DETECTED"
 // SensorTemplate describes how to extract a single sensor's value from the
 // GraphQL getEndpointState feature payload.
 //
-//   Name   — the canonical Go-side sensor name (e.g., "temperature").
-//            Also matched against feature.properties[].name to find the
-//            correct property entry within a feature.
-//   Key    — the GraphQL property key that carries the value blob
-//            (e.g., "value", "illuminanceValue", "rangeValue").
-//   Subkey — when the value blob is an object, the nested key whose value
-//            we extract. Empty means the value blob itself is the value.
-//   Scale  — when the value blob is an object, the nested key carrying the
-//            scale/unit string. Empty means the sensor has no scale.
+//	Name   — the canonical Go-side sensor name (e.g., "temperature").
+//	         Also matched against feature.properties[].name to find the
+//	         correct property entry within a feature.
+//	Key    — the GraphQL property key that carries the value blob
+//	         (e.g., "value", "illuminanceValue", "rangeValue").
+//	Subkey — when the value blob is an object, the nested key whose value
+//	         we extract. Empty means the value blob itself is the value.
+//	Scale  — when the value blob is an object, the nested key carrying the
+//	         scale/unit string. Empty means the sensor has no scale.
 type SensorTemplate struct {
 	Name   string
 	Key    string

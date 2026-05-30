@@ -10,7 +10,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
-	"github.com/Fishwaldo/goamazondevices"
+	amazondevices "github.com/Fishwaldo/goamazondevices"
 )
 
 var loginCmd = &cobra.Command{
@@ -61,18 +61,10 @@ var loginCmd = &cobra.Command{
 }
 
 func saveSession(s *amazondevices.Session) error {
-	path := viper.GetString("session_file")
-	if path == "" {
-		path = "session.json"
-	}
-	b, err := jsonMarshalIndent(s)
-	if err != nil {
+	if err := store.SaveSession(s); err != nil {
 		return err
 	}
-	if err := os.WriteFile(path, b, 0600); err != nil {
-		return err
-	}
-	fmt.Printf("Session saved to %s\n", path)
+	fmt.Printf("Session saved to %s\n", store.SessionPath())
 	return nil
 }
 

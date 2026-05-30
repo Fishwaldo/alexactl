@@ -70,56 +70,6 @@ func (s *DevicesService) setCacheForTest(c map[string]*Device) {
 	s.listCache.Set("", c)
 }
 
-// Default returns the user-set default device, or the first online device
-// (by sorted serial number) if not set. Iteration is deterministic across
-// calls because Go's map range order is randomized.
-func (s *DevicesService) Default(ctx context.Context) (*Device, error) {
-	devices, _, err := s.listCache.Get(ctx, "")
-	if err != nil {
-		return nil, err
-	}
-	s.mu.RLock()
-	def := s.defaultDevice
-	s.mu.RUnlock()
-	if def != nil {
-		return def, nil
-	}
-	serials := make([]string, 0, len(devices))
-	for serial := range devices {
-		serials = append(serials, serial)
-	}
-	sort.Strings(serials)
-	for _, serial := range serials {
-		if d := devices[serial]; d.Online {
-			return d, nil
-		}
-	}
-	return nil, fmt.Errorf("%w: no online devices", ErrCannotRetrieveData)
-}
-
-// SetDefault overrides the default device. The supplied *Device must be
-// one previously returned by List/Get/Default so it is present in the
-// service's cache; otherwise this returns an error wrapping
-// ErrDeviceNotFound. A nil *Device is rejected with a separate error.
-//
-// Breaking change vs v0.1.0: returns an error.
-func (s *DevicesService) SetDefault(d *Device) error {
-	if d == nil {
-		return fmt.Errorf("amazondevices: SetDefault: nil device")
-	}
-	devices, hit, _ := s.listCache.Get(context.Background(), "")
-	if !hit {
-		return fmt.Errorf("%w: device cache empty; call Refresh first", ErrDeviceNotFound)
-	}
-	if _, ok := devices[d.SerialNumber]; !ok {
-		return fmt.Errorf("%w: device %q not in cache", ErrDeviceNotFound, d.SerialNumber)
-	}
-	s.mu.Lock()
-	s.defaultDevice = d
-	s.mu.Unlock()
-	return nil
-}
-
 // Refresh forces a re-fetch of the device list, including the GraphQL
 // endpoint enrichment. WithoutSensors bypasses the cache loader (which
 // always runs sensors) and writes the no-sensors result straight into

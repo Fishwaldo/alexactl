@@ -6,8 +6,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var unlockDevice string
+
 var devicesUnlockCmd = &cobra.Command{
-	Use:   "unlock <serial>",
+	Use:   "unlock",
 	Short: "Unlock a smart lock",
 	Long: `Issues an Alexa.LockController unlock directive against the
 given device. Many locks disable remote unlock by policy (Yale's
@@ -17,8 +19,8 @@ Amazon returns a structured error which surfaces as
 ErrCannotControlDevice with a clear message.
 
 Example:
-  amazondevices-test devices unlock AB1234567890`,
-	Args: cobra.ExactArgs(1),
+  amazondevices-test devices unlock --device "Front Door"`,
+	Args: cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		ctx, cancel := signalContext()
 		defer cancel()
@@ -37,7 +39,7 @@ Example:
 			return err
 		}
 
-		d, err := client.Devices.Get(ctx, args[0])
+		d, err := resolveDevice(ctx, unlockDevice, client, store)
 		if err != nil {
 			return err
 		}
@@ -51,4 +53,5 @@ Example:
 
 func init() {
 	devicesCmd.AddCommand(devicesUnlockCmd)
+	registerDeviceFlag(devicesUnlockCmd, &unlockDevice)
 }

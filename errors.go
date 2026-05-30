@@ -24,7 +24,7 @@ var (
 	ErrCannotRegisterDevice = errors.New("amazondevices: cannot register device")
 
 	// ErrDeviceNotFound is returned when callers reference a device by
-	// serial number that isn't present in the cache (e.g. SetDefault).
+	// serial number that isn't present in the cache.
 	ErrDeviceNotFound = errors.New("amazondevices: device not found")
 
 	// ErrWrongMethod is returned when callers invoke a login method that

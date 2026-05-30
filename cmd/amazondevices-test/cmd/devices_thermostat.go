@@ -10,35 +10,43 @@ import (
 	amazondevices "github.com/Fishwaldo/goamazondevices"
 )
 
+var (
+	thermoTargetDevice string
+	thermoModeDevice   string
+)
+
 var devicesThermostatCmd = &cobra.Command{
-	Use:   "thermostat <serial> <subcommand>",
+	Use:   "thermostat <subcommand>",
 	Short: "Control a thermostat device (set-target | set-mode)",
 	Long: `Parent command for thermostat directives. Run with a subcommand
 ('set-target' or 'set-mode'). See the subcommand --help for details.`,
 }
 
 var devicesThermostatSetTargetCmd = &cobra.Command{
-	Use:   "set-target <serial> <value> [c|f]",
+	Use:   "set-target <value> [c|f]",
 	Short: "Set a thermostat's target setpoint",
 	Long: `Issues a setTargetSetpoint directive. Scale defaults to celsius
 ('c'); pass 'f' for fahrenheit. Amazon rejects values outside the
 device's supported range with INVALID_VALUE.
 
+The target device is the --device flag (serial or name) or the configured
+default-device.
+
 Example:
-  amazondevices-test devices thermostat set-target AB1234567890 21.5 c
-  amazondevices-test devices thermostat set-target AB1234567890 72 f`,
-	Args: cobra.RangeArgs(2, 3),
+  amazondevices-test devices thermostat set-target 21.5 c --device "Hallway"
+  amazondevices-test devices thermostat set-target 72 f`,
+	Args: cobra.RangeArgs(1, 2),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		ctx, cancel := signalContext()
 		defer cancel()
 
-		value, err := strconv.ParseFloat(args[1], 64)
+		value, err := strconv.ParseFloat(args[0], 64)
 		if err != nil {
-			return fmt.Errorf("invalid value %q: %w", args[1], err)
+			return fmt.Errorf("invalid value %q: %w", args[0], err)
 		}
 		scale := amazondevices.TemperatureScaleCelsius
-		if len(args) == 3 {
-			scale, err = parseScaleArg(args[2])
+		if len(args) == 2 {
+			scale, err = parseScaleArg(args[1])
 			if err != nil {
 				return err
 			}
@@ -58,7 +66,7 @@ Example:
 			return err
 		}
 
-		d, err := client.Devices.Get(ctx, args[0])
+		d, err := resolveDevice(ctx, thermoTargetDevice, client, store)
 		if err != nil {
 			return err
 		}
@@ -71,7 +79,7 @@ Example:
 }
 
 var devicesThermostatSetModeCmd = &cobra.Command{
-	Use:   "set-mode <serial> <heat|cool|auto|off|eco|em_heat>",
+	Use:   "set-mode <heat|cool|auto|off|eco|em_heat>",
 	Short: "Set a thermostat's operating mode",
 	Long: `Issues a setThermostatMode directive. Mode is case-insensitive.
 Per-device support varies — query the device's
@@ -79,17 +87,20 @@ Sensors["thermostatMode"].Configuration["supportedModes"] (via
 'devices inspect') to confirm what each device accepts before
 calling.
 
+The target device is the --device flag (serial or name) or the configured
+default-device.
+
 Examples:
-  amazondevices-test devices thermostat set-mode AB1234567890 cool
-  amazondevices-test devices thermostat set-mode AB1234567890 heat`,
-	Args: cobra.ExactArgs(2),
+  amazondevices-test devices thermostat set-mode cool --device "Hallway"
+  amazondevices-test devices thermostat set-mode heat`,
+	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		ctx, cancel := signalContext()
 		defer cancel()
 
-		mode, err := amazondevices.ParseThermostatMode(args[1])
+		mode, err := amazondevices.ParseThermostatMode(args[0])
 		if err != nil {
-			return fmt.Errorf("invalid mode %q: %w", args[1], err)
+			return fmt.Errorf("invalid mode %q: %w", args[0], err)
 		}
 
 		client, sess, err := newClient(true)
@@ -106,7 +117,7 @@ Examples:
 			return err
 		}
 
-		d, err := client.Devices.Get(ctx, args[0])
+		d, err := resolveDevice(ctx, thermoModeDevice, client, store)
 		if err != nil {
 			return err
 		}
@@ -138,4 +149,6 @@ func init() {
 	devicesThermostatCmd.AddCommand(devicesThermostatSetTargetCmd)
 	devicesThermostatCmd.AddCommand(devicesThermostatSetModeCmd)
 	devicesCmd.AddCommand(devicesThermostatCmd)
+	registerDeviceFlag(devicesThermostatSetTargetCmd, &thermoTargetDevice)
+	registerDeviceFlag(devicesThermostatSetModeCmd, &thermoModeDevice)
 }

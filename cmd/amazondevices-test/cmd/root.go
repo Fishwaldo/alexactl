@@ -1,7 +1,10 @@
+// Package cmd implements the cobra commands for the amazondevices-test CLI,
+// a manual exercise harness for the goamazondevices library.
 package cmd
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -11,7 +14,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
-	"github.com/Fishwaldo/goamazondevices"
+	amazondevices "github.com/Fishwaldo/goamazondevices"
 )
 
 var (
@@ -23,6 +26,8 @@ var (
 	siteFlag     string
 	debugFlag    bool
 	detailFlag   bool
+	cacheFile    string
+	store        *Store
 )
 
 // signalContext returns a context that's canceled on SIGINT / SIGTERM.
@@ -48,27 +53,38 @@ var rootCmd = &cobra.Command{
 persists the session, lists devices, and exercises media commands.
 
 Reads configuration from --config (default: ./config.yaml). Flags override
-config; environment variables override config too (prefix AMZ_).`,
+config; environment variables override config too (prefix AMZ_).
+
+Device targeting: commands that act on a single device take an optional
+--device flag accepting either a serial number or a friendly name (names
+are resolved against the live device list; ambiguous names error with the
+candidates listed). When --device is omitted, the device configured via
+'config set default-device <serial-or-name>' is used. List/filter commands
+(e.g. alarms ls, media-state) also take --device as a filter but never fall
+back to the default — omitting it lists all devices.`,
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+		s, err := Load(cfgFile, sessionFile, cacheFile)
+		if err != nil {
+			return err
+		}
+		store = s
+
+		// The global viper resolves credentials (email/password/otp) and the
+		// AMZ_SITE env fallback from flags + AMZ_ env + the same config file
+		// the Store resolved. The Store owns writes and the new keys.
 		viper.SetConfigType("yaml")
 		viper.SetEnvPrefix("AMZ")
 		viper.AutomaticEnv()
-		if cfgFile != "" {
-			viper.SetConfigFile(cfgFile)
-		} else {
-			viper.AddConfigPath(".")
-			viper.SetConfigName("config")
-		}
+		viper.SetConfigFile(store.ConfigPath())
 		if err := viper.ReadInConfig(); err != nil {
-			if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
+			var notFound viper.ConfigFileNotFoundError
+			if !errors.As(err, &notFound) && !os.IsNotExist(err) {
 				return fmt.Errorf("read config: %w", err)
 			}
 		}
 		_ = viper.BindPFlag("email", cmd.Flags().Lookup("email"))
 		_ = viper.BindPFlag("password", cmd.Flags().Lookup("password"))
 		_ = viper.BindPFlag("otp", cmd.Flags().Lookup("otp"))
-		_ = viper.BindPFlag("session_file", cmd.Flags().Lookup("session-file"))
-		_ = viper.BindPFlag("site", cmd.Flags().Lookup("site"))
 		return nil
 	},
 }
@@ -78,8 +94,9 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&emailFlag, "email", "", "Amazon account email")
 	rootCmd.PersistentFlags().StringVar(&passwordFlag, "password", "", "Amazon account password")
 	rootCmd.PersistentFlags().StringVar(&otpFlag, "otp", "", "OTP code (skip the interactive prompt)")
-	rootCmd.PersistentFlags().StringVar(&sessionFile, "session-file", "session.json", "path to saved session")
-	rootCmd.PersistentFlags().StringVar(&siteFlag, "site", "https://www.amazon.com", "Amazon site URL")
+	rootCmd.PersistentFlags().StringVar(&sessionFile, "session-file", "", "path to saved session (default: OS config dir)")
+	rootCmd.PersistentFlags().StringVar(&cacheFile, "cache-file", "", "path to cache file (default: OS cache dir)")
+	rootCmd.PersistentFlags().StringVar(&siteFlag, "site", "", "Amazon site URL (default https://www.amazon.com)")
 	rootCmd.PersistentFlags().BoolVar(&debugFlag, "debug", false, "enable debug-level logging (default is info)")
 	rootCmd.PersistentFlags().BoolVar(&detailFlag, "detail", false,
 		"include extra per-item detail in read-only commands (Configuration / supported modes / presets / interfaces / categories)")
@@ -90,29 +107,32 @@ func Execute() error {
 	return rootCmd.Execute()
 }
 
-// helper: build a configured Client from the resolved viper config.
+// newClient builds a configured Client from the Store. When loadSession is
+// true, a persisted session is supplied via WithSession. Site precedence:
+// --site flag > config site: key > AMZ_SITE env > default.
 func newClient(loadSession bool) (*amazondevices.Client, *amazondevices.Session, error) {
-	site := viper.GetString("site")
+	site := siteFlag
+	if site == "" {
+		if v, ok := store.Get("site"); ok {
+			site = v
+		}
+	}
+	if site == "" {
+		site = viper.GetString("site") // AMZ_SITE via AutomaticEnv
+	}
 	if site == "" {
 		site = "https://www.amazon.com"
 	}
 
 	var sess *amazondevices.Session
 	if loadSession {
-		path := viper.GetString("session_file")
-		if path != "" {
-			if b, err := os.ReadFile(path); err == nil {
-				var s amazondevices.Session
-				if err := jsonUnmarshalSession(b, &s); err == nil {
-					sess = &s
-				}
-			}
-		}
+		sess = store.LoadSession()
 	}
 
 	opts := []amazondevices.Option{
 		amazondevices.WithLogger(makeLogger()),
 		amazondevices.WithSite(site),
+		amazondevices.WithCachePersistence(store.CachePersistence()),
 	}
 	if sess != nil {
 		opts = append(opts, amazondevices.WithSession(sess))
@@ -122,10 +142,4 @@ func newClient(loadSession bool) (*amazondevices.Client, *amazondevices.Session,
 		return nil, nil, err
 	}
 	return c, sess, nil
-}
-
-// jsonUnmarshalSession is a tiny indirection so we don't import encoding/json
-// in five places.
-func jsonUnmarshalSession(b []byte, s *amazondevices.Session) error {
-	return jsonUnmarshal(b, s)
 }

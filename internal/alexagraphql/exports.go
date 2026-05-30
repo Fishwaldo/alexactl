@@ -146,12 +146,12 @@ type GetEndpointStateResponse struct {
 // types are unexported because genqlient derives Go names from the query
 // operation name; this wrapper re-exports the result as a typed struct.
 //
-// endpointIds is converted to []*string internally because the schema
+// endpointIDs is converted to []*string internally because the schema
 // declares endpointIds as [String] (nullable element type).
-func GetEndpointState(ctx context.Context, client graphql.Client, endpointIds []string) (*GetEndpointStateResponse, error) {
-	ptrs := make([]*string, len(endpointIds))
-	for i := range endpointIds {
-		s := endpointIds[i]
+func GetEndpointState(ctx context.Context, client graphql.Client, endpointIDs []string) (*GetEndpointStateResponse, error) {
+	ptrs := make([]*string, len(endpointIDs))
+	for i := range endpointIDs {
+		s := endpointIDs[i]
 		ptrs[i] = &s
 	}
 	resp, err := getEndpointState(ctx, client, ptrs)
@@ -184,35 +184,70 @@ type EndpointAllFeaturesEndpointFeaturesFeature = endpointAllFeaturesEndpointFea
 // endpointAllFeatures deep query.
 type EndpointAllFeaturesConfigThermostat = endpointAllFeaturesEndpointFeaturesFeatureConfigurationThermostatConfiguration
 
-// EndpointAllFeaturesConfigMode / Range — same concept on the deep
-// inspect query path.
-type EndpointAllFeaturesConfigMode  = endpointAllFeaturesEndpointFeaturesFeatureConfigurationModeConfiguration
+// EndpointAllFeaturesConfigMode is the ModeConfiguration variant of
+// feature.configuration on the deep inspect query path.
+type EndpointAllFeaturesConfigMode = endpointAllFeaturesEndpointFeaturesFeatureConfigurationModeConfiguration
+
+// EndpointAllFeaturesConfigRange is the RangeConfiguration variant of
+// feature.configuration on the deep inspect query path.
 type EndpointAllFeaturesConfigRange = endpointAllFeaturesEndpointFeaturesFeatureConfigurationRangeConfiguration
 
 // EndpointAllFeaturesPropPower is the Power property concrete type
 // produced by the endpointAllFeatures (deep) query.
 type EndpointAllFeaturesPropPower = endpointAllFeaturesEndpointFeaturesFeaturePropertiesPower
 
-// EndpointAllFeaturesPropBrightness, ...Color, ...ColorTemperature,
-// ...Lock, ...Setpoint, ...ThermostatMode, ...TemperatureSensor,
-// ...RangeValue, ...Illuminance, ...DetectionState, ...Reachability —
-// one alias per concrete property type the parser switches on.
-type EndpointAllFeaturesPropBrightness        = endpointAllFeaturesEndpointFeaturesFeaturePropertiesBrightness
-type EndpointAllFeaturesPropColor             = endpointAllFeaturesEndpointFeaturesFeaturePropertiesColor
-type EndpointAllFeaturesPropColorTemperature  = endpointAllFeaturesEndpointFeaturesFeaturePropertiesColorTemperature
-type EndpointAllFeaturesPropLock              = endpointAllFeaturesEndpointFeaturesFeaturePropertiesLock
-type EndpointAllFeaturesPropSetpoint          = endpointAllFeaturesEndpointFeaturesFeaturePropertiesSetpoint
-type EndpointAllFeaturesPropThermostatMode    = endpointAllFeaturesEndpointFeaturesFeaturePropertiesThermostatMode
+// The following aliases provide one exported name per concrete property
+// type the endpointAllFeatures (deep) parser switches on.
+
+// EndpointAllFeaturesPropBrightness is the Brightness property concrete type.
+type EndpointAllFeaturesPropBrightness = endpointAllFeaturesEndpointFeaturesFeaturePropertiesBrightness
+
+// EndpointAllFeaturesPropColor is the Color property concrete type.
+type EndpointAllFeaturesPropColor = endpointAllFeaturesEndpointFeaturesFeaturePropertiesColor
+
+// EndpointAllFeaturesPropColorTemperature is the ColorTemperature property concrete type.
+type EndpointAllFeaturesPropColorTemperature = endpointAllFeaturesEndpointFeaturesFeaturePropertiesColorTemperature
+
+// EndpointAllFeaturesPropLock is the Lock property concrete type.
+type EndpointAllFeaturesPropLock = endpointAllFeaturesEndpointFeaturesFeaturePropertiesLock
+
+// EndpointAllFeaturesPropSetpoint is the Setpoint property concrete type.
+type EndpointAllFeaturesPropSetpoint = endpointAllFeaturesEndpointFeaturesFeaturePropertiesSetpoint
+
+// EndpointAllFeaturesPropThermostatMode is the ThermostatMode property concrete type.
+type EndpointAllFeaturesPropThermostatMode = endpointAllFeaturesEndpointFeaturesFeaturePropertiesThermostatMode
+
+// EndpointAllFeaturesPropTemperatureSensor is the TemperatureSensor property concrete type.
 type EndpointAllFeaturesPropTemperatureSensor = endpointAllFeaturesEndpointFeaturesFeaturePropertiesTemperatureSensor
-type EndpointAllFeaturesPropRangeValue        = endpointAllFeaturesEndpointFeaturesFeaturePropertiesRangeValue
-type EndpointAllFeaturesPropIlluminance       = endpointAllFeaturesEndpointFeaturesFeaturePropertiesIlluminance
-type EndpointAllFeaturesPropDetectionState    = endpointAllFeaturesEndpointFeaturesFeaturePropertiesDetectionState
-type EndpointAllFeaturesPropReachability      = endpointAllFeaturesEndpointFeaturesFeaturePropertiesReachability
-type EndpointAllFeaturesPropMode              = endpointAllFeaturesEndpointFeaturesFeaturePropertiesMode
-type EndpointAllFeaturesPropToggleState       = endpointAllFeaturesEndpointFeaturesFeaturePropertiesToggleState
-type EndpointAllFeaturesPropEnablementState   = endpointAllFeaturesEndpointFeaturesFeaturePropertiesEnablementState
+
+// EndpointAllFeaturesPropRangeValue is the RangeValue property concrete type.
+type EndpointAllFeaturesPropRangeValue = endpointAllFeaturesEndpointFeaturesFeaturePropertiesRangeValue
+
+// EndpointAllFeaturesPropIlluminance is the Illuminance property concrete type.
+type EndpointAllFeaturesPropIlluminance = endpointAllFeaturesEndpointFeaturesFeaturePropertiesIlluminance
+
+// EndpointAllFeaturesPropDetectionState is the DetectionState property concrete type.
+type EndpointAllFeaturesPropDetectionState = endpointAllFeaturesEndpointFeaturesFeaturePropertiesDetectionState
+
+// EndpointAllFeaturesPropReachability is the Reachability property concrete type.
+type EndpointAllFeaturesPropReachability = endpointAllFeaturesEndpointFeaturesFeaturePropertiesReachability
+
+// EndpointAllFeaturesPropMode is the generic Mode property concrete type.
+type EndpointAllFeaturesPropMode = endpointAllFeaturesEndpointFeaturesFeaturePropertiesMode
+
+// EndpointAllFeaturesPropToggleState is the ToggleState property concrete type.
+type EndpointAllFeaturesPropToggleState = endpointAllFeaturesEndpointFeaturesFeaturePropertiesToggleState
+
+// EndpointAllFeaturesPropEnablementState is the EnablementState property concrete type.
+type EndpointAllFeaturesPropEnablementState = endpointAllFeaturesEndpointFeaturesFeaturePropertiesEnablementState
+
+// EndpointAllFeaturesPropDetectionSensitivity is the DetectionSensitivity property concrete type.
 type EndpointAllFeaturesPropDetectionSensitivity = endpointAllFeaturesEndpointFeaturesFeaturePropertiesDetectionSensitivity
-type EndpointAllFeaturesPropDetectionRange    = endpointAllFeaturesEndpointFeaturesFeaturePropertiesDetectionRange
+
+// EndpointAllFeaturesPropDetectionRange is the DetectionRange property concrete type.
+type EndpointAllFeaturesPropDetectionRange = endpointAllFeaturesEndpointFeaturesFeaturePropertiesDetectionRange
+
+// EndpointAllFeaturesPropDetectionTechnology is the DetectionTechnology property concrete type.
 type EndpointAllFeaturesPropDetectionTechnology = endpointAllFeaturesEndpointFeaturesFeaturePropertiesDetectionTechnology
 
 // EndpointAllFeaturesResponse is the exported response type for
@@ -227,8 +262,8 @@ type EndpointAllFeaturesResponse struct {
 // "endpointAllFeatures" (matches what the live web UI sends). Pass
 // nil for latencyTolerance to use the schema's default; LOW is the
 // usual choice (fresh data, no caching).
-func EndpointAllFeatures(ctx context.Context, client graphql.Client, endpointId string, latencyTolerance *LatencyToleranceValue) (*EndpointAllFeaturesResponse, error) {
-	resp, err := endpointAllFeatures(ctx, client, endpointId, latencyTolerance)
+func EndpointAllFeatures(ctx context.Context, client graphql.Client, endpointID string, latencyTolerance *LatencyToleranceValue) (*EndpointAllFeaturesResponse, error) {
+	resp, err := endpointAllFeatures(ctx, client, endpointID, latencyTolerance)
 	if err != nil {
 		return nil, err
 	}

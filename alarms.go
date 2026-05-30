@@ -265,7 +265,7 @@ func (s *AlarmsService) Delete(ctx context.Context, a *Alarm) error {
 	if err != nil {
 		return fmt.Errorf("%w: %w", ErrCannotConnect, err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode >= 400 {
 		return &APIError{
 			Category:   ErrCannotRetrieveData,
@@ -361,9 +361,8 @@ func (s *AlarmsService) put(ctx context.Context, path string, body any, method s
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", ErrCannotConnect, err)
 	}
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode >= 400 {
-		respBody := resp.Body
-		defer respBody.Close()
 		return nil, &APIError{
 			Category:   ErrCannotRetrieveData,
 			Method:     method,

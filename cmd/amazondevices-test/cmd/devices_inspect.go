@@ -8,10 +8,12 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var inspectDevice string
+
 var devicesInspectCmd = &cobra.Command{
-	Use:   "inspect <serial>",
+	Use:   "inspect",
 	Short: "Fetch the full per-endpoint feature set for one device",
-	Args:  cobra.ExactArgs(1),
+	Args:  cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		ctx, cancel := signalContext()
 		defer cancel()
@@ -30,7 +32,11 @@ var devicesInspectCmd = &cobra.Command{
 			return err
 		}
 
-		d, err := client.Devices.Inspect(ctx, args[0])
+		target, err := resolveDevice(ctx, inspectDevice, client, store)
+		if err != nil {
+			return err
+		}
+		d, err := client.Devices.Inspect(ctx, target.SerialNumber)
 		if err != nil {
 			return err
 		}
@@ -43,4 +49,5 @@ var devicesInspectCmd = &cobra.Command{
 
 func init() {
 	devicesCmd.AddCommand(devicesInspectCmd)
+	registerDeviceFlag(devicesInspectCmd, &inspectDevice)
 }

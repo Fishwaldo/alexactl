@@ -39,7 +39,7 @@ func newRoutinesListCmd() *cobra.Command {
 				return err
 			}
 			for _, n := range names {
-				fmt.Fprintln(os.Stdout, n)
+				_, _ = fmt.Fprintln(os.Stdout, n)
 			}
 			return nil
 		},

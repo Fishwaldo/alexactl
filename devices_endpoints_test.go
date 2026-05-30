@@ -100,69 +100,6 @@ func TestDevices_Enrichment(t *testing.T) {
 	assert.Equal(t, "999", aqm.SoftwareVersion)
 }
 
-// TestDefault_DeterministicAcrossCalls verifies that the fallback path in
-// Default (no user-set device) returns the same device for every call. The
-// underlying cache is a map, whose iteration order is randomized by Go, so
-// this would fail without the sort.Strings step.
-func TestDefault_DeterministicAcrossCalls(t *testing.T) {
-	wr, err := httpwrapper.New(httpwrapper.Config{
-		HTTPClient: &http.Client{},
-		Site:       "https://www.amazon.com",
-		RandReader: bytes.NewReader(bytes.Repeat([]byte{0x42}, 1024)),
-	})
-	require.NoError(t, err)
-
-	ds := &DevicesService{
-		wrapper: wr,
-		session: &Session{AccountCustomerID: "OWNER", Domain: "com"},
-	}
-	ds.initListCacheForTest(map[string]*Device{
-		"S-MIDDLE": {SerialNumber: "S-MIDDLE", Online: true},
-		"S-AAA":    {SerialNumber: "S-AAA", Online: true},
-		"S-ZZZ":    {SerialNumber: "S-ZZZ", Online: true},
-	})
-
-	first, err := ds.Default(context.Background())
-	require.NoError(t, err)
-	require.NotNil(t, first)
-	// The lowest-sorted serial should win.
-	assert.Equal(t, "S-AAA", first.SerialNumber)
-
-	for i := 0; i < 50; i++ {
-		got, err := ds.Default(context.Background())
-		require.NoError(t, err)
-		assert.Same(t, first, got, "Default() must return the same device every call")
-	}
-}
-
-// TestDefault_RespectsUserSet verifies that a user-set default takes
-// priority over the sorted-fallback path.
-func TestDefault_RespectsUserSet(t *testing.T) {
-	wr, err := httpwrapper.New(httpwrapper.Config{
-		HTTPClient: &http.Client{},
-		Site:       "https://www.amazon.com",
-		RandReader: bytes.NewReader(bytes.Repeat([]byte{0x42}, 1024)),
-	})
-	require.NoError(t, err)
-
-	userPick := &Device{SerialNumber: "S-ZZZ", Online: true}
-	ds := &DevicesService{
-		wrapper: wr,
-		session: &Session{AccountCustomerID: "OWNER", Domain: "com"},
-	}
-	ds.initListCacheForTest(map[string]*Device{
-		"S-AAA":  {SerialNumber: "S-AAA", Online: true},
-		"S-ZZZ":  userPick,
-		"S-MMMM": {SerialNumber: "S-MMMM", Online: true},
-	})
-	require.NoError(t, ds.SetDefault(userPick))
-
-	got, err := ds.Default(context.Background())
-	require.NoError(t, err)
-	assert.Same(t, userPick, got, "Default() must return the user-set device, not the sorted fallback")
-	assert.Equal(t, "S-ZZZ", got.SerialNumber)
-}
-
 // TestRefresh_Singleflight stands up an httptest server that counts how
 // many base-data fetches it serves. With singleflight in place, 10
 // concurrent List() calls against a stale cache should produce exactly 1
@@ -537,63 +474,6 @@ func TestMergeAlexaInterfaces_Union(t *testing.T) {
 
 	// Both empty → nil.
 	assert.Nil(t, mergeAlexaInterfaces(nil, nil))
-}
-
-// TestSetDefault_NilReturnsError verifies that SetDefault rejects a nil
-// *Device with a descriptive error.
-func TestSetDefault_NilReturnsError(t *testing.T) {
-	wr, err := httpwrapper.New(httpwrapper.Config{
-		HTTPClient: &http.Client{},
-		Site:       "https://www.amazon.com",
-		RandReader: bytes.NewReader(bytes.Repeat([]byte{0x42}, 1024)),
-	})
-	require.NoError(t, err)
-	ds := &DevicesService{wrapper: wr}
-	ds.initListCacheForTest(map[string]*Device{})
-	err = ds.SetDefault(nil)
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "nil device")
-}
-
-// TestSetDefault_NotInCacheReturnsError verifies that SetDefault rejects a
-// *Device whose serial isn't currently in the cache.
-func TestSetDefault_NotInCacheReturnsError(t *testing.T) {
-	wr, err := httpwrapper.New(httpwrapper.Config{
-		HTTPClient: &http.Client{},
-		Site:       "https://www.amazon.com",
-		RandReader: bytes.NewReader(bytes.Repeat([]byte{0x42}, 1024)),
-	})
-	require.NoError(t, err)
-	ds := &DevicesService{wrapper: wr}
-	ds.initListCacheForTest(map[string]*Device{
-		"S-AAA": {SerialNumber: "S-AAA", Online: true},
-	})
-	stranger := &Device{SerialNumber: "S-NOT-IN-CACHE", Online: true}
-	err = ds.SetDefault(stranger)
-	require.Error(t, err)
-	assert.ErrorIs(t, err, ErrDeviceNotFound)
-}
-
-// TestSetDefault_ValidDevicePersisted verifies the happy path: a device
-// already in the cache is accepted and is returned by subsequent calls to
-// Default().
-func TestSetDefault_ValidDevicePersisted(t *testing.T) {
-	wr, err := httpwrapper.New(httpwrapper.Config{
-		HTTPClient: &http.Client{},
-		Site:       "https://www.amazon.com",
-		RandReader: bytes.NewReader(bytes.Repeat([]byte{0x42}, 1024)),
-	})
-	require.NoError(t, err)
-	pick := &Device{SerialNumber: "S-PICK", Online: true}
-	ds := &DevicesService{wrapper: wr}
-	ds.initListCacheForTest(map[string]*Device{
-		"S-AAA":  {SerialNumber: "S-AAA", Online: true},
-		"S-PICK": pick,
-	})
-	require.NoError(t, ds.SetDefault(pick))
-	got, err := ds.Default(context.Background())
-	require.NoError(t, err)
-	assert.Same(t, pick, got)
 }
 
 func TestDevicesService_Inspect_RewritesCacheInPlace(t *testing.T) {

@@ -13,7 +13,8 @@ import (
 )
 
 var (
-	alarmsSerialFlag     string
+	alarmsDeviceFlag     string
+	alarmsLsDeviceFlag   string
 	alarmsAtFlag         string
 	alarmsLabelFlag      string
 	alarmsSoundFlag      string
@@ -79,13 +80,17 @@ var alarmsLsCmd = &cobra.Command{
 		if _, err := client.Auth.Restore(ctx); err != nil {
 			return err
 		}
+		filter, err := resolveFilter(ctx, alarmsLsDeviceFlag, client)
+		if err != nil {
+			return err
+		}
 		alarms, err := client.Alarms.Get(ctx)
 		if err != nil {
 			return err
 		}
 		fmt.Printf("%-50s %-20s %-30s %s\n", "ID", "FIRE_AT", "LABEL", "RECURRENCE")
 		for _, a := range alarms {
-			if alarmsSerialFlag != "" && a.DeviceSerialNumber != alarmsSerialFlag {
+			if filter != "" && a.DeviceSerialNumber != filter {
 				continue
 			}
 			rec := "(one-shot)"
@@ -103,9 +108,6 @@ var alarmsCreateCmd = &cobra.Command{
 	Use:   "create",
 	Short: "Create a new alarm",
 	RunE: func(cmd *cobra.Command, _ []string) error {
-		if alarmsSerialFlag == "" {
-			return fmt.Errorf("--serial is required")
-		}
 		if alarmsAtFlag == "" {
 			return fmt.Errorf("--at is required")
 		}
@@ -135,8 +137,12 @@ var alarmsCreateCmd = &cobra.Command{
 		if err := client.Devices.Refresh(ctx); err != nil {
 			return err
 		}
+		dvc, err := resolveDevice(ctx, alarmsDeviceFlag, client, store)
+		if err != nil {
+			return err
+		}
 		a := &amazondevices.Alarm{
-			DeviceSerialNumber: alarmsSerialFlag,
+			DeviceSerialNumber: dvc.SerialNumber,
 			FireAt:             fireAt,
 			Label:              alarmsLabelFlag,
 			Sound:              alarmsSoundFlag,
@@ -315,14 +321,14 @@ func codeToWeekday(code string) (time.Weekday, error) {
 }
 
 func init() {
-	alarmsCreateCmd.Flags().StringVar(&alarmsSerialFlag, "serial", "", "target device serial")
+	registerDeviceFlag(alarmsCreateCmd, &alarmsDeviceFlag)
 	alarmsCreateCmd.Flags().StringVar(&alarmsAtFlag, "at", "", "fire time, \"YYYY-MM-DD HH:MM\" or \"HH:MM\"")
 	alarmsCreateCmd.Flags().StringVar(&alarmsLabelFlag, "label", "", "optional label")
 	alarmsCreateCmd.Flags().StringVar(&alarmsSoundFlag, "sound", "", "optional sound id")
 	alarmsCreateCmd.Flags().StringVar(&alarmsRecurrenceFlag, "recurrence", "",
 		"recurrence: daily | weekdays | weekends | weekly:MO,WE,FR | rrule:\"FREQ=...\"")
 
-	alarmsLsCmd.Flags().StringVar(&alarmsSerialFlag, "serial", "", "optional device serial filter")
+	alarmsLsCmd.Flags().StringVar(&alarmsLsDeviceFlag, "device", "", "filter to one device (serial or name); omit for all devices")
 
 	alarmsCmd.AddCommand(alarmsLsCmd)
 	alarmsCmd.AddCommand(alarmsCreateCmd)

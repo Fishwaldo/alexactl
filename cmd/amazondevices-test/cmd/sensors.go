@@ -39,10 +39,10 @@ Quality Monitors report Humidity, VOC, PM25, PM10, CO, Air Quality.`,
 		}
 
 		for _, d := range devs {
-			fmt.Fprintf(os.Stdout, "%s (%s, online=%v)\n",
+			_, _ = fmt.Fprintf(os.Stdout, "%s (%s, online=%v)\n",
 				d.AccountName, d.SerialNumber, d.Online)
 			if len(d.Sensors) == 0 {
-				fmt.Fprintln(os.Stdout, "  (no sensors)")
+				_, _ = fmt.Fprintln(os.Stdout, "  (no sensors)")
 				continue
 			}
 			names := make([]string, 0, len(d.Sensors))
@@ -60,10 +60,10 @@ Quality Monitors report Humidity, VOC, PM25, PM10, CO, Air Quality.`,
 				if s.Scale != "" {
 					scale = " " + s.Scale
 				}
-				fmt.Fprintf(os.Stdout, "  %-20s  %v%s%s\n", n, s.Value, scale, flags)
+				_, _ = fmt.Fprintf(os.Stdout, "  %-20s  %v%s%s\n", n, s.Value, scale, flags)
 				if detailFlag {
 					if line := formatSensorDetail(s); line != "" {
-						fmt.Fprintf(os.Stdout, "    %s\n", line)
+						_, _ = fmt.Fprintf(os.Stdout, "    %s\n", line)
 					}
 				}
 			}

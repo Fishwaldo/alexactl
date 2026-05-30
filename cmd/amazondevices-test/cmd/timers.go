@@ -12,7 +12,8 @@ import (
 )
 
 var (
-	timersSerialFlag   string
+	timersDeviceFlag   string
+	timersLsDeviceFlag string
 	timersDurationFlag string
 	timersLabelFlag    string
 	timersSoundFlag    string
@@ -69,13 +70,17 @@ var timersLsCmd = &cobra.Command{
 		if _, err := client.Auth.Restore(ctx); err != nil {
 			return err
 		}
+		filter, err := resolveFilter(ctx, timersLsDeviceFlag, client)
+		if err != nil {
+			return err
+		}
 		timers, err := client.Timers.Get(ctx)
 		if err != nil {
 			return err
 		}
 		fmt.Printf("%-60s %-15s %-20s %s\n", "ID", "DURATION", "FIRE_AT", "LABEL")
 		for _, t := range timers {
-			if timersSerialFlag != "" && t.DeviceSerialNumber != timersSerialFlag {
+			if filter != "" && t.DeviceSerialNumber != filter {
 				continue
 			}
 			fmt.Printf("%-60s %-15s %-20s %s\n",
@@ -89,9 +94,6 @@ var timersCreateCmd = &cobra.Command{
 	Use:   "create",
 	Short: "Create a new timer",
 	RunE: func(cmd *cobra.Command, _ []string) error {
-		if timersSerialFlag == "" {
-			return fmt.Errorf("--serial is required")
-		}
 		if timersDurationFlag == "" {
 			return fmt.Errorf("--duration is required (e.g. 30m, 1h15m)")
 		}
@@ -114,8 +116,12 @@ var timersCreateCmd = &cobra.Command{
 		if err := client.Devices.Refresh(ctx); err != nil {
 			return err
 		}
+		dvc, err := resolveDevice(ctx, timersDeviceFlag, client, store)
+		if err != nil {
+			return err
+		}
 		t := &amazondevices.Timer{
-			DeviceSerialNumber: timersSerialFlag,
+			DeviceSerialNumber: dvc.SerialNumber,
 			Duration:           dur,
 			Label:              timersLabelFlag,
 			Sound:              timersSoundFlag,
@@ -186,12 +192,12 @@ func withTimer(action func(ctx context.Context, t *amazondevices.Timer, client *
 }
 
 func init() {
-	timersCreateCmd.Flags().StringVar(&timersSerialFlag, "serial", "", "target device serial")
+	registerDeviceFlag(timersCreateCmd, &timersDeviceFlag)
 	timersCreateCmd.Flags().StringVar(&timersDurationFlag, "duration", "", "countdown duration, e.g. 30m / 1h15m / 90s")
 	timersCreateCmd.Flags().StringVar(&timersLabelFlag, "label", "", "optional label")
 	timersCreateCmd.Flags().StringVar(&timersSoundFlag, "sound", "", "optional sound id")
 
-	timersLsCmd.Flags().StringVar(&timersSerialFlag, "serial", "", "optional device serial filter")
+	timersLsCmd.Flags().StringVar(&timersLsDeviceFlag, "device", "", "filter to one device (serial or name); omit for all devices")
 
 	timersCmd.AddCommand(timersLsCmd)
 	timersCmd.AddCommand(timersCreateCmd)

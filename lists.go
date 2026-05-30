@@ -152,9 +152,8 @@ func (s *ListsService) fetchItems(ctx context.Context) ([]*List, error) {
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", ErrCannotConnect, err)
 	}
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode >= 400 {
-		body := resp.Body
-		defer body.Close()
 		return nil, &APIError{
 			Category:   ErrCannotRetrieveData,
 			Method:     http.MethodGet,
@@ -348,9 +347,8 @@ func (l *List) AddItem(ctx context.Context, value string) (*ListItem, error) {
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", ErrCannotConnect, err)
 	}
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode >= 400 {
-		body := resp.Body
-		defer body.Close()
 		return nil, &APIError{
 			Category:   ErrCannotRetrieveData,
 			Method:     http.MethodPost,
@@ -428,9 +426,8 @@ func (l *List) updateItem(ctx context.Context, item *ListItem, overrides map[str
 	if err != nil {
 		return fmt.Errorf("%w: %w", ErrCannotConnect, err)
 	}
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode >= 400 {
-		respBody := resp.Body
-		defer respBody.Close()
 		return &APIError{
 			Category:   ErrCannotRetrieveData,
 			Method:     http.MethodPut,
@@ -488,7 +485,7 @@ func (l *List) Delete(ctx context.Context, item *ListItem) error {
 	if err != nil {
 		return fmt.Errorf("%w: %w", ErrCannotConnect, err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode >= 400 {
 		return &APIError{
 			Category:   ErrCannotRetrieveData,

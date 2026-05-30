@@ -96,6 +96,7 @@ func TestDecodeJSON_BodyTruncatedAtCap(t *testing.T) {
 	// And confirm DecodeJSON on an oversized non-JSON body does not panic.
 	resp2, err := srv.Client().Get(srv.URL)
 	require.NoError(t, err)
+	t.Cleanup(func() { _ = resp2.Body.Close() })
 	_, _ = httpwrapper.DecodeJSON(resp2) // returns error (not JSON) but must not panic
 }
 
@@ -121,6 +122,7 @@ func TestDecodeJSON_OversizedJSONTruncatedNoPanic(t *testing.T) {
 
 	resp, err := srv.Client().Get(srv.URL)
 	require.NoError(t, err)
+	t.Cleanup(func() { _ = resp.Body.Close() })
 
 	_, err = httpwrapper.DecodeJSON(resp)
 	// We expect an error (truncated JSON), and no panic.
@@ -160,7 +162,7 @@ func TestLogResponseBody_RedactsSensitiveFields(t *testing.T) {
 	logger, buf := newLogCapture(t, slog.LevelDebug)
 	resp := &http.Response{
 		StatusCode: 200,
-		Body:       io.NopCloser(strings.NewReader(
+		Body: io.NopCloser(strings.NewReader(
 			`{"accessToken":"SECRET","refresh_token":"SHHH","ok":true}`)),
 	}
 	httpwrapper.LogResponseBody(context.Background(), logger, "GET", "https://alexa.amazon.com/api/x", resp)

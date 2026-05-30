@@ -132,7 +132,7 @@ func TestDo_HonorsContext(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 	wr := newWrapper(t, srv)
-	_, err := wr.Do(ctx, httpwrapper.Request{Method: http.MethodGet, URL: srv.URL})
+	_, err := wr.Do(ctx, httpwrapper.Request{Method: http.MethodGet, URL: srv.URL}) //nolint:bodyclose // error path: Do returns a nil response, nothing to close.
 	assert.Error(t, err)
 }
 

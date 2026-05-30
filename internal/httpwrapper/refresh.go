@@ -81,7 +81,7 @@ func (w *Wrapper) RefreshAccessToken(ctx context.Context, in RefreshInput) (stri
 		return "", 0, err
 	}
 	if resp.StatusCode != http.StatusOK {
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 		return "", 0, fmt.Errorf("%w: status %d", ErrRefreshHTTP, resp.StatusCode)
 	}
 

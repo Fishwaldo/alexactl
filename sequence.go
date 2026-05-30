@@ -315,7 +315,7 @@ func (s *SequenceService) postSequences(ctx context.Context, ops []sequenceOp) e
 	if err != nil {
 		return fmt.Errorf("%w: %w", ErrCannotConnect, err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode >= 400 {
 		return &APIError{
 			Category:   ErrCannotRetrieveData,
@@ -360,7 +360,8 @@ func (s *SequenceService) Send(ctx context.Context, d *Device, kind SequenceType
 	// processBatch outlives the caller's ctx by design — the deferred
 	// POST runs in background with a context derived from the wrapper's
 	// own. Callers wanting cancellation use Flush(ctx).
-	go s.processBatch(context.Background(), gen)
+	//#nosec G118 -- intentional: the debounced batch must outlive the caller's request-scoped ctx.
+	go s.processBatch(context.Background(), gen) //nolint:contextcheck // intentional: batch must outlive the caller's request-scoped ctx (see above).
 	return nil
 }
 
@@ -558,9 +559,8 @@ func (s *SequenceService) fetchRoutines(ctx context.Context) (map[string]map[str
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", ErrCannotConnect, err)
 	}
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode >= 400 {
-		body := resp.Body
-		defer body.Close()
 		return nil, &APIError{
 			Category:   ErrCannotRetrieveData,
 			Method:     http.MethodGet,

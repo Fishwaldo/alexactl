@@ -48,14 +48,14 @@ shape to send — capture a HAR first.`,
 
 		for _, d := range devs {
 			// Header line per device.
-			fmt.Fprintf(os.Stdout, "%s  (%s, %s)\n",
+			_, _ = fmt.Fprintf(os.Stdout, "%s  (%s, %s)\n",
 				d.AccountName, d.SerialNumber, kindOrUnknown(d.Kind))
 
 			endpointOps := "(none)"
 			if len(d.Operations) > 0 {
 				endpointOps = fmt.Sprintf("%v", d.Operations)
 			}
-			fmt.Fprintf(os.Stdout, "  endpoint:                 %s\n", endpointOps)
+			_, _ = fmt.Fprintf(os.Stdout, "  endpoint:                 %s\n", endpointOps)
 
 			// Per-feature operations from Sensors[].Operations. Sorted by
 			// sensor key for stable output across runs.
@@ -67,19 +67,19 @@ shape to send — capture a HAR first.`,
 			}
 			sort.Strings(featureKeys)
 			if len(featureKeys) == 0 {
-				fmt.Fprintln(os.Stdout, "  (no per-feature operations)")
+				_, _ = fmt.Fprintln(os.Stdout, "  (no per-feature operations)")
 			} else {
 				for _, k := range featureKeys {
 					s := d.Sensors[k]
-					fmt.Fprintf(os.Stdout, "  %-25s %v\n", k+":", s.Operations)
+					_, _ = fmt.Fprintf(os.Stdout, "  %-25s %v\n", k+":", s.Operations)
 					if detailFlag && len(s.Configuration) > 0 {
 						if line := formatSensorDetail(s); line != "" {
-							fmt.Fprintf(os.Stdout, "    %s\n", line)
+							_, _ = fmt.Fprintf(os.Stdout, "    %s\n", line)
 						}
 					}
 				}
 			}
-			fmt.Fprintln(os.Stdout)
+			_, _ = fmt.Fprintln(os.Stdout)
 		}
 		return nil
 	},

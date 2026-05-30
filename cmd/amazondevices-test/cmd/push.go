@@ -71,16 +71,16 @@ func newPushTailCmd() *cobra.Command {
 func printEvent(evt amazondevices.PushEvent) {
 	ts := time.Now().UTC().Format(time.RFC3339)
 	if _, ok := evt.(*amazondevices.ReauthRequiredEvent); ok {
-		fmt.Fprintf(os.Stdout, "%s REAUTH_REQUIRED — run `login` again\n", ts)
+		_, _ = fmt.Fprintf(os.Stdout, "%s REAUTH_REQUIRED — run `login` again\n", ts)
 		return
 	}
 	rawBytes, _ := json.Marshal(evt.RawPayload())
 	if u, ok := evt.(*amazondevices.UnknownPushEvent); ok {
-		fmt.Fprintf(os.Stdout, "%s UNKNOWN[%s] serial=%s raw=%s\n",
+		_, _ = fmt.Fprintf(os.Stdout, "%s UNKNOWN[%s] serial=%s raw=%s\n",
 			ts, u.WireType, u.SerialNumber(), rawBytes)
 		return
 	}
-	fmt.Fprintf(os.Stdout, "%s %s serial=%s raw=%s\n",
+	_, _ = fmt.Fprintf(os.Stdout, "%s %s serial=%s raw=%s\n",
 		ts, evt.Type(), evt.SerialNumber(), rawBytes)
 }
 

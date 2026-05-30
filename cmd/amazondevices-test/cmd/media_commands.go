@@ -48,10 +48,10 @@ func newSoundListCmd() *cobra.Command {
 				ids = append(ids, id)
 			}
 			sort.Strings(ids)
-			fmt.Fprintf(os.Stdout, "%-46s  %-26s  %s\n", "ID", "CATEGORY", "LABEL")
+			_, _ = fmt.Fprintf(os.Stdout, "%-46s  %-26s  %s\n", "ID", "CATEGORY", "LABEL")
 			for _, id := range ids {
 				s := sounds[id]
-				fmt.Fprintf(os.Stdout, "%-46s  %-26s  %s\n", id, s.Category, s.DisplayName)
+				_, _ = fmt.Fprintf(os.Stdout, "%-46s  %-26s  %s\n", id, s.Category, s.DisplayName)
 			}
 			return nil
 		},
@@ -59,14 +59,13 @@ func newSoundListCmd() *cobra.Command {
 }
 
 func newSoundPlayCmd() *cobra.Command {
-	var serial, soundID string
+	var device, soundID string
 	c := &cobra.Command{
 		Use:   "play",
 		Short: "Play a sound effect on a device (cluster fanout)",
 	}
-	c.Flags().StringVar(&serial, "serial", "", "device serial number (required)")
+	registerDeviceFlag(c, &device)
 	c.Flags().StringVar(&soundID, "sound-id", "", "sound effect id (e.g. amzn_sfx_doorbell_01) (required)")
-	_ = c.MarkFlagRequired("serial")
 	_ = c.MarkFlagRequired("sound-id")
 	c.RunE = func(_ *cobra.Command, _ []string) error {
 		ctx, cancel := signalContext()
@@ -81,7 +80,7 @@ func newSoundPlayCmd() *cobra.Command {
 		if _, err := client.Auth.Restore(ctx); err != nil {
 			return err
 		}
-		dvc, err := client.Devices.Get(ctx, serial)
+		dvc, err := resolveDevice(ctx, device, client, store)
 		if err != nil {
 			return err
 		}
@@ -92,17 +91,16 @@ func newSoundPlayCmd() *cobra.Command {
 
 // newMusicCmd builds `music` — query is a positional argument.
 //
-// Usage: amazondevices-test music --serial S --provider amzn-music "avici"
+// Usage: amazondevices-test music --device "Bedroom" --provider amzn-music "avici"
 func newMusicCmd() *cobra.Command {
-	var serial, provider string
+	var device, provider string
 	c := &cobra.Command{
 		Use:   "music <query>",
 		Short: "Play music on a device via the named provider",
 		Args:  cobra.ExactArgs(1),
 	}
-	c.Flags().StringVar(&serial, "serial", "", "device serial number (required)")
+	registerDeviceFlag(c, &device)
 	c.Flags().StringVar(&provider, "provider", "", "music provider id (required; see `music-providers`)")
-	_ = c.MarkFlagRequired("serial")
 	_ = c.MarkFlagRequired("provider")
 	c.RunE = func(_ *cobra.Command, args []string) error {
 		ctx, cancel := signalContext()
@@ -118,7 +116,7 @@ func newMusicCmd() *cobra.Command {
 		if _, err := client.Auth.Restore(ctx); err != nil {
 			return err
 		}
-		dvc, err := client.Devices.Get(ctx, serial)
+		dvc, err := resolveDevice(ctx, device, client, store)
 		if err != nil {
 			return err
 		}
@@ -128,14 +126,13 @@ func newMusicCmd() *cobra.Command {
 }
 
 func newTextCmd() *cobra.Command {
-	var serial, text string
+	var device, text string
 	c := &cobra.Command{
 		Use:   "text",
 		Short: "Send an Alexa.TextCommand to a device",
 	}
-	c.Flags().StringVar(&serial, "serial", "", "device serial number (required)")
+	registerDeviceFlag(c, &device)
 	c.Flags().StringVar(&text, "text", "", "command text (required)")
-	_ = c.MarkFlagRequired("serial")
 	_ = c.MarkFlagRequired("text")
 	c.RunE = func(_ *cobra.Command, _ []string) error {
 		ctx, cancel := signalContext()
@@ -150,7 +147,7 @@ func newTextCmd() *cobra.Command {
 		if _, err := client.Auth.Restore(ctx); err != nil {
 			return err
 		}
-		dvc, err := client.Devices.Get(ctx, serial)
+		dvc, err := resolveDevice(ctx, device, client, store)
 		if err != nil {
 			return err
 		}
@@ -181,7 +178,7 @@ func newSkillListCmd() *cobra.Command {
 				return err
 			}
 			for _, s := range client.Media.InfoSkills() {
-				fmt.Fprintln(os.Stdout, s)
+				_, _ = fmt.Fprintln(os.Stdout, s)
 			}
 			return nil
 		},
@@ -189,14 +186,13 @@ func newSkillListCmd() *cobra.Command {
 }
 
 func newSkillLaunchCmd() *cobra.Command {
-	var serial, skill string
+	var device, skill string
 	c := &cobra.Command{
 		Use:   "launch",
 		Short: "Launch a skill on a device",
 	}
-	c.Flags().StringVar(&serial, "serial", "", "device serial number (required)")
+	registerDeviceFlag(c, &device)
 	c.Flags().StringVar(&skill, "skill", "", "skill name (required)")
-	_ = c.MarkFlagRequired("serial")
 	_ = c.MarkFlagRequired("skill")
 	c.RunE = func(_ *cobra.Command, _ []string) error {
 		ctx, cancel := signalContext()
@@ -211,7 +207,7 @@ func newSkillLaunchCmd() *cobra.Command {
 		if _, err := client.Auth.Restore(ctx); err != nil {
 			return err
 		}
-		dvc, err := client.Devices.Get(ctx, serial)
+		dvc, err := resolveDevice(ctx, device, client, store)
 		if err != nil {
 			return err
 		}
@@ -223,16 +219,15 @@ func newSkillLaunchCmd() *cobra.Command {
 // newControlCmd builds `control` — the command keyword is a positional
 // argument.
 //
-// Usage: amazondevices-test control --serial S play
+// Usage: amazondevices-test control --device "Bedroom" play
 func newControlCmd() *cobra.Command {
-	var serial string
+	var device string
 	c := &cobra.Command{
 		Use:   "control <play|pause|next|prev|stop|rewind|forward>",
 		Short: "Send a media control",
 		Args:  cobra.ExactArgs(1),
 	}
-	c.Flags().StringVar(&serial, "serial", "", "device serial number (required)")
-	_ = c.MarkFlagRequired("serial")
+	registerDeviceFlag(c, &device)
 	c.RunE = func(_ *cobra.Command, args []string) error {
 		ctx, cancel := signalContext()
 		defer cancel()
@@ -250,7 +245,7 @@ func newControlCmd() *cobra.Command {
 		if _, err := client.Auth.Restore(ctx); err != nil {
 			return err
 		}
-		dvc, err := client.Devices.Get(ctx, serial)
+		dvc, err := resolveDevice(ctx, device, client, store)
 		if err != nil {
 			return err
 		}

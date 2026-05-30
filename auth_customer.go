@@ -57,6 +57,7 @@ func (s *AuthService) obtainCustomerIDForSerial(
 		if err != nil {
 			return "", err
 		}
+		defer func() { _ = resp.Body.Close() }()
 		data, err := httpwrapper.DecodeJSON(resp)
 		if err != nil {
 			return "", err

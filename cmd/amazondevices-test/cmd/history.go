@@ -41,11 +41,11 @@ before issuing the POST.`,
 		}
 		sort.Strings(serials)
 
-		fmt.Fprintf(os.Stdout, "%-32s  %-20s  %s\n",
+		_, _ = fmt.Fprintf(os.Stdout, "%-32s  %-20s  %s\n",
 			"SERIAL", "TIMESTAMP", "TITLE")
 		for _, s := range serials {
 			r := records[s]
-			fmt.Fprintf(os.Stdout, "%-32s  %-20s  %s\n",
+			_, _ = fmt.Fprintf(os.Stdout, "%-32s  %-20s  %s\n",
 				s, r.Timestamp.Format("2006-01-02 15:04:05"), r.Title)
 		}
 		return nil

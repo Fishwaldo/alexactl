@@ -562,4 +562,3 @@ func extractFeatureConfiguration(feature *epFeature) map[string]any {
 		}
 	}
 }
-

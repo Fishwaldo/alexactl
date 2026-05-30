@@ -36,11 +36,11 @@ func newMusicProvidersCmd() *cobra.Command {
 				ids = append(ids, id)
 			}
 			sort.Strings(ids)
-			fmt.Fprintf(os.Stdout, "%-30s  %-25s  %-12s  %s\n",
+			_, _ = fmt.Fprintf(os.Stdout, "%-30s  %-25s  %-12s  %s\n",
 				"ID", "NAME", "AVAILABILITY", "DEFAULT")
 			for _, id := range ids {
 				p := providers[id]
-				fmt.Fprintf(os.Stdout, "%-30s  %-25s  %-12s  %v\n",
+				_, _ = fmt.Fprintf(os.Stdout, "%-30s  %-25s  %-12s  %v\n",
 					p.ProviderID, p.ProviderName, p.Availability, p.DefaultProvider)
 			}
 			return nil
@@ -74,10 +74,10 @@ func newVolumeStateCmd() *cobra.Command {
 				serials = append(serials, s)
 			}
 			sort.Strings(serials)
-			fmt.Fprintf(os.Stdout, "%-32s  %-7s  %s\n", "SERIAL", "VOLUME", "MUTED")
+			_, _ = fmt.Fprintf(os.Stdout, "%-32s  %-7s  %s\n", "SERIAL", "VOLUME", "MUTED")
 			for _, s := range serials {
 				v := volumes[s]
-				fmt.Fprintf(os.Stdout, "%-32s  %-7d  %v\n", s, v.Volume, v.Muted)
+				_, _ = fmt.Fprintf(os.Stdout, "%-32s  %-7d  %v\n", s, v.Volume, v.Muted)
 			}
 			return nil
 		},
@@ -115,16 +115,16 @@ func newMediaStateCmd() *cobra.Command {
 		}
 		s, ok := states[serial]
 		if !ok {
-			fmt.Fprintln(os.Stdout, "(no media session for this device)")
+			_, _ = fmt.Fprintln(os.Stdout, "(no media session for this device)")
 			return nil
 		}
-		fmt.Fprintf(os.Stdout, "state    : %s\n", s.PlayerState)
-		fmt.Fprintf(os.Stdout, "title    : %s\n", s.NowPlayingTitle)
-		fmt.Fprintf(os.Stdout, "line1    : %s\n", s.NowPlayingLine1)
-		fmt.Fprintf(os.Stdout, "line2    : %s\n", s.NowPlayingLine2)
-		fmt.Fprintf(os.Stdout, "provider : %s\n", s.MediaProvider)
-		fmt.Fprintf(os.Stdout, "length   : %s\n", s.MediaLength)
-		fmt.Fprintf(os.Stdout, "position : %s (as of %s)\n",
+		_, _ = fmt.Fprintf(os.Stdout, "state    : %s\n", s.PlayerState)
+		_, _ = fmt.Fprintf(os.Stdout, "title    : %s\n", s.NowPlayingTitle)
+		_, _ = fmt.Fprintf(os.Stdout, "line1    : %s\n", s.NowPlayingLine1)
+		_, _ = fmt.Fprintf(os.Stdout, "line2    : %s\n", s.NowPlayingLine2)
+		_, _ = fmt.Fprintf(os.Stdout, "provider : %s\n", s.MediaProvider)
+		_, _ = fmt.Fprintf(os.Stdout, "length   : %s\n", s.MediaLength)
+		_, _ = fmt.Fprintf(os.Stdout, "position : %s (as of %s)\n",
 			s.MediaPosition, s.MediaPositionUpdated.Format("15:04:05"))
 		return nil
 	}

@@ -8,8 +8,10 @@ import (
 	amazondevices "github.com/Fishwaldo/goamazondevices"
 )
 
+var powerDevice string
+
 var devicesPowerCmd = &cobra.Command{
-	Use:   "power <serial> <on|off|toggle>",
+	Use:   "power <on|off|toggle>",
 	Short: "Turn a smart-home device on/off or toggle its current state",
 	Long: `Issues an Alexa.PowerController directive against the given
 device. The device must advertise Alexa.PowerController in its
@@ -17,10 +19,10 @@ AlexaInterfaces (Phase 4a populates this from the discovery query) and
 have a non-empty EndpointID. Run 'devices list' first to confirm.
 
 Examples:
-  amazondevices-test devices power AB1234567890 on
-  amazondevices-test devices power AB1234567890 off
-  amazondevices-test devices power AB1234567890 toggle`,
-	Args: cobra.ExactArgs(2),
+  amazondevices-test devices power on --device "Bedroom"
+  amazondevices-test devices power off --device AB1234567890
+  amazondevices-test devices power toggle`,
+	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		ctx, cancel := signalContext()
 		defer cancel()
@@ -39,7 +41,7 @@ Examples:
 			return err
 		}
 
-		d, err := client.Devices.Get(ctx, args[0])
+		d, err := resolveDevice(ctx, powerDevice, client, store)
 		if err != nil {
 			return err
 		}
@@ -49,7 +51,7 @@ Examples:
 				d.SerialNumber, amazondevices.Kind(d.Kind))
 		}
 
-		switch args[1] {
+		switch args[0] {
 		case "on":
 			return power.On(ctx)
 		case "off":
@@ -57,11 +59,12 @@ Examples:
 		case "toggle":
 			return power.Toggle(ctx)
 		default:
-			return fmt.Errorf("unknown action %q: use on, off, or toggle", args[1])
+			return fmt.Errorf("unknown action %q: use on, off, or toggle", args[0])
 		}
 	},
 }
 
 func init() {
 	devicesCmd.AddCommand(devicesPowerCmd)
+	registerDeviceFlag(devicesPowerCmd, &powerDevice)
 }

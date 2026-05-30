@@ -223,7 +223,7 @@ func (s *PushService) removeSubscriber(sub *subscriber) {
 	// Channel may already be closed by notifyReauthAndClose; safe to
 	// ignore the panic.
 	func() {
-		defer func() { recover() }()
+		defer func() { _ = recover() }()
 		close(sub.ch)
 	}()
 	if left == 0 {

@@ -12,7 +12,8 @@ import (
 )
 
 var (
-	remindersSerialFlag     string
+	remindersDeviceFlag     string
+	remindersLsDeviceFlag   string
 	remindersAtFlag         string
 	remindersLabelFlag      string
 	remindersRecurrenceFlag string
@@ -77,13 +78,17 @@ var remindersLsCmd = &cobra.Command{
 		if _, err := client.Auth.Restore(ctx); err != nil {
 			return err
 		}
+		filter, err := resolveFilter(ctx, remindersLsDeviceFlag, client)
+		if err != nil {
+			return err
+		}
 		reminders, err := client.Reminders.Get(ctx)
 		if err != nil {
 			return err
 		}
 		fmt.Printf("%-60s %-20s %-30s %s\n", "ID", "FIRE_AT", "LABEL", "RECURRENCE")
 		for _, r := range reminders {
-			if remindersSerialFlag != "" && r.DeviceSerialNumber != remindersSerialFlag {
+			if filter != "" && r.DeviceSerialNumber != filter {
 				continue
 			}
 			rec := "(one-shot)"
@@ -101,9 +106,6 @@ var remindersCreateCmd = &cobra.Command{
 	Use:   "create",
 	Short: "Create a new reminder",
 	RunE: func(cmd *cobra.Command, _ []string) error {
-		if remindersSerialFlag == "" {
-			return fmt.Errorf("--serial is required")
-		}
 		if remindersAtFlag == "" {
 			return fmt.Errorf("--at is required")
 		}
@@ -136,8 +138,12 @@ var remindersCreateCmd = &cobra.Command{
 		if err := client.Devices.Refresh(ctx); err != nil {
 			return err
 		}
+		dvc, err := resolveDevice(ctx, remindersDeviceFlag, client, store)
+		if err != nil {
+			return err
+		}
 		r := &amazondevices.Reminder{
-			DeviceSerialNumber: remindersSerialFlag,
+			DeviceSerialNumber: dvc.SerialNumber,
 			FireAt:             fireAt,
 			Label:              remindersLabelFlag,
 			Recurrence:         recur,
@@ -235,13 +241,13 @@ func withReminder(action func(ctx context.Context, r *amazondevices.Reminder, cl
 }
 
 func init() {
-	remindersCreateCmd.Flags().StringVar(&remindersSerialFlag, "serial", "", "target device serial")
+	registerDeviceFlag(remindersCreateCmd, &remindersDeviceFlag)
 	remindersCreateCmd.Flags().StringVar(&remindersAtFlag, "at", "", "fire time, \"YYYY-MM-DD HH:MM\" or \"HH:MM\"")
 	remindersCreateCmd.Flags().StringVar(&remindersLabelFlag, "label", "", "what Alexa speaks (REQUIRED)")
 	remindersCreateCmd.Flags().StringVar(&remindersRecurrenceFlag, "recurrence", "",
 		"recurrence: daily | weekdays | weekends | weekly:MO,WE,FR | rrule:\"FREQ=...\"")
 
-	remindersLsCmd.Flags().StringVar(&remindersSerialFlag, "serial", "", "optional device serial filter")
+	remindersLsCmd.Flags().StringVar(&remindersLsDeviceFlag, "device", "", "filter to one device (serial or name); omit for all devices")
 
 	remindersCmd.AddCommand(remindersLsCmd)
 	remindersCmd.AddCommand(remindersCreateCmd)

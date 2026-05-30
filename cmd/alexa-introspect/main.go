@@ -85,6 +85,7 @@ func run(sessionPath string) error {
 	cookieURL, _ := url.Parse("https://" + host)
 	cookies := make([]*http.Cookie, 0, len(sess.WebsiteCookies))
 	for name, value := range sess.WebsiteCookies {
+		// #nosec G124 -- client-side request cookies replayed from a saved session; Secure/HttpOnly/SameSite are server-response attributes and do not apply.
 		cookies = append(cookies, &http.Cookie{Name: name, Value: value})
 	}
 	jar.SetCookies(cookieURL, cookies)
@@ -115,7 +116,7 @@ func run(sessionPath string) error {
 	if err != nil {
 		return fmt.Errorf("introspection request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("unexpected status %d", resp.StatusCode)
 	}
@@ -139,6 +140,7 @@ func run(sessionPath string) error {
 // writes) and returns it. We use amazondevices.Session here only as a
 // JSON shape — no client construction.
 func loadSession(path string) (*amazondevices.Session, error) {
+	// #nosec G304 -- this dev tool reads a session file at a path supplied by the operator on the CLI.
 	b, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err

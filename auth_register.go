@@ -77,6 +77,7 @@ func (s *AuthService) registerDevice(ctx context.Context, in registerInput) (*Se
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", ErrCannotConnect, err)
 	}
+	defer func() { _ = resp.Body.Close() }()
 
 	data, decErr := httpwrapper.DecodeJSON(resp)
 	if decErr != nil {

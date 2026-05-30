@@ -71,4 +71,3 @@ func TestLogPushPart_NonJSON_LogsSizeOnly(t *testing.T) {
 	assert.NotContains(t, out, "not json at all",
 		"non-JSON payload contents must not be logged")
 }
-

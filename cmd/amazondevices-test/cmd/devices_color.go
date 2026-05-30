@@ -10,8 +10,10 @@ import (
 	amazondevices "github.com/Fishwaldo/goamazondevices"
 )
 
+var colorDevice string
+
 var devicesColorCmd = &cobra.Command{
-	Use:   "color <serial> <hex | hsv h s b>",
+	Use:   "color <hex | hsv h s b>",
 	Short: "Set an RGB device's color from a hex code or HSV triple",
 	Long: `Issues an Alexa.ColorController setColor directive against the
 given device. Color can be specified either as a 6-digit RGB hex
@@ -19,15 +21,15 @@ given device. Color can be specified either as a 6-digit RGB hex
 with hue in degrees [0..360) and saturation/brightness as floats [0..1].
 
 Examples:
-  amazondevices-test devices color AB1234567890 #FF5733       # red-orange via hex
-  amazondevices-test devices color AB1234567890 FF5733        # leading # optional
-  amazondevices-test devices color AB1234567890 hsv 348 0.91 1.0`,
-	Args: cobra.MinimumNArgs(2),
+  amazondevices-test devices color #FF5733 --device "Bedroom"   # red-orange via hex
+  amazondevices-test devices color FF5733 --device AB1234567890 # leading # optional
+  amazondevices-test devices color hsv 348 0.91 1.0`,
+	Args: cobra.MinimumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		ctx, cancel := signalContext()
 		defer cancel()
 
-		color, err := parseColorArgs(args[1:])
+		color, err := parseColorArgs(args)
 		if err != nil {
 			return err
 		}
@@ -46,7 +48,7 @@ Examples:
 			return err
 		}
 
-		d, err := client.Devices.Get(ctx, args[0])
+		d, err := resolveDevice(ctx, colorDevice, client, store)
 		if err != nil {
 			return err
 		}
@@ -90,4 +92,5 @@ func parseColorArgs(args []string) (amazondevices.Color, error) {
 
 func init() {
 	devicesCmd.AddCommand(devicesColorCmd)
+	registerDeviceFlag(devicesColorCmd, &colorDevice)
 }

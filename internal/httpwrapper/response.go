@@ -25,7 +25,7 @@ const MaxResponseBodyBytes = 16 << 20 // 16 MiB
 // Closes resp.Body before returning. Reads are bounded by
 // MaxResponseBodyBytes.
 func DecodeJSON(resp *http.Response) (map[string]any, error) {
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	raw, err := io.ReadAll(io.LimitReader(resp.Body, MaxResponseBodyBytes))
 	if err != nil {

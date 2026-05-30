@@ -111,4 +111,3 @@ type DeviceSensor struct {
 	// feature exposes no operations.
 	Operations []string
 }
-

@@ -730,4 +730,3 @@ func TestSensorsService_Update_RangeConfigurationParsed(t *testing.T) {
 	assert.EqualValues(t, 5.0, presets[1]["value"])
 	assert.Equal(t, "Medium", presets[1]["friendlyName"])
 }
-

@@ -38,9 +38,8 @@ func (s *MediaService) fetchDeviceVolumes(ctx context.Context) (map[string]*Volu
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", ErrCannotConnect, err)
 	}
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode >= 400 {
-		body := resp.Body
-		defer body.Close()
 		return nil, &APIError{
 			Category:   ErrCannotRetrieveData,
 			Method:     http.MethodGet,
@@ -143,9 +142,8 @@ func (s *MediaService) fetchMediaStates(ctx context.Context) (map[string]map[str
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", ErrCannotConnect, err)
 	}
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode >= 400 {
-		body := resp.Body
-		defer body.Close()
 		return nil, &APIError{
 			Category:   ErrCannotRetrieveData,
 			Method:     http.MethodGet,
@@ -288,8 +286,8 @@ func (s *MediaService) fetchSounds(ctx context.Context) (map[string]Sound, error
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", ErrCannotConnect, err)
 	}
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode >= 400 {
-		defer resp.Body.Close()
 		return nil, &APIError{
 			Category:   ErrCannotRetrieveData,
 			Method:     http.MethodGet,
@@ -359,9 +357,8 @@ func (s *MediaService) fetchMusicProviders(ctx context.Context) (map[string]Musi
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", ErrCannotConnect, err)
 	}
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode >= 400 {
-		body := resp.Body
-		defer body.Close()
 		return nil, &APIError{
 			Category:   ErrCannotRetrieveData,
 			Method:     http.MethodGet,

@@ -7,8 +7,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var colorTempDevice string
+
 var devicesColorTempCmd = &cobra.Command{
-	Use:   "color-temp <serial> <kelvin>",
+	Use:   "color-temp <kelvin>",
 	Short: "Set a color-temperature device's white-point in kelvin",
 	Long: `Issues an Alexa.ColorTemperatureController setColorTemperature
 directive against the given device. Kelvin is not clamped — Amazon
@@ -23,15 +25,15 @@ Typical ranges:
   cool white   6500K
 
 Example:
-  amazondevices-test devices color-temp AB1234567890 2700`,
-	Args: cobra.ExactArgs(2),
+  amazondevices-test devices color-temp 2700 --device "Bedroom"`,
+	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		ctx, cancel := signalContext()
 		defer cancel()
 
-		kelvin, err := strconv.Atoi(args[1])
+		kelvin, err := strconv.Atoi(args[0])
 		if err != nil {
-			return fmt.Errorf("invalid kelvin %q: %w", args[1], err)
+			return fmt.Errorf("invalid kelvin %q: %w", args[0], err)
 		}
 
 		client, sess, err := newClient(true)
@@ -48,7 +50,7 @@ Example:
 			return err
 		}
 
-		d, err := client.Devices.Get(ctx, args[0])
+		d, err := resolveDevice(ctx, colorTempDevice, client, store)
 		if err != nil {
 			return err
 		}
@@ -62,4 +64,5 @@ Example:
 
 func init() {
 	devicesCmd.AddCommand(devicesColorTempCmd)
+	registerDeviceFlag(devicesColorTempCmd, &colorTempDevice)
 }

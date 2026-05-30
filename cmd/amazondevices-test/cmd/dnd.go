@@ -42,9 +42,9 @@ func newDnDGetCmd() *cobra.Command {
 			}
 			sort.Strings(serials)
 
-			fmt.Fprintf(os.Stdout, "%-32s  %s\n", "SERIAL", "DND")
+			_, _ = fmt.Fprintf(os.Stdout, "%-32s  %s\n", "SERIAL", "DND")
 			for _, s := range serials {
-				fmt.Fprintf(os.Stdout, "%-32s  %v\n", s, status[s].Value)
+				_, _ = fmt.Fprintf(os.Stdout, "%-32s  %v\n", s, status[s].Value)
 			}
 			return nil
 		},

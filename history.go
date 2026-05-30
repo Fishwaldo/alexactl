@@ -174,9 +174,8 @@ func (s *HistoryService) vocalHistoryJSON(ctx context.Context) (map[string]any, 
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", ErrCannotConnect, err)
 	}
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode >= 400 {
-		body := resp.Body
-		defer body.Close()
 		return nil, &APIError{
 			Category:   ErrCannotRetrieveData,
 			Method:     http.MethodPost,
@@ -203,7 +202,7 @@ func (s *HistoryService) fetchCSRFToken(ctx context.Context) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("%w: %w", ErrCannotConnect, err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode >= 400 {
 		return "", &APIError{
 			Category:   ErrCannotRetrieveData,

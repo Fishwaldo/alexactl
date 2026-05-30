@@ -6,8 +6,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var lockDevice string
+
 var devicesLockCmd = &cobra.Command{
-	Use:   "lock <serial>",
+	Use:   "lock",
 	Short: "Lock a smart lock",
 	Long: `Issues an Alexa.LockController lock directive against the given
 device. The device must advertise Alexa.LockController in its
@@ -15,8 +17,8 @@ AlexaInterfaces (Phase 4a populates this from the discovery query) and
 have a non-empty EndpointID. Run 'devices list' first to confirm.
 
 Example:
-  amazondevices-test devices lock AB1234567890`,
-	Args: cobra.ExactArgs(1),
+  amazondevices-test devices lock --device "Front Door"`,
+	Args: cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		ctx, cancel := signalContext()
 		defer cancel()
@@ -35,7 +37,7 @@ Example:
 			return err
 		}
 
-		d, err := client.Devices.Get(ctx, args[0])
+		d, err := resolveDevice(ctx, lockDevice, client, store)
 		if err != nil {
 			return err
 		}
@@ -49,4 +51,5 @@ Example:
 
 func init() {
 	devicesCmd.AddCommand(devicesLockCmd)
+	registerDeviceFlag(devicesLockCmd, &lockDevice)
 }

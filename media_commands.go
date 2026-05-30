@@ -107,7 +107,7 @@ func (s *MediaService) Control(ctx context.Context, d *Device, cmd MediaCommand)
 	if err != nil {
 		return fmt.Errorf("%w: %w", ErrCannotConnect, err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode >= 400 {
 		return &APIError{
 			Category:   ErrCannotRetrieveData,

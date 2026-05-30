@@ -66,9 +66,8 @@ func (s *DnDService) fetchStatus(ctx context.Context) (map[string]*DeviceSensor,
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", ErrCannotConnect, err)
 	}
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode >= 400 {
-		body := resp.Body
-		defer body.Close()
 		return nil, &APIError{
 			Category:   ErrCannotRetrieveData,
 			Method:     http.MethodGet,
@@ -126,7 +125,7 @@ func (s *DnDService) Set(ctx context.Context, d *Device, enabled bool) error {
 	if err != nil {
 		return fmt.Errorf("%w: %w", ErrCannotConnect, err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode >= 400 {
 		return &APIError{
 			Category:   ErrCannotRetrieveData,
