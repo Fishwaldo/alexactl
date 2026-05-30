@@ -18,9 +18,12 @@ coverage.txt
 
 # Local test/CLI artifacts
 /testdata/captured/
-/session.json
+/session*.json
 /login_data.json
 config.yaml
+
+# Playwright MCP capture artifacts
+/.playwright-mcp/
 
 # HTTP traffic captures — contain session cookies, never commit
 *.har
