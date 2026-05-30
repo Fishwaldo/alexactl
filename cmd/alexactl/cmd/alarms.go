@@ -9,7 +9,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	amazondevices "github.com/Fishwaldo/goamazondevices"
+	"github.com/Fishwaldo/alexactl"
 )
 
 var (
@@ -45,7 +45,7 @@ by device.`,
 		if err != nil {
 			return err
 		}
-		byDevice := map[string][]*amazondevices.Alarm{}
+		byDevice := map[string][]*alexactl.Alarm{}
 		for _, a := range alarms {
 			byDevice[a.DeviceSerialNumber] = append(byDevice[a.DeviceSerialNumber], a)
 		}
@@ -112,7 +112,7 @@ var alarmsCreateCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		var recur *amazondevices.Recurrence
+		var recur *alexactl.Recurrence
 		if alarmsRecurrenceFlag != "" {
 			recur, err = parseRecurrenceFlag(alarmsRecurrenceFlag)
 			if err != nil {
@@ -138,7 +138,7 @@ var alarmsCreateCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		a := &amazondevices.Alarm{
+		a := &alexactl.Alarm{
 			DeviceSerialNumber: dvc.SerialNumber,
 			FireAt:             fireAt,
 			Label:              alarmsLabelFlag,
@@ -159,7 +159,7 @@ var alarmsEnableCmd = &cobra.Command{
 	Use:   "enable <alarm-id>",
 	Short: "Set status=ON on an alarm",
 	Args:  cobra.ExactArgs(1),
-	RunE: withAlarm(func(ctx context.Context, a *amazondevices.Alarm, client *amazondevices.Client, _ []string) error {
+	RunE: withAlarm(func(ctx context.Context, a *alexactl.Alarm, client *alexactl.Client, _ []string) error {
 		return client.Alarms.Enable(ctx, a)
 	}),
 }
@@ -168,7 +168,7 @@ var alarmsDisableCmd = &cobra.Command{
 	Use:   "disable <alarm-id>",
 	Short: "Set status=OFF on an alarm",
 	Args:  cobra.ExactArgs(1),
-	RunE: withAlarm(func(ctx context.Context, a *amazondevices.Alarm, client *amazondevices.Client, _ []string) error {
+	RunE: withAlarm(func(ctx context.Context, a *alexactl.Alarm, client *alexactl.Client, _ []string) error {
 		return client.Alarms.Disable(ctx, a)
 	}),
 }
@@ -177,7 +177,7 @@ var alarmsSnoozeCmd = &cobra.Command{
 	Use:   "snooze <alarm-id> <duration>",
 	Short: "Snooze an alarm by a duration (e.g. 10m, 1h)",
 	Args:  cobra.ExactArgs(2),
-	RunE: withAlarm(func(ctx context.Context, a *amazondevices.Alarm, client *amazondevices.Client, args []string) error {
+	RunE: withAlarm(func(ctx context.Context, a *alexactl.Alarm, client *alexactl.Client, args []string) error {
 		dur, err := time.ParseDuration(args[1])
 		if err != nil {
 			return fmt.Errorf("invalid duration %q: %w", args[1], err)
@@ -190,7 +190,7 @@ var alarmsDeleteCmd = &cobra.Command{
 	Use:   "delete <alarm-id>",
 	Short: "Delete an alarm",
 	Args:  cobra.ExactArgs(1),
-	RunE: withAlarm(func(ctx context.Context, a *amazondevices.Alarm, client *amazondevices.Client, _ []string) error {
+	RunE: withAlarm(func(ctx context.Context, a *alexactl.Alarm, client *alexactl.Client, _ []string) error {
 		return client.Alarms.Delete(ctx, a)
 	}),
 }
@@ -199,8 +199,8 @@ var alarmsShowCmd = &cobra.Command{
 	Use:   "show <alarm-id>",
 	Short: "Print the raw server-shape map for an alarm as pretty JSON",
 	Args:  cobra.ExactArgs(1),
-	RunE: withAlarm(func(_ context.Context, a *amazondevices.Alarm, _ *amazondevices.Client, _ []string) error {
-		raw := amazondevices.AlarmServerShape(a)
+	RunE: withAlarm(func(_ context.Context, a *alexactl.Alarm, _ *alexactl.Client, _ []string) error {
+		raw := alexactl.AlarmServerShape(a)
 		out, err := json.MarshalIndent(raw, "", "  ")
 		if err != nil {
 			return err
@@ -212,7 +212,7 @@ var alarmsShowCmd = &cobra.Command{
 
 // withAlarm builds a RunE that resolves an *Alarm by ID across all
 // alarms on the account and dispatches.
-func withAlarm(action func(ctx context.Context, a *amazondevices.Alarm, client *amazondevices.Client, args []string) error) func(*cobra.Command, []string) error {
+func withAlarm(action func(ctx context.Context, a *alexactl.Alarm, client *alexactl.Client, args []string) error) func(*cobra.Command, []string) error {
 	return func(cmd *cobra.Command, args []string) error {
 		ctx, cancel := signalContext()
 		defer cancel()
@@ -269,14 +269,14 @@ func parseAtFlag(raw string) (time.Time, error) {
 //	weekends            → RecurrenceWeekends()
 //	weekly:MO,WE,FR     → RecurrenceWeekly(Mon, Wed, Fri)
 //	rrule:"FREQ=..."    → RecurrenceRule("FREQ=...")
-func parseRecurrenceFlag(raw string) (*amazondevices.Recurrence, error) {
+func parseRecurrenceFlag(raw string) (*alexactl.Recurrence, error) {
 	switch raw {
 	case "daily":
-		return amazondevices.RecurrenceDaily(), nil
+		return alexactl.RecurrenceDaily(), nil
 	case "weekdays":
-		return amazondevices.RecurrenceWeekdays(), nil
+		return alexactl.RecurrenceWeekdays(), nil
 	case "weekends":
-		return amazondevices.RecurrenceWeekends(), nil
+		return alexactl.RecurrenceWeekends(), nil
 	}
 	if strings.HasPrefix(raw, "weekly:") {
 		spec := strings.TrimPrefix(raw, "weekly:")
@@ -289,10 +289,10 @@ func parseRecurrenceFlag(raw string) (*amazondevices.Recurrence, error) {
 			}
 			days = append(days, d)
 		}
-		return amazondevices.RecurrenceWeekly(days...), nil
+		return alexactl.RecurrenceWeekly(days...), nil
 	}
 	if strings.HasPrefix(raw, "rrule:") {
-		return amazondevices.RecurrenceRule(strings.TrimPrefix(raw, "rrule:")), nil
+		return alexactl.RecurrenceRule(strings.TrimPrefix(raw, "rrule:")), nil
 	}
 	return nil, fmt.Errorf("invalid --recurrence %q (use daily | weekdays | weekends | weekly:DAYS | rrule:RRULE)", raw)
 }

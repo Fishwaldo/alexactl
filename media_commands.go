@@ -1,17 +1,17 @@
-package amazondevices
+package alexactl
 
 import (
 	"context"
 	"fmt"
 	"net/http"
 
-	"github.com/Fishwaldo/goamazondevices/internal/amzconst"
-	"github.com/Fishwaldo/goamazondevices/internal/httpwrapper"
+	"github.com/Fishwaldo/alexactl/internal/amzconst"
+	"github.com/Fishwaldo/alexactl/internal/httpwrapper"
 )
 
 // PlaySound triggers an Alexa sound on each cluster member of d.
 // soundID must be present in Sounds(ctx); unknown IDs return
-// "amazondevices: sound %q not available" without contacting Amazon.
+// "alexactl: sound %q not available" without contacting Amazon.
 func (s *MediaService) PlaySound(ctx context.Context, d *Device, soundID string) error {
 	if err := s.validateSound(ctx, soundID); err != nil {
 		return err
@@ -30,7 +30,7 @@ func (s *MediaService) validateSound(ctx context.Context, soundID string) error 
 		return err
 	}
 	if _, ok := sounds[soundID]; !ok {
-		return fmt.Errorf("amazondevices: sound %q not available", soundID)
+		return fmt.Errorf("alexactl: sound %q not available", soundID)
 	}
 	return nil
 }
@@ -78,7 +78,7 @@ func (s *MediaService) validateMusicProvider(ctx context.Context, providerID str
 		return err
 	}
 	if _, ok := providers[providerID]; !ok {
-		return fmt.Errorf("amazondevices: music provider %q not available", providerID)
+		return fmt.Errorf("alexactl: music provider %q not available", providerID)
 	}
 	return nil
 }
@@ -134,7 +134,7 @@ func (s *MediaService) CallRoutine(ctx context.Context, d *Device, name string) 
 // Amazon.
 func (s *MediaService) InfoSkill(ctx context.Context, d *Device, skill string) error {
 	if !amzconst.IsAlexaInfoSkill(skill) {
-		return fmt.Errorf("amazondevices: unrecognised info skill %q", skill)
+		return fmt.Errorf("alexactl: unrecognised info skill %q", skill)
 	}
 	return s.fanoutAndFlush(ctx, d, SequenceType(skill), "", "")
 }

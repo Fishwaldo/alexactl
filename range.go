@@ -1,9 +1,9 @@
-package amazondevices
+package alexactl
 
 import (
 	"context"
 
-	"github.com/Fishwaldo/goamazondevices/internal/amzconst"
+	"github.com/Fishwaldo/alexactl/internal/amzconst"
 )
 
 // RangeControl is the typed accessor returned by Device.Range(
@@ -65,10 +65,10 @@ func (c *RangeControl) Adjust(ctx context.Context, delta float64) error {
 // (and matches ToggleControl's warning).
 func (c *RangeControl) warn(ctx context.Context, op string) {
 	c.device.controller.wrapper.Logger(ctx).WarnContext(ctx,
-		"amazondevices: Alexa.RangeController write path is not yet wired; "+
+		"alexactl: Alexa.RangeController write path is not yet wired; "+
 			"the wire payload shape for setRangeValue/adjustRangeValue has "+
 			"not been confirmed against real hardware. Please file an issue "+
-			"at https://github.com/Fishwaldo/goamazondevices/issues with a "+
+			"at https://github.com/Fishwaldo/alexactl/issues with a "+
 			"HAR capture of the Alexa web UI sending the directive against "+
 			"your device — see issue template 'Phase 4e wire capture'.",
 		"interface", amzconst.InterfaceRangeController,

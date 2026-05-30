@@ -8,7 +8,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	amazondevices "github.com/Fishwaldo/goamazondevices"
+	"github.com/Fishwaldo/alexactl"
 )
 
 var (
@@ -38,7 +38,7 @@ var timersCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		byDevice := map[string][]*amazondevices.Timer{}
+		byDevice := map[string][]*alexactl.Timer{}
 		for _, t := range timers {
 			byDevice[t.DeviceSerialNumber] = append(byDevice[t.DeviceSerialNumber], t)
 		}
@@ -117,7 +117,7 @@ var timersCreateCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		t := &amazondevices.Timer{
+		t := &alexactl.Timer{
 			DeviceSerialNumber: dvc.SerialNumber,
 			Duration:           dur,
 			Label:              timersLabelFlag,
@@ -137,7 +137,7 @@ var timersDeleteCmd = &cobra.Command{
 	Use:   "delete <timer-id>",
 	Short: "Cancel a timer",
 	Args:  cobra.ExactArgs(1),
-	RunE: withTimer(func(ctx context.Context, t *amazondevices.Timer, client *amazondevices.Client, _ []string) error {
+	RunE: withTimer(func(ctx context.Context, t *alexactl.Timer, client *alexactl.Client, _ []string) error {
 		return client.Timers.Delete(ctx, t)
 	}),
 }
@@ -146,8 +146,8 @@ var timersShowCmd = &cobra.Command{
 	Use:   "show <timer-id>",
 	Short: "Print the raw server-shape map for a timer as pretty JSON",
 	Args:  cobra.ExactArgs(1),
-	RunE: withTimer(func(_ context.Context, t *amazondevices.Timer, _ *amazondevices.Client, _ []string) error {
-		raw := amazondevices.TimerServerShape(t)
+	RunE: withTimer(func(_ context.Context, t *alexactl.Timer, _ *alexactl.Client, _ []string) error {
+		raw := alexactl.TimerServerShape(t)
 		out, err := json.MarshalIndent(raw, "", "  ")
 		if err != nil {
 			return err
@@ -157,7 +157,7 @@ var timersShowCmd = &cobra.Command{
 	}),
 }
 
-func withTimer(action func(ctx context.Context, t *amazondevices.Timer, client *amazondevices.Client, args []string) error) func(*cobra.Command, []string) error {
+func withTimer(action func(ctx context.Context, t *alexactl.Timer, client *alexactl.Client, args []string) error) func(*cobra.Command, []string) error {
 	return func(cmd *cobra.Command, args []string) error {
 		ctx, cancel := signalContext()
 		defer cancel()

@@ -1,11 +1,11 @@
-package amazondevices
+package alexactl
 
 import (
 	"context"
 	"testing"
 	"time"
 
-	"github.com/Fishwaldo/goamazondevices/internal/cache"
+	"github.com/Fishwaldo/alexactl/internal/cache"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

@@ -8,7 +8,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	amazondevices "github.com/Fishwaldo/goamazondevices"
+	"github.com/Fishwaldo/alexactl"
 )
 
 func newPushCmd() *cobra.Command {
@@ -47,11 +47,11 @@ func newPushTailCmd() *cobra.Command {
 			return err
 		}
 
-		opts := []amazondevices.SubscribeOption{
-			amazondevices.WithPushChannelCapacity(capacity),
+		opts := []alexactl.SubscribeOption{
+			alexactl.WithPushChannelCapacity(capacity),
 		}
 		if initialSync {
-			opts = append(opts, amazondevices.WithInitialSyncOnFirstEvent())
+			opts = append(opts, alexactl.WithInitialSyncOnFirstEvent())
 		}
 
 		ch, err := client.Push.Subscribe(ctx, opts...)
@@ -68,14 +68,14 @@ func newPushTailCmd() *cobra.Command {
 	return c
 }
 
-func printEvent(evt amazondevices.PushEvent) {
+func printEvent(evt alexactl.PushEvent) {
 	ts := time.Now().UTC().Format(time.RFC3339)
-	if _, ok := evt.(*amazondevices.ReauthRequiredEvent); ok {
+	if _, ok := evt.(*alexactl.ReauthRequiredEvent); ok {
 		_, _ = fmt.Fprintf(os.Stdout, "%s REAUTH_REQUIRED — run `login` again\n", ts)
 		return
 	}
 	rawBytes, _ := json.Marshal(evt.RawPayload())
-	if u, ok := evt.(*amazondevices.UnknownPushEvent); ok {
+	if u, ok := evt.(*alexactl.UnknownPushEvent); ok {
 		_, _ = fmt.Fprintf(os.Stdout, "%s UNKNOWN[%s] serial=%s raw=%s\n",
 			ts, u.WireType, u.SerialNumber(), rawBytes)
 		return

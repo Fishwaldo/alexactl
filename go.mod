@@ -1,4 +1,4 @@
-module github.com/Fishwaldo/goamazondevices
+module github.com/Fishwaldo/alexactl
 
 go 1.25.0
 

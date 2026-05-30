@@ -1,4 +1,4 @@
-# goamazondevices — maintenance phase
+# alexactl — maintenance phase
 
 Go port of the Python library **aioamazondevices**
 (https://github.com/chemelli74/aioamazondevices), API frozen at v1.0.0.
@@ -7,7 +7,7 @@ and may still help when reading older commits.
 
 ## Architecture (one screen)
 
-`amazondevices.Client` is the entry point; sub-services hang off it:
+`alexactl.Client` is the entry point; sub-services hang off it:
 `Auth` (OAuth + form-scrape login, OTP), `Devices` (list/refresh/inspect,
 typed-controller surface on `*Device`), `Media` (Speak/Announce/SetVolume
 + Sequence facade), `Sensors` (state enrichment, optimistic local
@@ -76,4 +76,4 @@ all wire-vocabulary.
 - Tests that hit live Amazon endpoints. Always `httptest` + `testdata/`
   fixtures.
 - Reorganizing package layout without updating
-  `docs/superpowers/specs/2026-05-24-goamazondevices-design.md` first.
+  `docs/superpowers/specs/2026-05-24-alexactl-design.md` first.

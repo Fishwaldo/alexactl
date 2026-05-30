@@ -1,4 +1,4 @@
-package amazondevices
+package alexactl
 
 import (
 	"bytes"
@@ -14,7 +14,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/Fishwaldo/goamazondevices/internal/httpwrapper"
+	"github.com/Fishwaldo/alexactl/internal/httpwrapper"
 )
 
 // loginEmailPasswordHTML is the page returned by GET /ap/signin.

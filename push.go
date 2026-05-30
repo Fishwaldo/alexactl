@@ -1,4 +1,4 @@
-package amazondevices
+package alexactl
 
 import (
 	"bytes"
@@ -13,9 +13,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/Fishwaldo/goamazondevices/internal/amzconst"
-	"github.com/Fishwaldo/goamazondevices/internal/http2stream"
-	"github.com/Fishwaldo/goamazondevices/internal/httpwrapper"
+	"github.com/Fishwaldo/alexactl/internal/amzconst"
+	"github.com/Fishwaldo/alexactl/internal/http2stream"
+	"github.com/Fishwaldo/alexactl/internal/httpwrapper"
 )
 
 // Reconnect tunables per spec §F.
@@ -126,13 +126,13 @@ func (s *PushService) registerCapabilities(ctx context.Context, accessToken stri
 
 	body, err := json.Marshal(amzconst.DeviceCapabilities())
 	if err != nil {
-		return fmt.Errorf("amazondevices: marshal capabilities: %w", err)
+		return fmt.Errorf("alexactl: marshal capabilities: %w", err)
 	}
 
 	url := s.capabilitiesURL()
 	req, err := http.NewRequestWithContext(ctx, http.MethodPut, url, bytes.NewReader(body))
 	if err != nil {
-		return fmt.Errorf("amazondevices: build capabilities request: %w", err)
+		return fmt.Errorf("alexactl: build capabilities request: %w", err)
 	}
 	req.Header.Set("Authorization", "Bearer "+accessToken)
 	req.Header.Set("Content-Type", "application/json")
@@ -189,7 +189,7 @@ func (s *PushService) Subscribe(ctx context.Context, opts ...SubscribeOption) (<
 
 	sess := s.session()
 	if sess == nil {
-		return nil, fmt.Errorf("amazondevices: Push.Subscribe before Auth.Login/Restore: %w", ErrWrongMethod)
+		return nil, fmt.Errorf("alexactl: Push.Subscribe before Auth.Login/Restore: %w", ErrWrongMethod)
 	}
 
 	sub := &subscriber{ch: make(chan PushEvent, cfg.chanCapacity), cfg: cfg}
@@ -275,14 +275,14 @@ func (s *PushService) streamLoop(ctx context.Context) {
 
 		sess := s.session()
 		if sess == nil {
-			logger.WarnContext(ctx, "amazondevices: push streamLoop with no session — exiting")
+			logger.WarnContext(ctx, "alexactl: push streamLoop with no session — exiting")
 			return
 		}
 		accessToken := sess.AccessToken
 
 		if err := s.registerCapabilities(ctx, accessToken); err != nil {
 			logger.WarnContext(ctx,
-				"amazondevices: capabilities registration failed",
+				"alexactl: capabilities registration failed",
 				"err", err)
 			if !s.backoffSleep(ctx, sleep, attempt) {
 				return
@@ -299,14 +299,14 @@ func (s *PushService) streamLoop(ctx context.Context) {
 		err := conn.Open(ctx)
 		if errors.Is(err, http2stream.ErrStreamReauthRequired) {
 			logger.WarnContext(ctx,
-				"amazondevices: push stream requires reauth; notifying subscribers",
+				"alexactl: push stream requires reauth; notifying subscribers",
 				"err", err)
 			s.notifyReauthAndClose(ctx)
 			_ = conn.Close()
 			return
 		}
 		if err != nil {
-			logger.WarnContext(ctx, "amazondevices: stream open failed",
+			logger.WarnContext(ctx, "alexactl: stream open failed",
 				"err", err)
 			_ = conn.Close()
 			if !s.backoffSleep(ctx, sleep, attempt) {
@@ -353,7 +353,7 @@ func (s *PushService) runConnection(ctx context.Context, conn *http2stream.Conn,
 		logPushPart(ctx, logger, part)
 		events, err := DecodeRenderingUpdate(part)
 		if err != nil {
-			logger.WarnContext(ctx, "amazondevices: decode part failed",
+			logger.WarnContext(ctx, "alexactl: decode part failed",
 				"err", err)
 			continue
 		}
@@ -362,7 +362,7 @@ func (s *PushService) runConnection(ctx context.Context, conn *http2stream.Conn,
 		}
 	}
 	if err := conn.Err(); err != nil {
-		logger.DebugContext(ctx, "amazondevices: stream ended with error",
+		logger.DebugContext(ctx, "alexactl: stream ended with error",
 			"err", err)
 	}
 	if pingHealthy.Load() {
@@ -401,17 +401,17 @@ func (s *PushService) pingLoop(ctx context.Context, conn *http2stream.Conn, ping
 		if err != nil {
 			if errors.Is(err, http2stream.ErrPingReauthRequired) {
 				logger.WarnContext(ctx,
-					"amazondevices: ping requires reauth — closing stream so streamLoop reauth branch fires",
+					"alexactl: ping requires reauth — closing stream so streamLoop reauth branch fires",
 					"err", err)
 				_ = conn.Close()
 				return
 			}
-			logger.WarnContext(ctx, "amazondevices: ping error (will continue)",
+			logger.WarnContext(ctx, "alexactl: ping error (will continue)",
 				"err", err)
 			continue
 		}
 		pingHealthy.Store(true)
-		logger.DebugContext(ctx, "amazondevices: push ping ok")
+		logger.DebugContext(ctx, "alexactl: push ping ok")
 	}
 }
 
@@ -430,11 +430,11 @@ func logPushPart(ctx context.Context, logger *slog.Logger, part []byte) {
 	}
 	var body map[string]any
 	if err := json.Unmarshal(part, &body); err != nil {
-		logger.DebugContext(ctx, "amazondevices: push body (non-json)",
+		logger.DebugContext(ctx, "alexactl: push body (non-json)",
 			"bytes", len(part))
 		return
 	}
-	logger.DebugContext(ctx, "amazondevices: push body",
+	logger.DebugContext(ctx, "alexactl: push body",
 		"body", body)
 }
 
@@ -480,7 +480,7 @@ func (s *PushService) deliverWithDropOldest(ctx context.Context, sub *subscriber
 	select {
 	case <-sub.ch:
 		logger.WarnContext(ctx,
-			"amazondevices: push subscriber backpressure — dropped oldest event")
+			"alexactl: push subscriber backpressure — dropped oldest event")
 	default:
 		// Channel drained between checks; fine.
 	}
@@ -488,7 +488,7 @@ func (s *PushService) deliverWithDropOldest(ctx context.Context, sub *subscriber
 	case sub.ch <- evt:
 	default:
 		logger.WarnContext(ctx,
-			"amazondevices: push subscriber backpressure — dropped new event")
+			"alexactl: push subscriber backpressure — dropped new event")
 	}
 }
 
@@ -530,12 +530,12 @@ func (s *PushService) runInitialSync(ctx context.Context, sub *subscriber) {
 		// Default wiring is set by Client at construction time. If
 		// it is still nil here, we've nothing to do.
 		logger.WarnContext(ctx,
-			"amazondevices: initial sync requested but no initialSyncFn wired")
+			"alexactl: initial sync requested but no initialSyncFn wired")
 		return
 	}
 	states, err := syncFn(ctx)
 	if err != nil {
-		logger.WarnContext(ctx, "amazondevices: initial sync failed",
+		logger.WarnContext(ctx, "alexactl: initial sync failed",
 			"err", err)
 		return
 	}

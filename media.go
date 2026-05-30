@@ -1,13 +1,13 @@
-package amazondevices
+package alexactl
 
 import (
 	"context"
 	"fmt"
 	"sync"
 
-	"github.com/Fishwaldo/goamazondevices/internal/amzconst"
-	"github.com/Fishwaldo/goamazondevices/internal/cache"
-	"github.com/Fishwaldo/goamazondevices/internal/httpwrapper"
+	"github.com/Fishwaldo/alexactl/internal/amzconst"
+	"github.com/Fishwaldo/alexactl/internal/cache"
+	"github.com/Fishwaldo/alexactl/internal/httpwrapper"
 )
 
 // MediaService is the user-facing surface for Alexa media operations.
@@ -106,7 +106,7 @@ func (s *MediaService) Announce(ctx context.Context, d *Device, text string) err
 // SetVolume sets a volume in [0, 100] on each cluster member.
 func (s *MediaService) SetVolume(ctx context.Context, d *Device, vol int) error {
 	if vol < amzconst.VolumeMin || vol > amzconst.VolumeMax {
-		return fmt.Errorf("amazondevices: volume %d not in [%d,%d]",
+		return fmt.Errorf("alexactl: volume %d not in [%d,%d]",
 			vol, amzconst.VolumeMin, amzconst.VolumeMax)
 	}
 	return s.fanoutAndFlush(ctx, d, SeqVolume, vol, "")

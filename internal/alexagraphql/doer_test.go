@@ -13,8 +13,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/Fishwaldo/goamazondevices/internal/alexagraphql"
-	"github.com/Fishwaldo/goamazondevices/internal/httpwrapper"
+	"github.com/Fishwaldo/alexactl/internal/alexagraphql"
+	"github.com/Fishwaldo/alexactl/internal/httpwrapper"
 )
 
 // TestDoer_ForwardsRequestBody verifies the adapter sends pre-marshaled

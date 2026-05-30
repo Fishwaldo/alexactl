@@ -1,4 +1,4 @@
-package amazondevices
+package alexactl
 
 import (
 	"errors"
@@ -53,7 +53,7 @@ func TestAPIError_ErrorString_EmptyMethodAndStatus(t *testing.T) {
 	}
 
 	got := apiErr.Error()
-	assert.Equal(t, "amazondevices: cannot retrieve data: https://example.com/x", got)
+	assert.Equal(t, "alexactl: cannot retrieve data: https://example.com/x", got)
 	assert.NotContains(t, got, " 0 ")
 }
 

@@ -8,7 +8,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	amazondevices "github.com/Fishwaldo/goamazondevices"
+	"github.com/Fishwaldo/alexactl"
 )
 
 var (
@@ -37,7 +37,7 @@ var remindersCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		byDevice := map[string][]*amazondevices.Reminder{}
+		byDevice := map[string][]*alexactl.Reminder{}
 		for _, r := range reminders {
 			byDevice[r.DeviceSerialNumber] = append(byDevice[r.DeviceSerialNumber], r)
 		}
@@ -110,7 +110,7 @@ var remindersCreateCmd = &cobra.Command{
 			return err
 		}
 		label := args[1]
-		var recur *amazondevices.Recurrence
+		var recur *alexactl.Recurrence
 		if remindersRecurrenceFlag != "" {
 			recur, err = parseRecurrenceFlag(remindersRecurrenceFlag)
 			if err != nil {
@@ -136,7 +136,7 @@ var remindersCreateCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		r := &amazondevices.Reminder{
+		r := &alexactl.Reminder{
 			DeviceSerialNumber: dvc.SerialNumber,
 			FireAt:             fireAt,
 			Label:              label,
@@ -156,7 +156,7 @@ var remindersEnableCmd = &cobra.Command{
 	Use:   "enable <reminder-id>",
 	Short: "Set status=ON on a reminder",
 	Args:  cobra.ExactArgs(1),
-	RunE: withReminder(func(ctx context.Context, r *amazondevices.Reminder, client *amazondevices.Client, _ []string) error {
+	RunE: withReminder(func(ctx context.Context, r *alexactl.Reminder, client *alexactl.Client, _ []string) error {
 		return client.Reminders.Enable(ctx, r)
 	}),
 }
@@ -165,7 +165,7 @@ var remindersDisableCmd = &cobra.Command{
 	Use:   "disable <reminder-id>",
 	Short: "Set status=OFF on a reminder",
 	Args:  cobra.ExactArgs(1),
-	RunE: withReminder(func(ctx context.Context, r *amazondevices.Reminder, client *amazondevices.Client, _ []string) error {
+	RunE: withReminder(func(ctx context.Context, r *alexactl.Reminder, client *alexactl.Client, _ []string) error {
 		return client.Reminders.Disable(ctx, r)
 	}),
 }
@@ -174,7 +174,7 @@ var remindersAcknowledgeCmd = &cobra.Command{
 	Use:   "acknowledge <reminder-id>",
 	Short: "Mark a reminder as acknowledged",
 	Args:  cobra.ExactArgs(1),
-	RunE: withReminder(func(ctx context.Context, r *amazondevices.Reminder, client *amazondevices.Client, _ []string) error {
+	RunE: withReminder(func(ctx context.Context, r *alexactl.Reminder, client *alexactl.Client, _ []string) error {
 		return client.Reminders.Acknowledge(ctx, r)
 	}),
 }
@@ -183,7 +183,7 @@ var remindersDeleteCmd = &cobra.Command{
 	Use:   "delete <reminder-id>",
 	Short: "Delete a reminder",
 	Args:  cobra.ExactArgs(1),
-	RunE: withReminder(func(ctx context.Context, r *amazondevices.Reminder, client *amazondevices.Client, _ []string) error {
+	RunE: withReminder(func(ctx context.Context, r *alexactl.Reminder, client *alexactl.Client, _ []string) error {
 		return client.Reminders.Delete(ctx, r)
 	}),
 }
@@ -192,8 +192,8 @@ var remindersShowCmd = &cobra.Command{
 	Use:   "show <reminder-id>",
 	Short: "Print the raw server-shape map for a reminder as pretty JSON",
 	Args:  cobra.ExactArgs(1),
-	RunE: withReminder(func(_ context.Context, r *amazondevices.Reminder, _ *amazondevices.Client, _ []string) error {
-		raw := amazondevices.ReminderServerShape(r)
+	RunE: withReminder(func(_ context.Context, r *alexactl.Reminder, _ *alexactl.Client, _ []string) error {
+		raw := alexactl.ReminderServerShape(r)
 		out, err := json.MarshalIndent(raw, "", "  ")
 		if err != nil {
 			return err
@@ -203,7 +203,7 @@ var remindersShowCmd = &cobra.Command{
 	}),
 }
 
-func withReminder(action func(ctx context.Context, r *amazondevices.Reminder, client *amazondevices.Client, args []string) error) func(*cobra.Command, []string) error {
+func withReminder(action func(ctx context.Context, r *alexactl.Reminder, client *alexactl.Client, args []string) error) func(*cobra.Command, []string) error {
 	return func(cmd *cobra.Command, args []string) error {
 		ctx, cancel := signalContext()
 		defer cancel()

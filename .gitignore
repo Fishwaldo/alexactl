@@ -7,7 +7,7 @@
 coverage.txt
 /bin/
 /dist/
-/amazondevices-test
+/alexactl
 /alexa-introspect
 
 # Editors / OS

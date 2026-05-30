@@ -152,7 +152,7 @@ func (w *Wrapper) Do(ctx context.Context, req Request) (*http.Response, error) {
 	} else if req.Form != nil {
 		reqAttrs = append(reqAttrs, slog.Any("body", req.Form))
 	}
-	logger.DebugContext(ctx, "amazondevices: http request", reqAttrs...)
+	logger.DebugContext(ctx, "alexactl: http request", reqAttrs...)
 
 	// Re-seed pre-login cookies before every request, mirroring Python's
 	// `cookie_jar.update_cookies(self._cookies, URL("amazon.<tld>"))` pattern.
@@ -242,7 +242,7 @@ func (w *Wrapper) Do(ctx context.Context, req Request) (*http.Response, error) {
 		}
 	}
 
-	logger.DebugContext(ctx, "amazondevices: http response",
+	logger.DebugContext(ctx, "alexactl: http response",
 		"method", req.Method, "url", req.URL, "status", resp.StatusCode)
 
 	// Body-level DEBUG logging. Skipped for /auth/ and /ap/ endpoints

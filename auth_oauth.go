@@ -1,4 +1,4 @@
-package amazondevices
+package alexactl
 
 import (
 	"context"
@@ -8,8 +8,8 @@ import (
 	"net/http"
 	urlpkg "net/url"
 
-	"github.com/Fishwaldo/goamazondevices/internal/httpwrapper"
-	"github.com/Fishwaldo/goamazondevices/internal/oauth"
+	"github.com/Fishwaldo/alexactl/internal/httpwrapper"
+	"github.com/Fishwaldo/alexactl/internal/oauth"
 )
 
 // oauthURLBuilder is a seam used by tests to point the OAuth flow at a
@@ -52,7 +52,7 @@ func (s *AuthService) doOAuthDance(
 	if err != nil {
 		return "", "", "", fmt.Errorf("auth: oauth get: %w", err)
 	}
-	logger.DebugContext(ctx, "amazondevices: OAuth password page served")
+	logger.DebugContext(ctx, "alexactl: OAuth password page served")
 
 	// Step 2: POST email + password to the form action.
 	pwForm := mergeForm(form.Inputs, map[string]string{
@@ -66,7 +66,7 @@ func (s *AuthService) doOAuthDance(
 
 	// Step 2a: handle Japanese-locale captcha by retrying with ja_JP.
 	if otpForm.IsCaptcha && language != "ja_JP" {
-		logger.DebugContext(ctx, "amazondevices: captcha detected, retrying with ja_JP")
+		logger.DebugContext(ctx, "alexactl: captcha detected, retrying with ja_JP")
 		s.wrapper.ClearCSRF()
 		loginPageURL2 := urlBuilder(codeVerifier, clientID, "ja_JP")
 		form2, err := s.getForm(ctx, http.MethodGet, loginPageURL2, nil)
@@ -87,7 +87,7 @@ func (s *AuthService) doOAuthDance(
 		return "", "", "", fmt.Errorf("%w: MFA OTP page not served (check credentials)",
 			ErrCannotAuthenticate)
 	}
-	logger.DebugContext(ctx, "amazondevices: MFA OTP page detected")
+	logger.DebugContext(ctx, "alexactl: MFA OTP page detected")
 
 	// Step 3: invoke caller's OTPProvider — now that the password worked
 	// and the SMS (if any) has been sent.

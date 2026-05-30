@@ -1,4 +1,4 @@
-package amazondevices
+package alexactl
 
 import (
 	"context"
@@ -8,8 +8,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/Fishwaldo/goamazondevices/internal/amzconst"
-	"github.com/Fishwaldo/goamazondevices/internal/httpwrapper"
+	"github.com/Fishwaldo/alexactl/internal/amzconst"
+	"github.com/Fishwaldo/alexactl/internal/httpwrapper"
 )
 
 func TestDevice_Toggle_NilWhenNoToggleController(t *testing.T) {
@@ -62,7 +62,7 @@ func TestToggleControl_On_StubReturnsNotImplementedAndWarns(t *testing.T) {
 	logLine := buf.String()
 	assert.Contains(t, logLine, "level=WARN")
 	assert.Contains(t, logLine, "Alexa.ToggleController")
-	assert.Contains(t, logLine, "https://github.com/Fishwaldo/goamazondevices/issues")
+	assert.Contains(t, logLine, "https://github.com/Fishwaldo/alexactl/issues")
 	assert.Contains(t, logLine, "turnOn")
 	assert.Contains(t, logLine, "S-1")
 	assert.Contains(t, logLine, "Skill.Ionizer")

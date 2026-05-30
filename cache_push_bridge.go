@@ -1,9 +1,9 @@
-package amazondevices
+package alexactl
 
 import (
 	"context"
 
-	"github.com/Fishwaldo/goamazondevices/internal/cache"
+	"github.com/Fishwaldo/alexactl/internal/cache"
 )
 
 // pushEventAdapter wraps a root-package PushEvent so it satisfies
@@ -27,7 +27,7 @@ func (c *Client) startPushCacheBridge() {
 	sub, err := c.Push.Subscribe(context.Background())
 	if err != nil {
 		c.wrapper.Logger(context.Background()).WarnContext(context.Background(),
-			"amazondevices: failed to start push cache bridge",
+			"alexactl: failed to start push cache bridge",
 			"err", err)
 		return
 	}

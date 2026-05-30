@@ -1,5 +1,5 @@
 // Package alexagraphql contains the auto-generated typed GraphQL client
-// used by goamazondevices to talk to alexa.amazon.com's
+// used by alexactl to talk to alexa.amazon.com's
 // /nexus/v1/graphql endpoint.
 //
 // The generated client (generated.go) is produced by genqlient from

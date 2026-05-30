@@ -1,4 +1,4 @@
-package amazondevices
+package alexactl
 
 import (
 	"encoding/json"
@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/Fishwaldo/goamazondevices/internal/alexagraphql"
+	"github.com/Fishwaldo/alexactl/internal/alexagraphql"
 )
 
 // TestParseAllFeaturesEndpoint_PopulatesSensors uses the

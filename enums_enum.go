@@ -3,7 +3,7 @@
 
 // Built By: go install
 
-package amazondevices
+package alexactl
 
 import (
 	"fmt"

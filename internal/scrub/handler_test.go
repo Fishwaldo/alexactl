@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/Fishwaldo/goamazondevices/internal/scrub"
+	"github.com/Fishwaldo/alexactl/internal/scrub"
 )
 
 // captureLogger returns a *slog.Logger that writes JSON records to buf via

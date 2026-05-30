@@ -1,4 +1,4 @@
-package amazondevices
+package alexactl
 
 import (
 	"encoding/json"
@@ -27,7 +27,7 @@ func DecodeRenderingUpdate(part []byte) ([]PushEvent, error) {
 		} `json:"directive"`
 	}
 	if err := json.Unmarshal(part, &envelope); err != nil {
-		return nil, fmt.Errorf("amazondevices: decode envelope: %w", err)
+		return nil, fmt.Errorf("alexactl: decode envelope: %w", err)
 	}
 
 	updates := envelope.Directive.Payload.RenderingUpdates

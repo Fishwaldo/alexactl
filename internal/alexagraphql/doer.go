@@ -5,7 +5,7 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/Fishwaldo/goamazondevices/internal/httpwrapper"
+	"github.com/Fishwaldo/alexactl/internal/httpwrapper"
 )
 
 // Doer is the genqlient transport interface. It is satisfied by

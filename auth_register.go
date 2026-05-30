@@ -1,4 +1,4 @@
-package amazondevices
+package alexactl
 
 import (
 	"context"
@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Fishwaldo/goamazondevices/internal/amzconst"
-	"github.com/Fishwaldo/goamazondevices/internal/httpwrapper"
+	"github.com/Fishwaldo/alexactl/internal/amzconst"
+	"github.com/Fishwaldo/alexactl/internal/httpwrapper"
 )
 
 // registerInput carries the data needed by registerDevice.
@@ -176,7 +176,7 @@ func (s *AuthService) registerDevice(ctx context.Context, in registerInput) (*Se
 		Site:   s.wrapper.Site(),
 		Domain: s.wrapper.Domain(),
 	}
-	s.wrapper.Logger(ctx).DebugContext(ctx, "amazondevices: device registered",
+	s.wrapper.Logger(ctx).DebugContext(ctx, "alexactl: device registered",
 		"serial", sess.DeviceInfo.DeviceSerialNumber)
 	return sess, nil
 }

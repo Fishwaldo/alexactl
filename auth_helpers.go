@@ -1,4 +1,4 @@
-package amazondevices
+package alexactl
 
 import (
 	"crypto/rand"
@@ -8,8 +8,8 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/Fishwaldo/goamazondevices/internal/amzconst"
-	"github.com/Fishwaldo/goamazondevices/internal/oauth"
+	"github.com/Fishwaldo/alexactl/internal/amzconst"
+	"github.com/Fishwaldo/alexactl/internal/oauth"
 )
 
 // newSerialNumber returns a 32-char uppercase hex device serial, matching

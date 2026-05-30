@@ -5,7 +5,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/Fishwaldo/goamazondevices/internal/amzconst"
+	"github.com/Fishwaldo/alexactl/internal/amzconst"
 )
 
 func TestDisplayCategoryToKind_KnownMappings(t *testing.T) {

@@ -10,7 +10,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
-	amazondevices "github.com/Fishwaldo/goamazondevices"
+	"github.com/Fishwaldo/alexactl"
 )
 
 var loginCmd = &cobra.Command{
@@ -39,7 +39,7 @@ var loginCmd = &cobra.Command{
 			return fmt.Errorf("login: --email and --password required (or set in config / env AMZ_EMAIL, AMZ_PASSWORD)")
 		}
 
-		otpProvider := amazondevices.OTPProviderFunc(func(c context.Context) (string, error) {
+		otpProvider := alexactl.OTPProviderFunc(func(c context.Context) (string, error) {
 			if v := viper.GetString("otp"); v != "" {
 				return v, nil
 			}
@@ -60,7 +60,7 @@ var loginCmd = &cobra.Command{
 	},
 }
 
-func saveSession(s *amazondevices.Session) error {
+func saveSession(s *alexactl.Session) error {
 	if err := store.SaveSession(s); err != nil {
 		return err
 	}

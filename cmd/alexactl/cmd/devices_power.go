@@ -5,7 +5,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	amazondevices "github.com/Fishwaldo/goamazondevices"
+	"github.com/Fishwaldo/alexactl"
 )
 
 var powerDevice string
@@ -19,9 +19,9 @@ AlexaInterfaces (Phase 4a populates this from the discovery query) and
 have a non-empty EndpointID. Run 'devices list' first to confirm.
 
 Examples:
-  amazondevices-test devices power on --device "Bedroom"
-  amazondevices-test devices power off --device AB1234567890
-  amazondevices-test devices power toggle`,
+  alexactl devices power on --device "Bedroom"
+  alexactl devices power off --device AB1234567890
+  alexactl devices power toggle`,
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		ctx, cancel := signalContext()
@@ -48,7 +48,7 @@ Examples:
 		power := d.Power()
 		if power == nil {
 			return fmt.Errorf("device %q (kind=%s) does not expose Alexa.PowerController",
-				d.SerialNumber, amazondevices.Kind(d.Kind))
+				d.SerialNumber, alexactl.Kind(d.Kind))
 		}
 
 		switch args[0] {

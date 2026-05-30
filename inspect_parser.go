@@ -1,8 +1,8 @@
-package amazondevices
+package alexactl
 
 import (
-	"github.com/Fishwaldo/goamazondevices/internal/alexagraphql"
-	"github.com/Fishwaldo/goamazondevices/internal/amzconst"
+	"github.com/Fishwaldo/alexactl/internal/alexagraphql"
+	"github.com/Fishwaldo/alexactl/internal/amzconst"
 )
 
 // parseAllFeaturesEndpoint converts the deep endpointAllFeatures

@@ -1,7 +1,7 @@
-# goamazondevices
+# alexactl
 
-[![CI](https://github.com/Fishwaldo/goamazondevices/actions/workflows/ci.yml/badge.svg)](https://github.com/Fishwaldo/goamazondevices/actions/workflows/ci.yml)
-[![Go Reference](https://pkg.go.dev/badge/github.com/Fishwaldo/goamazondevices.svg)](https://pkg.go.dev/github.com/Fishwaldo/goamazondevices)
+[![CI](https://github.com/Fishwaldo/alexactl/actions/workflows/ci.yml/badge.svg)](https://github.com/Fishwaldo/alexactl/actions/workflows/ci.yml)
+[![Go Reference](https://pkg.go.dev/badge/github.com/Fishwaldo/alexactl.svg)](https://pkg.go.dev/github.com/Fishwaldo/alexactl)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 
 A Go library for controlling Amazon Echo / Alexa devices and skill-discovered
@@ -15,7 +15,7 @@ smart-home endpoints (lights, switches, locks, thermostats, fans, …).
 ## Install
 
 ```bash
-go get github.com/Fishwaldo/goamazondevices
+go get github.com/Fishwaldo/alexactl
 ```
 
 ## Quickstart
@@ -28,19 +28,19 @@ import (
     "fmt"
     "log"
 
-    "github.com/Fishwaldo/goamazondevices"
+    "github.com/Fishwaldo/alexactl"
 )
 
 func main() {
     ctx := context.Background()
 
-    client, err := amazondevices.NewClient()
+    client, err := alexactl.NewClient()
     if err != nil {
         log.Fatal(err)
     }
 
     session, err := client.Auth.Login(ctx, "you@example.com", "your-password",
-        amazondevices.OTPProviderFunc(func(ctx context.Context) (string, error) {
+        alexactl.OTPProviderFunc(func(ctx context.Context) (string, error) {
             var otp string
             fmt.Print("Enter Amazon OTP: ")
             fmt.Scanln(&otp)
@@ -76,13 +76,13 @@ for _, d := range devices {
         _ = bc.Set(ctx, 80) // 0..100
     }
     if cc := d.Color(); cc != nil {
-        _ = cc.Set(ctx, amazondevices.ColorFromRGB(255, 64, 0))
+        _ = cc.Set(ctx, alexactl.ColorFromRGB(255, 64, 0))
     }
     if lc := d.Lock(); lc != nil {
         _ = lc.Lock(ctx)
     }
     if tc := d.Thermostat(); tc != nil {
-        _ = tc.SetTarget(ctx, 21, amazondevices.TemperatureScaleCelsius)
+        _ = tc.SetTarget(ctx, 21, alexactl.TemperatureScaleCelsius)
     }
     if mc := d.Mode("Apparatus.FanSpeed"); mc != nil {
         _ = mc.Set(ctx, "L3")
@@ -90,40 +90,40 @@ for _, d := range devices {
 }
 ```
 
-See `cmd/amazondevices-test/` for a full CLI example.
+See `cmd/alexactl/` for a full CLI example.
 
 ## CLI test harness
 
-`cmd/amazondevices-test/` is a Cobra/Viper CLI mirroring the Python
+`cmd/alexactl/` is a Cobra/Viper CLI mirroring the Python
 `library_test.py`. Build and use:
 
 ```bash
-go build -o amazondevices-test ./cmd/amazondevices-test
+go build -o alexactl ./cmd/alexactl
 
 # Interactive login (prompts for OTP)
-./amazondevices-test login --email you@example.com --password 'your-password'
+./alexactl login --email you@example.com --password 'your-password'
 
 # Inventory + state
-./amazondevices-test devices list
-./amazondevices-test devices list --detail
-./amazondevices-test sensors list
+./alexactl devices list
+./alexactl devices list --detail
+./alexactl sensors list
 
 # Media (Echo speakers). Every single-device command takes --device
 # (serial or friendly name); omit it to use the configured default-device.
-./amazondevices-test speak    "hello"        --device "Kitchen"
-./amazondevices-test announce "dinner ready" --device "Kitchen"
-./amazondevices-test volume   30             --device "Kitchen"
-./amazondevices-test music    AMAZON_MUSIC "miles davis" --device "Kitchen"
-./amazondevices-test sound play amzn_sfx_doorbell_01     --device "Kitchen"
-./amazondevices-test dnd set  on             --device "Kitchen"
+./alexactl speak    "hello"        --device "Kitchen"
+./alexactl announce "dinner ready" --device "Kitchen"
+./alexactl volume   30             --device "Kitchen"
+./alexactl music    AMAZON_MUSIC "miles davis" --device "Kitchen"
+./alexactl sound play amzn_sfx_doorbell_01     --device "Kitchen"
+./alexactl dnd set  on             --device "Kitchen"
 
 # Smart-home control
-./amazondevices-test devices power      on --device "Lamp"
-./amazondevices-test devices brightness 80 --device "Lamp"
-./amazondevices-test devices color      ff4000 --device "Lamp"
-./amazondevices-test devices lock       --device "Front Door"
-./amazondevices-test devices thermostat set-target 21 c --device "Hallway"
-./amazondevices-test devices mode set   Apparatus.FanSpeed L3 --device "AC"
+./alexactl devices power      on --device "Lamp"
+./alexactl devices brightness 80 --device "Lamp"
+./alexactl devices color      ff4000 --device "Lamp"
+./alexactl devices lock       --device "Front Door"
+./alexactl devices thermostat set-target 21 c --device "Hallway"
+./alexactl devices mode set   Apparatus.FanSpeed L3 --device "AC"
 ```
 
 Configuration can also be supplied via `./config.yaml`:

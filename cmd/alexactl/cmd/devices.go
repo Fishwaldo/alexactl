@@ -7,7 +7,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	amazondevices "github.com/Fishwaldo/goamazondevices"
+	"github.com/Fishwaldo/alexactl"
 )
 
 var devicesCmd = &cobra.Command{
@@ -76,7 +76,7 @@ func init() {
 
 // kindOrUnknown returns the device's Kind string, or "?" if empty.
 // Compact for the table column.
-func kindOrUnknown(k amazondevices.Kind) string {
+func kindOrUnknown(k alexactl.Kind) string {
 	if k == "" {
 		return "?"
 	}
@@ -91,7 +91,7 @@ func kindOrUnknown(k amazondevices.Kind) string {
 //	"TP-LINK HS100"
 //	"Signify Netherlands B.V. LCT024"
 //	"Amazon Echo Show 8 (gen 2)"
-func summarizeHardware(d *amazondevices.Device) string {
+func summarizeHardware(d *alexactl.Device) string {
 	mfg := d.Manufacturer
 	model := d.Model
 	switch {
@@ -113,7 +113,7 @@ func summarizeHardware(d *amazondevices.Device) string {
 //	thermostat: "COOL, target=21.5°C"
 //	lock:       "LOCKED"
 //	switch:     "OFF"
-func summarizeDevice(d *amazondevices.Device) string {
+func summarizeDevice(d *alexactl.Device) string {
 	var parts []string
 	if p, ok := d.Sensors["powerState"]; ok && p != nil {
 		if s, _ := p.Value.(string); s != "" {

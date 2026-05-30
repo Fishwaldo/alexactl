@@ -13,9 +13,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/Fishwaldo/goamazondevices/internal/amzconst"
-	"github.com/Fishwaldo/goamazondevices/internal/httpwrapper"
-	"github.com/Fishwaldo/goamazondevices/internal/scrub"
+	"github.com/Fishwaldo/alexactl/internal/amzconst"
+	"github.com/Fishwaldo/alexactl/internal/httpwrapper"
+	"github.com/Fishwaldo/alexactl/internal/scrub"
 )
 
 func TestDecodeJSON_Object(t *testing.T) {

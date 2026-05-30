@@ -7,7 +7,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	amazondevices "github.com/Fishwaldo/goamazondevices"
+	"github.com/Fishwaldo/alexactl"
 )
 
 var (
@@ -33,8 +33,8 @@ The target device is the --device flag (serial or name) or the configured
 default-device.
 
 Example:
-  amazondevices-test devices thermostat set-target 21.5 c --device "Hallway"
-  amazondevices-test devices thermostat set-target 72 f`,
+  alexactl devices thermostat set-target 21.5 c --device "Hallway"
+  alexactl devices thermostat set-target 72 f`,
 	Args: cobra.RangeArgs(1, 2),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		ctx, cancel := signalContext()
@@ -44,7 +44,7 @@ Example:
 		if err != nil {
 			return fmt.Errorf("invalid value %q: %w", args[0], err)
 		}
-		scale := amazondevices.TemperatureScaleCelsius
+		scale := alexactl.TemperatureScaleCelsius
 		if len(args) == 2 {
 			scale, err = parseScaleArg(args[1])
 			if err != nil {
@@ -91,14 +91,14 @@ The target device is the --device flag (serial or name) or the configured
 default-device.
 
 Examples:
-  amazondevices-test devices thermostat set-mode cool --device "Hallway"
-  amazondevices-test devices thermostat set-mode heat`,
+  alexactl devices thermostat set-mode cool --device "Hallway"
+  alexactl devices thermostat set-mode heat`,
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		ctx, cancel := signalContext()
 		defer cancel()
 
-		mode, err := amazondevices.ParseThermostatMode(args[0])
+		mode, err := alexactl.ParseThermostatMode(args[0])
 		if err != nil {
 			return fmt.Errorf("invalid mode %q: %w", args[0], err)
 		}
@@ -132,14 +132,14 @@ Examples:
 // parseScaleArg accepts 'c' / 'C' / 'celsius' or 'f' / 'F' /
 // 'fahrenheit'. Returns TemperatureScaleCelsius by default; errors on
 // anything else.
-func parseScaleArg(s string) (amazondevices.TemperatureScale, error) {
+func parseScaleArg(s string) (alexactl.TemperatureScale, error) {
 	switch strings.ToLower(s) {
 	case "c", "celsius":
-		return amazondevices.TemperatureScaleCelsius, nil
+		return alexactl.TemperatureScaleCelsius, nil
 	case "f", "fahrenheit":
-		return amazondevices.TemperatureScaleFahrenheit, nil
+		return alexactl.TemperatureScaleFahrenheit, nil
 	case "k", "kelvin":
-		return amazondevices.TemperatureScaleKelvin, nil
+		return alexactl.TemperatureScaleKelvin, nil
 	default:
 		return "", fmt.Errorf("invalid scale %q: want c|f|k", s)
 	}

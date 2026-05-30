@@ -23,7 +23,7 @@ air-conditioner has Apparatus.FanSpeed AND Apparatus.FanDirection).
 The instance argument selects which one. List available instances
 + supported values via:
 
-  amazondevices-test devices inspect --device <serial-or-name> | jq '.Sensors |
+  alexactl devices inspect --device <serial-or-name> | jq '.Sensors |
       to_entries | map(select(.value.Configuration._type ==
       "ModeConfiguration"))'`,
 }
@@ -41,9 +41,9 @@ The target device is the --device flag (serial or name) or the configured
 default-device.
 
 Examples:
-  amazondevices-test devices mode set Pure.FanSpeed FanSpeed.High --device "Air Purifier"
-  amazondevices-test devices mode set Genesis.ColorPalette Spectrum
-  amazondevices-test devices mode set Apparatus.FanSpeed L3`,
+  alexactl devices mode set Pure.FanSpeed FanSpeed.High --device "Air Purifier"
+  alexactl devices mode set Genesis.ColorPalette Spectrum
+  alexactl devices mode set Apparatus.FanSpeed L3`,
 	Args: cobra.ExactArgs(2),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		ctx, cancel := signalContext()
@@ -87,8 +87,8 @@ The target device is the --device flag (serial or name) or the configured
 default-device.
 
 Example:
-  amazondevices-test devices mode adjust Pure.FanSpeed 1 --device "Air Purifier"
-  amazondevices-test devices mode adjust Apparatus.FanSpeed -2`,
+  alexactl devices mode adjust Pure.FanSpeed 1 --device "Air Purifier"
+  alexactl devices mode adjust Apparatus.FanSpeed -2`,
 	Args: cobra.ExactArgs(2),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		ctx, cancel := signalContext()

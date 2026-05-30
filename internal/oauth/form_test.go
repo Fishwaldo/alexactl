@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/Fishwaldo/goamazondevices/internal/oauth"
+	"github.com/Fishwaldo/alexactl/internal/oauth"
 )
 
 func loadHTML(t *testing.T, path string) string {

@@ -1,4 +1,4 @@
-package amazondevices
+package alexactl
 
 // Compile-time assertions: every concrete event type satisfies PushEvent.
 var (

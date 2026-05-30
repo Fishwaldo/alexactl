@@ -1,4 +1,4 @@
-package amazondevices
+package alexactl
 
 // SubscribeOption configures a single Subscribe call. Options are
 // applied left-to-right; later options win on conflict.

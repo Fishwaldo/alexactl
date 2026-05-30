@@ -1,4 +1,4 @@
-package amazondevices
+package alexactl
 
 import (
 	"context"
@@ -8,9 +8,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Fishwaldo/goamazondevices/internal/amzconst"
-	"github.com/Fishwaldo/goamazondevices/internal/cache"
-	"github.com/Fishwaldo/goamazondevices/internal/httpwrapper"
+	"github.com/Fishwaldo/alexactl/internal/amzconst"
+	"github.com/Fishwaldo/alexactl/internal/cache"
+	"github.com/Fishwaldo/alexactl/internal/httpwrapper"
 )
 
 // OTPProvider supplies the MFA OTP code to AuthService.Login. The callback
@@ -97,7 +97,7 @@ func (s *AuthService) broadcast(sess *Session) {
 // service calls. Callers should persist it to disk (mode 0600).
 func (s *AuthService) Login(ctx context.Context, email, password string, otp OTPProvider) (*Session, error) {
 	logger := s.wrapper.Logger(ctx)
-	logger.DebugContext(ctx, "amazondevices: starting Login", "email", email)
+	logger.DebugContext(ctx, "alexactl: starting Login", "email", email)
 
 	authcode, codeVerifier, serial, err := s.doOAuthDance(ctx, email, password, otp, "en-US", nil)
 	if err != nil {
@@ -156,7 +156,7 @@ func (s *AuthService) Restore(ctx context.Context) (*Session, error) {
 	if cur == nil {
 		return nil, ErrWrongMethod
 	}
-	s.wrapper.Logger(ctx).DebugContext(ctx, "amazondevices: restoring session")
+	s.wrapper.Logger(ctx).DebugContext(ctx, "alexactl: restoring session")
 
 	// Seed the wrapper with the persisted website cookies so subsequent
 	// requests authenticate. Fresh Login picks these up naturally from

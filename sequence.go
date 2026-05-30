@@ -1,4 +1,4 @@
-package amazondevices
+package alexactl
 
 import (
 	"context"
@@ -9,9 +9,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Fishwaldo/goamazondevices/internal/amzconst"
-	"github.com/Fishwaldo/goamazondevices/internal/cache"
-	"github.com/Fishwaldo/goamazondevices/internal/httpwrapper"
+	"github.com/Fishwaldo/alexactl/internal/amzconst"
+	"github.com/Fishwaldo/alexactl/internal/cache"
+	"github.com/Fishwaldo/alexactl/internal/httpwrapper"
 )
 
 // marshalRoutinesEntries / unmarshalRoutinesEntries persist the
@@ -165,7 +165,7 @@ func (s *SequenceService) buildOperationNode(ctx context.Context, d *Device, mes
 			"content": []any{
 				map[string]any{
 					"locale":  s.wrapper.Language(),
-					"display": map[string]any{"title": "goamazondevices", "body": messageBody},
+					"display": map[string]any{"title": "alexactl", "body": messageBody},
 					"speak":   map[string]any{"type": "text", "value": messageBody},
 				},
 			},
@@ -221,7 +221,7 @@ func (s *SequenceService) buildOperationNode(ctx context.Context, d *Device, mes
 	case string(SeqRoutine):
 		name, ok := messageBody.(string)
 		if !ok {
-			return nil, fmt.Errorf("amazondevices: sequence: routine name must be a string")
+			return nil, fmt.Errorf("alexactl: sequence: routine name must be a string")
 		}
 		cached, _, gerr := s.routinesCache.Get(ctx, "")
 		if gerr != nil {
@@ -229,11 +229,11 @@ func (s *SequenceService) buildOperationNode(ctx context.Context, d *Device, mes
 		}
 		seq, found := cached[name]
 		if !found {
-			return nil, fmt.Errorf("amazondevices: sequence: unknown routine %q (run Routines first)", name)
+			return nil, fmt.Errorf("alexactl: sequence: unknown routine %q (run Routines first)", name)
 		}
 		startNode, _ := seq["startNode"].(map[string]any)
 		if startNode == nil {
-			return nil, fmt.Errorf("amazondevices: sequence: routine %q has no startNode", name)
+			return nil, fmt.Errorf("alexactl: sequence: routine %q has no startNode", name)
 		}
 		return replaceRoutinePlaceholders(deepCopyMap(startNode), d), nil
 	default:
@@ -241,7 +241,7 @@ func (s *SequenceService) buildOperationNode(ctx context.Context, d *Device, mes
 			payload = base
 			break
 		}
-		return nil, fmt.Errorf("amazondevices: sequence: unrecognised message type %q", messageType)
+		return nil, fmt.Errorf("alexactl: sequence: unrecognised message type %q", messageType)
 	}
 
 	return map[string]any{
@@ -294,7 +294,7 @@ func (s *SequenceService) postSequences(ctx context.Context, ops []sequenceOp) e
 	}
 	seqJSON, err := json.Marshal(seq)
 	if err != nil {
-		return fmt.Errorf("amazondevices: sequence marshal: %w", err)
+		return fmt.Errorf("alexactl: sequence marshal: %w", err)
 	}
 
 	body := map[string]any{
@@ -303,7 +303,7 @@ func (s *SequenceService) postSequences(ctx context.Context, ops []sequenceOp) e
 		"status":       "ENABLED",
 	}
 
-	s.wrapper.Logger(ctx).DebugContext(ctx, "amazondevices: sending sequence",
+	s.wrapper.Logger(ctx).DebugContext(ctx, "alexactl: sending sequence",
 		"op_count", len(ops))
 
 	url := fmt.Sprintf("https://alexa.amazon.%s%s", s.wrapper.Domain(), amzconst.URIBehaviorsPreview)
@@ -387,7 +387,7 @@ func (s *SequenceService) processBatch(ctx context.Context, gen uint64) {
 	}
 	if err := s.postSequences(ctx, ops); err != nil {
 		s.wrapper.Logger(ctx).WarnContext(ctx,
-			"amazondevices: sequence batch failed",
+			"alexactl: sequence batch failed",
 			"err", err, "op_count", len(ops))
 	}
 }

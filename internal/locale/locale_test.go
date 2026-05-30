@@ -5,7 +5,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/Fishwaldo/goamazondevices/internal/locale"
+	"github.com/Fishwaldo/alexactl/internal/locale"
 )
 
 func TestForCountry(t *testing.T) {

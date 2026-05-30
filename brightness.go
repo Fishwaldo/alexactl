@@ -1,10 +1,10 @@
-package amazondevices
+package alexactl
 
 import (
 	"context"
 	"fmt"
 
-	"github.com/Fishwaldo/goamazondevices/internal/amzconst"
+	"github.com/Fishwaldo/alexactl/internal/amzconst"
 )
 
 // BrightnessControl is the typed accessor returned by Device.Brightness()

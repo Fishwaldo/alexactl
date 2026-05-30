@@ -9,7 +9,7 @@ import (
 	"log/slog"
 	"net/http"
 
-	"github.com/Fishwaldo/goamazondevices/internal/amzconst"
+	"github.com/Fishwaldo/alexactl/internal/amzconst"
 )
 
 // MaxResponseBodyBytes caps the size of response bodies decoded by
@@ -80,7 +80,7 @@ func LogResponseBody(ctx context.Context, logger *slog.Logger, method, url strin
 	}
 	raw, err := io.ReadAll(io.LimitReader(resp.Body, MaxResponseBodyBytes))
 	if err != nil {
-		logger.DebugContext(ctx, "amazondevices: http response body (read error)",
+		logger.DebugContext(ctx, "alexactl: http response body (read error)",
 			"method", method, "url", url, "read_err", err.Error())
 		return
 	}
@@ -88,23 +88,23 @@ func LogResponseBody(ctx context.Context, logger *slog.Logger, method, url strin
 	resp.Body = io.NopCloser(bytes.NewReader(raw))
 
 	if len(raw) == 0 {
-		logger.DebugContext(ctx, "amazondevices: http response body",
+		logger.DebugContext(ctx, "alexactl: http response body",
 			"method", method, "url", url, "bytes", 0)
 		return
 	}
 
 	var obj map[string]any
 	if jerr := json.Unmarshal(raw, &obj); jerr == nil && obj != nil {
-		logger.DebugContext(ctx, "amazondevices: http response body",
+		logger.DebugContext(ctx, "alexactl: http response body",
 			"method", method, "url", url, "body", obj)
 		return
 	}
 	var arr []any
 	if jerr := json.Unmarshal(raw, &arr); jerr == nil {
-		logger.DebugContext(ctx, "amazondevices: http response body",
+		logger.DebugContext(ctx, "alexactl: http response body",
 			"method", method, "url", url, "body", arr)
 		return
 	}
-	logger.DebugContext(ctx, "amazondevices: http response body",
+	logger.DebugContext(ctx, "alexactl: http response body",
 		"method", method, "url", url, "bytes", len(raw), "kind", "non-json")
 }

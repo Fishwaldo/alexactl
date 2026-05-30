@@ -1,5 +1,5 @@
-// Package cmd implements the cobra commands for the amazondevices-test CLI,
-// a manual exercise harness for the goamazondevices library.
+// Package cmd implements the cobra commands for the alexactl CLI,
+// a manual exercise harness for the alexactl library.
 package cmd
 
 import (
@@ -14,7 +14,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
-	amazondevices "github.com/Fishwaldo/goamazondevices"
+	"github.com/Fishwaldo/alexactl"
 )
 
 var (
@@ -47,9 +47,9 @@ func makeLogger() *slog.Logger {
 }
 
 var rootCmd = &cobra.Command{
-	Use:   "amazondevices-test",
-	Short: "Manual CLI harness for the goamazondevices library",
-	Long: `Manual smoke-test CLI for goamazondevices. Logs in, optionally
+	Use:   "alexactl",
+	Short: "Manual CLI harness for the alexactl library",
+	Long: `Manual smoke-test CLI for alexactl. Logs in, optionally
 persists the session, lists devices, and exercises media commands.
 
 Reads configuration from --config (default: ./config.yaml). Flags override
@@ -110,7 +110,7 @@ func Execute() error {
 // newClient builds a configured Client from the Store. When loadSession is
 // true, a persisted session is supplied via WithSession. Site precedence:
 // --site flag > config site: key > AMZ_SITE env > default.
-func newClient(loadSession bool) (*amazondevices.Client, *amazondevices.Session, error) {
+func newClient(loadSession bool) (*alexactl.Client, *alexactl.Session, error) {
 	site := siteFlag
 	if site == "" {
 		if v, ok := store.Get("site"); ok {
@@ -124,20 +124,20 @@ func newClient(loadSession bool) (*amazondevices.Client, *amazondevices.Session,
 		site = "https://www.amazon.com"
 	}
 
-	var sess *amazondevices.Session
+	var sess *alexactl.Session
 	if loadSession {
 		sess = store.LoadSession()
 	}
 
-	opts := []amazondevices.Option{
-		amazondevices.WithLogger(makeLogger()),
-		amazondevices.WithSite(site),
-		amazondevices.WithCachePersistence(store.CachePersistence()),
+	opts := []alexactl.Option{
+		alexactl.WithLogger(makeLogger()),
+		alexactl.WithSite(site),
+		alexactl.WithCachePersistence(store.CachePersistence()),
 	}
 	if sess != nil {
-		opts = append(opts, amazondevices.WithSession(sess))
+		opts = append(opts, alexactl.WithSession(sess))
 	}
-	c, err := amazondevices.NewClient(opts...)
+	c, err := alexactl.NewClient(opts...)
 	if err != nil {
 		return nil, nil, err
 	}

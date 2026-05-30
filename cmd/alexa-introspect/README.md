@@ -6,7 +6,7 @@ the response as JSON to stdout.
 
 ## Usage
 
-After logging in via `cmd/amazondevices-test login`, `session.json`
+After logging in via `cmd/alexactl login`, `session.json`
 carries the cookie jar + tokens the introspection request needs. Use
 a **fresh** session — this tool talks directly to Amazon via a stdlib
 `*http.Client`, bypassing the library's auth-refresh path. If the

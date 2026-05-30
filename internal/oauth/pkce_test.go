@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/Fishwaldo/goamazondevices/internal/oauth"
+	"github.com/Fishwaldo/alexactl/internal/oauth"
 )
 
 func TestNewCodeVerifier_LengthAndCharset(t *testing.T) {

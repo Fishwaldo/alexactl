@@ -1,4 +1,4 @@
-package amazondevices
+package alexactl
 
 import (
 	_ "embed"

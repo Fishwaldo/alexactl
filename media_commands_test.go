@@ -1,4 +1,4 @@
-package amazondevices
+package alexactl
 
 import (
 	"context"
@@ -222,7 +222,7 @@ func TestMedia_PlaySound_RejectsUnknownSound(t *testing.T) {
 		t.Fatal("must not reach the server for an unknown sound")
 	})
 	ms.validateSoundFn = func(_ context.Context, soundID string) error {
-		return fmt.Errorf("amazondevices: sound %q not available", soundID)
+		return fmt.Errorf("alexactl: sound %q not available", soundID)
 	}
 
 	dev := &Device{SerialNumber: "S", DeviceType: "T",

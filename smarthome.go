@@ -1,4 +1,4 @@
-package amazondevices
+package alexactl
 
 import (
 	"context"
@@ -6,9 +6,9 @@ import (
 
 	"github.com/Khan/genqlient/graphql"
 
-	"github.com/Fishwaldo/goamazondevices/internal/alexagraphql"
-	"github.com/Fishwaldo/goamazondevices/internal/amzconst"
-	"github.com/Fishwaldo/goamazondevices/internal/httpwrapper"
+	"github.com/Fishwaldo/alexactl/internal/alexagraphql"
+	"github.com/Fishwaldo/alexactl/internal/amzconst"
+	"github.com/Fishwaldo/alexactl/internal/httpwrapper"
 )
 
 // smartHomeClient is the internal POST helper that backs every typed

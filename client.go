@@ -1,4 +1,4 @@
-package amazondevices
+package alexactl
 
 import (
 	"context"
@@ -6,11 +6,11 @@ import (
 	"net/http"
 	"sync"
 
-	"github.com/Fishwaldo/goamazondevices/internal/cache"
-	"github.com/Fishwaldo/goamazondevices/internal/httpwrapper"
+	"github.com/Fishwaldo/alexactl/internal/cache"
+	"github.com/Fishwaldo/alexactl/internal/httpwrapper"
 )
 
-// Client is the entry point for the goamazondevices library. Construct
+// Client is the entry point for the alexactl library. Construct
 // with NewClient; safe for concurrent use.
 type Client struct {
 	cfg *config
@@ -67,7 +67,7 @@ func NewClient(opts ...Option) (*Client, error) {
 		Version:    Version,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("amazondevices: build http wrapper: %w", err)
+		return nil, fmt.Errorf("alexactl: build http wrapper: %w", err)
 	}
 
 	classes := cache.DefaultClassConfig()
@@ -259,7 +259,7 @@ func NewClient(opts ...Option) (*Client, error) {
 		dnd, dndErr := c.DnD.Status(ctx)
 		if dndErr != nil {
 			c.wrapper.Logger(ctx).WarnContext(ctx,
-				"amazondevices: DnD lookup failed; sensors will be applied without DnD",
+				"alexactl: DnD lookup failed; sensors will be applied without DnD",
 				"err", dndErr)
 			dnd = nil
 		}
@@ -269,7 +269,7 @@ func NewClient(opts ...Option) (*Client, error) {
 		sched, sErr := schedulesGet(ctx)
 		if sErr != nil {
 			c.wrapper.Logger(ctx).WarnContext(ctx,
-				"amazondevices: schedules lookup failed; per-device Alarms/Reminders/Timers will be empty",
+				"alexactl: schedules lookup failed; per-device Alarms/Reminders/Timers will be empty",
 				"err", sErr)
 			sched = &schedulesFetchResult{}
 		}
@@ -287,7 +287,7 @@ func NewClient(opts ...Option) (*Client, error) {
 	if mgr.Persistence() != nil {
 		if err := mgr.Restore(context.Background()); err != nil {
 			wr.Logger(context.Background()).WarnContext(context.Background(),
-				"amazondevices: cache Restore failed; continuing with empty caches",
+				"alexactl: cache Restore failed; continuing with empty caches",
 				"err", err)
 		}
 	}

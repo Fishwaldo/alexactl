@@ -4,20 +4,20 @@ import (
 	"fmt"
 	"strings"
 
-	amazondevices "github.com/Fishwaldo/goamazondevices"
+	"github.com/Fishwaldo/alexactl"
 	"github.com/spf13/cobra"
 )
 
 // resolveDeviceRef maps a serial-or-name reference to a serial. Serial match
 // wins; otherwise an exact (case-sensitive) AccountName match is used. Zero
 // matches is an error; multiple name matches is an error listing candidates.
-func resolveDeviceRef(devices []*amazondevices.Device, ref string) (string, error) {
+func resolveDeviceRef(devices []*alexactl.Device, ref string) (string, error) {
 	for _, d := range devices {
 		if d.SerialNumber == ref {
 			return d.SerialNumber, nil
 		}
 	}
-	var matches []*amazondevices.Device
+	var matches []*alexactl.Device
 	for _, d := range devices {
 		if d.AccountName == ref {
 			matches = append(matches, d)

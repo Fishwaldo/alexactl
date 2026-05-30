@@ -25,7 +25,7 @@ import (
 	"os"
 	"time"
 
-	amazondevices "github.com/Fishwaldo/goamazondevices"
+	"github.com/Fishwaldo/alexactl"
 )
 
 const introspectionQuery = `query IntrospectionQuery {
@@ -136,16 +136,16 @@ func run(sessionPath string) error {
 	return nil
 }
 
-// loadSession reads session.json (the same format cmd/amazondevices-test
-// writes) and returns it. We use amazondevices.Session here only as a
+// loadSession reads session.json (the same format cmd/alexactl
+// writes) and returns it. We use alexactl.Session here only as a
 // JSON shape — no client construction.
-func loadSession(path string) (*amazondevices.Session, error) {
+func loadSession(path string) (*alexactl.Session, error) {
 	// #nosec G304 -- this dev tool reads a session file at a path supplied by the operator on the CLI.
 	b, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
-	var s amazondevices.Session
+	var s alexactl.Session
 	if err := json.Unmarshal(b, &s); err != nil {
 		return nil, err
 	}

@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	amazondevices "github.com/Fishwaldo/goamazondevices"
+	"github.com/Fishwaldo/alexactl"
 )
 
 func TestResolvePaths_OSStandardDefaults(t *testing.T) {
@@ -104,7 +104,7 @@ func TestConfigSetUnknownKeyRejected(t *testing.T) {
 
 func TestSessionRoundTrip(t *testing.T) {
 	s := newTestStore(t)
-	if err := s.SaveSession(&amazondevices.Session{}); err != nil {
+	if err := s.SaveSession(&alexactl.Session{}); err != nil {
 		t.Fatalf("SaveSession: %v", err)
 	}
 	info, err := os.Stat(s.paths.session)

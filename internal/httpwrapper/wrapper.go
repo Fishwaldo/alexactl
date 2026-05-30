@@ -1,5 +1,5 @@
 // Package httpwrapper provides the authenticated HTTP request layer used
-// by all public services in the amazondevices package. It owns the
+// by all public services in the alexactl package. It owns the
 // session cookies, CSRF token, retry behavior, and token refresh.
 package httpwrapper
 
@@ -14,9 +14,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Fishwaldo/goamazondevices/internal/amzconst"
-	"github.com/Fishwaldo/goamazondevices/internal/locale"
-	"github.com/Fishwaldo/goamazondevices/internal/scrub"
+	"github.com/Fishwaldo/alexactl/internal/amzconst"
+	"github.com/Fishwaldo/alexactl/internal/locale"
+	"github.com/Fishwaldo/alexactl/internal/scrub"
 )
 
 // recentRefreshWindow is the deduplication window for transparent 401
@@ -124,7 +124,7 @@ func (w *Wrapper) HeadersForRequest() http.Header {
 	if w.language != "" {
 		h.Set("Accept-Language", w.language)
 	}
-	h.Set("x-amzn-client", "github.com/Fishwaldo/goamazondevices")
+	h.Set("x-amzn-client", "github.com/Fishwaldo/alexactl")
 	if w.version != "" {
 		h.Set("x-amzn-build-version", w.version)
 	}

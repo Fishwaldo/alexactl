@@ -1,11 +1,11 @@
-package amazondevices
+package alexactl
 
 import (
 	"context"
 	"fmt"
 	"math"
 
-	"github.com/Fishwaldo/goamazondevices/internal/amzconst"
+	"github.com/Fishwaldo/alexactl/internal/amzconst"
 )
 
 // Color is the HSV-encoded color value Amazon's Alexa.ColorController

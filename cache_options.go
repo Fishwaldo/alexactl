@@ -1,9 +1,9 @@
-package amazondevices
+package alexactl
 
 import (
 	"time"
 
-	"github.com/Fishwaldo/goamazondevices/internal/cache"
+	"github.com/Fishwaldo/alexactl/internal/cache"
 )
 
 // CacheClass re-exports cache.CacheClass so callers don't import the

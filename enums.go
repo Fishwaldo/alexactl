@@ -1,4 +1,4 @@
-package amazondevices
+package alexactl
 
 // SequenceType is an Alexa sequence command name as it appears on the wire.
 //

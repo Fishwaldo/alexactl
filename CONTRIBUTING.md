@@ -1,4 +1,4 @@
-# Contributing to goamazondevices
+# Contributing to alexactl
 
 Thanks for your interest! This project is a Go port of
 [aioamazondevices](https://github.com/chemelli74/aioamazondevices). During

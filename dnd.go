@@ -1,4 +1,4 @@
-package amazondevices
+package alexactl
 
 import (
 	"context"
@@ -7,9 +7,9 @@ import (
 	"net/http"
 	"sync"
 
-	"github.com/Fishwaldo/goamazondevices/internal/amzconst"
-	"github.com/Fishwaldo/goamazondevices/internal/cache"
-	"github.com/Fishwaldo/goamazondevices/internal/httpwrapper"
+	"github.com/Fishwaldo/alexactl/internal/amzconst"
+	"github.com/Fishwaldo/alexactl/internal/cache"
+	"github.com/Fishwaldo/alexactl/internal/httpwrapper"
 )
 
 // DnDService gets and sets the per-device Do Not Disturb flag.
@@ -106,7 +106,7 @@ func (s *DnDService) fetchStatus(ctx context.Context) (map[string]*DeviceSensor,
 // is not a cluster-fanout operation in Amazon's API.
 func (s *DnDService) Set(ctx context.Context, d *Device, enabled bool) error {
 	if d == nil {
-		return fmt.Errorf("amazondevices: DnD.Set: nil device")
+		return fmt.Errorf("alexactl: DnD.Set: nil device")
 	}
 	url := fmt.Sprintf("https://alexa.amazon.%s%s",
 		s.wrapper.Domain(), amzconst.URIDnDStatusDevice)

@@ -1,4 +1,4 @@
-package amazondevices
+package alexactl
 
 import (
 	"context"
@@ -6,8 +6,8 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/Fishwaldo/goamazondevices/internal/alexagraphql"
-	"github.com/Fishwaldo/goamazondevices/internal/amzconst"
+	"github.com/Fishwaldo/alexactl/internal/alexagraphql"
+	"github.com/Fishwaldo/alexactl/internal/amzconst"
 	"github.com/Khan/genqlient/graphql"
 )
 
@@ -113,7 +113,7 @@ func (s *DevicesService) refreshSkipSensors(ctx context.Context) (map[string]*De
 // fetchBase + fetchEndpoints + sensorsHook (when set) and returns the
 // enriched device map.
 func (s *DevicesService) fetchAndEnrichDevices(ctx context.Context) (map[string]*Device, error) {
-	s.wrapper.Logger(ctx).DebugContext(ctx, "amazondevices: refreshing devices")
+	s.wrapper.Logger(ctx).DebugContext(ctx, "alexactl: refreshing devices")
 	sitePrefix := s.alexaHost()
 
 	base, err := s.fetchBase(ctx, sitePrefix)
@@ -136,7 +136,7 @@ func (s *DevicesService) fetchAndEnrichDevices(ctx context.Context) (map[string]
 		}
 		if hookErr := s.sensorsHook(ctx, base, endpoints); hookErr != nil {
 			s.wrapper.Logger(ctx).WarnContext(ctx,
-				"amazondevices: sensor enrichment failed; continuing without it",
+				"alexactl: sensor enrichment failed; continuing without it",
 				"err", hookErr)
 		}
 		// Derive AlexaInterfaces from each device's populated sensor

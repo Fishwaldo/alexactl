@@ -1,4 +1,4 @@
-package amazondevices
+package alexactl
 
 import (
 	"errors"
@@ -9,31 +9,31 @@ import (
 var (
 	// ErrCannotAuthenticate is returned when the credentials are rejected
 	// or a previously valid session is no longer usable.
-	ErrCannotAuthenticate = errors.New("amazondevices: cannot authenticate")
+	ErrCannotAuthenticate = errors.New("alexactl: cannot authenticate")
 
 	// ErrCannotConnect is returned when network-level errors prevent any
 	// response from being received.
-	ErrCannotConnect = errors.New("amazondevices: cannot connect")
+	ErrCannotConnect = errors.New("alexactl: cannot connect")
 
 	// ErrCannotRetrieveData is returned when Amazon returns a non-OK HTTP
 	// status that isn't an auth failure.
-	ErrCannotRetrieveData = errors.New("amazondevices: cannot retrieve data")
+	ErrCannotRetrieveData = errors.New("alexactl: cannot retrieve data")
 
 	// ErrCannotRegisterDevice is returned when /auth/register fails during
 	// the OAuth flow.
-	ErrCannotRegisterDevice = errors.New("amazondevices: cannot register device")
+	ErrCannotRegisterDevice = errors.New("alexactl: cannot register device")
 
 	// ErrDeviceNotFound is returned when callers reference a device by
 	// serial number that isn't present in the cache.
-	ErrDeviceNotFound = errors.New("amazondevices: device not found")
+	ErrDeviceNotFound = errors.New("alexactl: device not found")
 
 	// ErrWrongMethod is returned when callers invoke a login method that
 	// doesn't match the available state (e.g., Restore without a Session).
-	ErrWrongMethod = errors.New("amazondevices: wrong login method")
+	ErrWrongMethod = errors.New("alexactl: wrong login method")
 
 	// ErrReauthRequired signals that the caller must run Auth.Login again.
 	// Surfaced by the Phase-3 push event stream before the channel closes.
-	ErrReauthRequired = errors.New("amazondevices: reauth required")
+	ErrReauthRequired = errors.New("alexactl: reauth required")
 
 	// ErrCannotControlDevice is returned when Amazon's setEndpointFeatures
 	// mutation responds with a structured error for one of the requested
@@ -43,7 +43,7 @@ var (
 	// formatted string; callers can `errors.Is(err, ErrCannotControlDevice)`
 	// to distinguish protocol-level rejections from transport errors
 	// (which return ErrCannotConnect / ErrCannotRetrieveData).
-	ErrCannotControlDevice = errors.New("amazondevices: cannot control device")
+	ErrCannotControlDevice = errors.New("alexactl: cannot control device")
 
 	// ErrControllerNotImplemented is returned by typed control accessors
 	// whose wire payload shape has not yet been confirmed against real
@@ -55,7 +55,7 @@ var (
 	//	if err := dvc.Range("FanSpeed").Set(ctx, 5.0); errors.Is(err, ErrControllerNotImplemented) {
 	//	    // expected — Range write surface is HAR-capture-gated
 	//	}
-	ErrControllerNotImplemented = errors.New("amazondevices: typed controller not yet wired — HAR capture needed")
+	ErrControllerNotImplemented = errors.New("alexactl: typed controller not yet wired — HAR capture needed")
 
 	// ErrListItemNotFound is returned by *List write methods (Complete,
 	// Uncomplete, Delete, Rename) when the passed *ListItem is nil or
@@ -65,7 +65,7 @@ var (
 	//	if errors.Is(err, ErrListItemNotFound) {
 	//	    // we passed the wrong item to the wrong list; reload and retry
 	//	}
-	ErrListItemNotFound = errors.New("amazondevices: list item not found")
+	ErrListItemNotFound = errors.New("alexactl: list item not found")
 
 	// ErrAlarmNotFound is returned by *AlarmsService write methods
 	// (Update, Delete, Enable, Disable, Snooze) when the passed *Alarm
@@ -76,15 +76,15 @@ var (
 	//	if errors.Is(err, ErrAlarmNotFound) {
 	//	    // wrong item; reload and retry
 	//	}
-	ErrAlarmNotFound = errors.New("amazondevices: alarm not found")
+	ErrAlarmNotFound = errors.New("alexactl: alarm not found")
 
 	// ErrReminderNotFound is the same sentinel as ErrAlarmNotFound but
 	// for *RemindersService write methods.
-	ErrReminderNotFound = errors.New("amazondevices: reminder not found")
+	ErrReminderNotFound = errors.New("alexactl: reminder not found")
 
 	// ErrTimerNotFound is the same sentinel as ErrAlarmNotFound but
 	// for *TimersService write methods.
-	ErrTimerNotFound = errors.New("amazondevices: timer not found")
+	ErrTimerNotFound = errors.New("alexactl: timer not found")
 )
 
 // APIError carries HTTP-level detail about a failed request. Its Unwrap

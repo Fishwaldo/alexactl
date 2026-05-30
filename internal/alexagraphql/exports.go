@@ -7,7 +7,7 @@ import (
 )
 
 // Exported type aliases for the generated (unexported) types produced by the
-// getEndpointState query. Callers in package amazondevices use these names to
+// getEndpointState query. Callers in package alexactl use these names to
 // avoid referencing the long internal generated names directly.
 
 // EndpointStateEndpoint is the generated endpoint type for getEndpointState.

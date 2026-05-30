@@ -8,7 +8,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	amazondevices "github.com/Fishwaldo/goamazondevices"
+	"github.com/Fishwaldo/alexactl"
 )
 
 // newSoundCmd builds the `sound` parent command with `list` and `play`
@@ -91,7 +91,7 @@ func newSoundPlayCmd() *cobra.Command {
 // newMusicCmd builds `music` — provider and query are positional
 // arguments (provider first, then the search query).
 //
-// Usage: amazondevices-test music amzn-music "avici" --device "Bedroom"
+// Usage: alexactl music amzn-music "avici" --device "Bedroom"
 func newMusicCmd() *cobra.Command {
 	var device string
 	c := &cobra.Command{
@@ -215,7 +215,7 @@ func newSkillLaunchCmd() *cobra.Command {
 // newControlCmd builds `control` — the command keyword is a positional
 // argument.
 //
-// Usage: amazondevices-test control --device "Bedroom" play
+// Usage: alexactl control --device "Bedroom" play
 func newControlCmd() *cobra.Command {
 	var device string
 	c := &cobra.Command{
@@ -251,23 +251,23 @@ func newControlCmd() *cobra.Command {
 }
 
 // parseMediaCommand maps user-friendly strings ("play", "stop", ...) to
-// the typed amazondevices.MediaCommand.
-func parseMediaCommand(s string) (amazondevices.MediaCommand, error) {
+// the typed alexactl.MediaCommand.
+func parseMediaCommand(s string) (alexactl.MediaCommand, error) {
 	switch strings.ToLower(s) {
 	case "play":
-		return amazondevices.CmdPlay, nil
+		return alexactl.CmdPlay, nil
 	case "pause":
-		return amazondevices.CmdPause, nil
+		return alexactl.CmdPause, nil
 	case "next":
-		return amazondevices.CmdNext, nil
+		return alexactl.CmdNext, nil
 	case "prev", "previous":
-		return amazondevices.CmdPrev, nil
+		return alexactl.CmdPrev, nil
 	case "stop":
-		return amazondevices.CmdStop, nil
+		return alexactl.CmdStop, nil
 	case "rewind":
-		return amazondevices.CmdRewind, nil
+		return alexactl.CmdRewind, nil
 	case "forward", "fastforward", "ff":
-		return amazondevices.CmdForward, nil
+		return alexactl.CmdForward, nil
 	}
 	return "", fmt.Errorf("unknown media command %q", s)
 }

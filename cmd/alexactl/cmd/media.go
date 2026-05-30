@@ -77,7 +77,7 @@ func newAnnounceCmd() *cobra.Command {
 // newVolumeCmd builds the `volume` subcommand — the level is a positional
 // argument and the target device is the standard --device flag.
 //
-// Usage: amazondevices-test volume 42 --device "Bedroom"
+// Usage: alexactl volume 42 --device "Bedroom"
 func newVolumeCmd() *cobra.Command {
 	var device string
 	cmd := &cobra.Command{

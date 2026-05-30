@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/Fishwaldo/goamazondevices/internal/amzconst"
+	"github.com/Fishwaldo/alexactl/internal/amzconst"
 )
 
 // BuildInitialCookies returns the pre-login cookie set Amazon expects to

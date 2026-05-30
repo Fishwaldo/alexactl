@@ -1,4 +1,4 @@
-package amazondevices
+package alexactl
 
 import (
 	"context"
@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Fishwaldo/goamazondevices/internal/amzconst"
-	"github.com/Fishwaldo/goamazondevices/internal/httpwrapper"
+	"github.com/Fishwaldo/alexactl/internal/amzconst"
+	"github.com/Fishwaldo/alexactl/internal/httpwrapper"
 )
 
 // customerIDSleepSeconds is how long obtainCustomerIDForSerial waits between
@@ -51,7 +51,7 @@ func (s *AuthService) obtainCustomerIDForSerial(
 		if i > 0 {
 			s.sleep(ctx, customerIDSleepSeconds)
 		}
-		logger.DebugContext(ctx, "amazondevices: looking up customer ID", "attempt", i+1)
+		logger.DebugContext(ctx, "alexactl: looking up customer ID", "attempt", i+1)
 
 		resp, err := s.wrapper.Do(ctx, httpwrapper.Request{Method: http.MethodGet, URL: url})
 		if err != nil {

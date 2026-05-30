@@ -8,7 +8,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	amazondevices "github.com/Fishwaldo/goamazondevices"
+	"github.com/Fishwaldo/alexactl"
 )
 
 var sensorsCmd = &cobra.Command{
@@ -80,7 +80,7 @@ func init() {
 // non-state fields on a *DeviceSensor that are interesting under
 // --detail (Operations + Configuration). Returns "" when there's
 // nothing extra to show.
-func formatSensorDetail(s *amazondevices.DeviceSensor) string {
+func formatSensorDetail(s *alexactl.DeviceSensor) string {
 	if s == nil {
 		return ""
 	}

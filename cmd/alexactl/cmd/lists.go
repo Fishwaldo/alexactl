@@ -8,7 +8,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	amazondevices "github.com/Fishwaldo/goamazondevices"
+	"github.com/Fishwaldo/alexactl"
 )
 
 var listsListFlag string
@@ -83,7 +83,7 @@ var listsLsCmd = &cobra.Command{
 			return err
 		}
 
-		var target *amazondevices.List
+		var target *alexactl.List
 		wantName := ""
 		if len(args) == 1 {
 			wantName = args[0]
@@ -160,7 +160,7 @@ var listsCompleteCmd = &cobra.Command{
 	Use:   "complete <item-id>",
 	Short: "Mark item complete (looked up across all lists)",
 	Args:  cobra.ExactArgs(1),
-	RunE: withItem(func(ctx ctxAlias, parent *amazondevices.List, item *amazondevices.ListItem, _ []string) error {
+	RunE: withItem(func(ctx ctxAlias, parent *alexactl.List, item *alexactl.ListItem, _ []string) error {
 		return parent.Complete(ctx, item)
 	}),
 }
@@ -169,7 +169,7 @@ var listsUncompleteCmd = &cobra.Command{
 	Use:   "uncomplete <item-id>",
 	Short: "Flip a completed item back to active",
 	Args:  cobra.ExactArgs(1),
-	RunE: withItem(func(ctx ctxAlias, parent *amazondevices.List, item *amazondevices.ListItem, _ []string) error {
+	RunE: withItem(func(ctx ctxAlias, parent *alexactl.List, item *alexactl.ListItem, _ []string) error {
 		return parent.Uncomplete(ctx, item)
 	}),
 }
@@ -178,7 +178,7 @@ var listsDeleteCmd = &cobra.Command{
 	Use:   "delete <item-id>",
 	Short: "Remove an item",
 	Args:  cobra.ExactArgs(1),
-	RunE: withItem(func(ctx ctxAlias, parent *amazondevices.List, item *amazondevices.ListItem, _ []string) error {
+	RunE: withItem(func(ctx ctxAlias, parent *alexactl.List, item *alexactl.ListItem, _ []string) error {
 		return parent.Delete(ctx, item)
 	}),
 }
@@ -187,7 +187,7 @@ var listsRenameCmd = &cobra.Command{
 	Use:   "rename <item-id> <new-value>",
 	Short: "Rewrite an item's value",
 	Args:  cobra.ExactArgs(2),
-	RunE: withItem(func(ctx ctxAlias, parent *amazondevices.List, item *amazondevices.ListItem, args []string) error {
+	RunE: withItem(func(ctx ctxAlias, parent *alexactl.List, item *alexactl.ListItem, args []string) error {
 		return parent.Rename(ctx, item, args[1])
 	}),
 }
@@ -201,7 +201,7 @@ inspecting fields the typed *ListItem hides — encryptedValue, full
 listItemMetadata audit trail, customerId — and for diagnosing wire
 shape changes.`,
 	Args: cobra.ExactArgs(1),
-	RunE: withItem(func(_ ctxAlias, _ *amazondevices.List, item *amazondevices.ListItem, _ []string) error {
+	RunE: withItem(func(_ ctxAlias, _ *alexactl.List, item *alexactl.ListItem, _ []string) error {
 		out, err := json.MarshalIndent(item.ServerShape(), "", "  ")
 		if err != nil {
 			return err
@@ -214,7 +214,7 @@ shape changes.`,
 // withItem builds a RunE that looks up an item by ID across all lists
 // (item IDs are UUIDs, so collision-free) and hands the resolved
 // (parent, item) tuple to the action. ID is always args[0].
-func withItem(action func(ctx ctxAlias, parent *amazondevices.List, item *amazondevices.ListItem, args []string) error) func(*cobra.Command, []string) error {
+func withItem(action func(ctx ctxAlias, parent *alexactl.List, item *alexactl.ListItem, args []string) error) func(*cobra.Command, []string) error {
 	return func(cmd *cobra.Command, args []string) error {
 		ctx, cancel := signalContext()
 		defer cancel()
@@ -248,7 +248,7 @@ func withItem(action func(ctx ctxAlias, parent *amazondevices.List, item *amazon
 
 // findListByName returns the matching *List by case-insensitive name,
 // or the default shopping list when name == "". Nil if no match.
-func findListByName(lists []*amazondevices.List, name string) *amazondevices.List {
+func findListByName(lists []*alexactl.List, name string) *alexactl.List {
 	for _, l := range lists {
 		if name == "" && l.Default {
 			return l

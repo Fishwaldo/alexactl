@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/Fishwaldo/goamazondevices/internal/amzconst"
+	"github.com/Fishwaldo/alexactl/internal/amzconst"
 )
 
 // defaultRefreshTTL is the fallback access-token lifetime applied when the
@@ -17,7 +17,7 @@ import (
 const defaultRefreshTTL = time.Hour
 
 // Sentinel errors returned by RefreshAccessToken. Callers (in particular
-// the main amazondevices package) use errors.Is to map these to
+// the main alexactl package) use errors.Is to map these to
 // higher-level sentinels (ErrCannotAuthenticate / ErrCannotConnect).
 var (
 	// ErrRefreshHTTP indicates the /auth/token endpoint returned a non-2xx
@@ -96,7 +96,7 @@ func (w *Wrapper) RefreshAccessToken(ctx context.Context, in RefreshInput) (stri
 
 	ttl := parseExpiresIn(body)
 	if ttl <= 0 {
-		w.Logger(ctx).DebugContext(ctx, "amazondevices: refresh response missing or non-positive expires_in; using default",
+		w.Logger(ctx).DebugContext(ctx, "alexactl: refresh response missing or non-positive expires_in; using default",
 			slog.Duration("default_ttl", defaultRefreshTTL))
 		ttl = defaultRefreshTTL
 	}

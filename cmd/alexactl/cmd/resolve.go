@@ -6,7 +6,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	amazondevices "github.com/Fishwaldo/goamazondevices"
+	"github.com/Fishwaldo/alexactl"
 )
 
 // registerDeviceFlag adds the standard optional --device flag bound to p.
@@ -17,7 +17,7 @@ func registerDeviceFlag(c *cobra.Command, p *string) {
 
 // resolveTarget picks the target serial from the --device flag (serial or
 // name, resolved against the device list) or the persisted default-device.
-func resolveTarget(deviceFlag string, s *Store, devices []*amazondevices.Device) (string, error) {
+func resolveTarget(deviceFlag string, s *Store, devices []*alexactl.Device) (string, error) {
 	if deviceFlag != "" {
 		return resolveDeviceRef(devices, deviceFlag)
 	}
@@ -29,8 +29,8 @@ func resolveTarget(deviceFlag string, s *Store, devices []*amazondevices.Device)
 
 // resolveDevice fetches the device targeted by --device or the persisted
 // default-device. It lists devices only when name resolution is needed.
-func resolveDevice(ctx context.Context, deviceFlag string, client *amazondevices.Client, s *Store) (*amazondevices.Device, error) {
-	var devices []*amazondevices.Device
+func resolveDevice(ctx context.Context, deviceFlag string, client *alexactl.Client, s *Store) (*alexactl.Device, error) {
+	var devices []*alexactl.Device
 	if deviceFlag != "" {
 		var err error
 		devices, err = client.Devices.List(ctx)
@@ -50,7 +50,7 @@ func resolveDevice(ctx context.Context, deviceFlag string, client *amazondevices
 // an empty serial, meaning "all devices" — unlike resolveDevice/
 // resolveTarget it never falls back to the configured default-device. A
 // name is resolved against the live device list.
-func resolveFilter(ctx context.Context, deviceFlag string, client *amazondevices.Client) (string, error) {
+func resolveFilter(ctx context.Context, deviceFlag string, client *alexactl.Client) (string, error) {
 	if deviceFlag == "" {
 		return "", nil
 	}

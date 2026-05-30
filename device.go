@@ -1,4 +1,4 @@
-package amazondevices
+package alexactl
 
 // Device describes one Amazon Echo (or Alexa-enabled) device. Returned by
 // DevicesService.List as a read-only snapshot — mutations on a *Device do

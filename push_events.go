@@ -1,4 +1,4 @@
-package amazondevices
+package alexactl
 
 // PushEvent is the common interface implemented by every concrete push
 // event type. Concrete event types live in this file. Switch on the

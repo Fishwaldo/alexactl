@@ -1,4 +1,4 @@
-package amazondevices
+package alexactl
 
 import (
 	"bytes"
@@ -8,7 +8,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/Fishwaldo/goamazondevices/internal/scrub"
+	"github.com/Fishwaldo/alexactl/internal/scrub"
 )
 
 // newPushLogCapture builds a slog.Logger backed by an in-memory text

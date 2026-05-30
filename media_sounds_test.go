@@ -1,4 +1,4 @@
-package amazondevices
+package alexactl
 
 import (
 	"context"
@@ -14,7 +14,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/Fishwaldo/goamazondevices/internal/cache"
+	"github.com/Fishwaldo/alexactl/internal/cache"
 )
 
 func TestMedia_Sounds_DecodesEntities(t *testing.T) {

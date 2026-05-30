@@ -6,12 +6,12 @@ import (
 	"os"
 	"path/filepath"
 
-	amazondevices "github.com/Fishwaldo/goamazondevices"
+	"github.com/Fishwaldo/alexactl"
 	"github.com/spf13/viper"
 )
 
 // appDirName is the per-app subdirectory under the OS config and cache dirs.
-const appDirName = "amazondevices-test"
+const appDirName = "alexactl"
 
 type storePaths struct {
 	config  string
@@ -145,12 +145,12 @@ func (s *Store) ConfigPath() string { return s.paths.config }
 
 // LoadSession reads the persisted Session, or returns nil if absent or
 // unreadable (caller then logs in fresh).
-func (s *Store) LoadSession() *amazondevices.Session {
+func (s *Store) LoadSession() *alexactl.Session {
 	b, err := os.ReadFile(s.paths.session)
 	if err != nil {
 		return nil
 	}
-	var sess amazondevices.Session
+	var sess alexactl.Session
 	if err := jsonUnmarshal(b, &sess); err != nil {
 		return nil
 	}
@@ -158,7 +158,7 @@ func (s *Store) LoadSession() *amazondevices.Session {
 }
 
 // SaveSession writes the Session as 0600 JSON, creating its directory.
-func (s *Store) SaveSession(sess *amazondevices.Session) error {
+func (s *Store) SaveSession(sess *alexactl.Session) error {
 	if err := os.MkdirAll(filepath.Dir(s.paths.session), 0o700); err != nil {
 		return fmt.Errorf("create session dir: %w", err)
 	}
@@ -177,8 +177,8 @@ func (s *Store) SessionPath() string { return s.paths.session }
 
 // CachePersistence returns a file-backed Persistence at the resolved cache
 // path, using the library's atomic file adapter.
-func (s *Store) CachePersistence() amazondevices.Persistence {
-	return amazondevices.FilePersistence(s.paths.cache)
+func (s *Store) CachePersistence() alexactl.Persistence {
+	return alexactl.FilePersistence(s.paths.cache)
 }
 
 // Load resolves all paths and reads config, applying override precedence:

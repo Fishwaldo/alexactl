@@ -16,7 +16,7 @@ var devicesBrightnessCmd = &cobra.Command{
 against the given device. Percent is clamped to [0,100] before sending.
 
 Example:
-  amazondevices-test devices brightness 75 --device "Bedroom"`,
+  alexactl devices brightness 75 --device "Bedroom"`,
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		ctx, cancel := signalContext()

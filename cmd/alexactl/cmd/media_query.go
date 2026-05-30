@@ -7,7 +7,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	amazondevices "github.com/Fishwaldo/goamazondevices"
+	"github.com/Fishwaldo/alexactl"
 )
 
 func newMusicProvidersCmd() *cobra.Command {
@@ -108,13 +108,13 @@ func newMediaStateCmd() *cobra.Command {
 		if err != nil {
 			return err
 		}
-		var devices []*amazondevices.Device
+		var devices []*alexactl.Device
 		if filter == "" {
 			devices, err = client.Devices.List(ctx)
 		} else {
-			var dvc *amazondevices.Device
+			var dvc *alexactl.Device
 			dvc, err = client.Devices.Get(ctx, filter)
-			devices = []*amazondevices.Device{dvc}
+			devices = []*alexactl.Device{dvc}
 		}
 		if err != nil {
 			return err

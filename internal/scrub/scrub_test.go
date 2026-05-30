@@ -5,7 +5,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/Fishwaldo/goamazondevices/internal/scrub"
+	"github.com/Fishwaldo/alexactl/internal/scrub"
 )
 
 func TestFields_TopLevel(t *testing.T) {

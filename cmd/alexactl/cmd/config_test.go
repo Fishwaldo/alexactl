@@ -4,11 +4,11 @@ import (
 	"strings"
 	"testing"
 
-	amazondevices "github.com/Fishwaldo/goamazondevices"
+	"github.com/Fishwaldo/alexactl"
 )
 
-func devs() []*amazondevices.Device {
-	return []*amazondevices.Device{
+func devs() []*alexactl.Device {
+	return []*alexactl.Device{
 		{SerialNumber: "G1", AccountName: "Kitchen"},
 		{SerialNumber: "G2", AccountName: "Bedroom"},
 		{SerialNumber: "G3", AccountName: "Bedroom"},

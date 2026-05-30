@@ -25,7 +25,7 @@ Typical ranges:
   cool white   6500K
 
 Example:
-  amazondevices-test devices color-temp 2700 --device "Bedroom"`,
+  alexactl devices color-temp 2700 --device "Bedroom"`,
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		ctx, cancel := signalContext()

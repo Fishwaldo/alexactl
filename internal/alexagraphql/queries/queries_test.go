@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/Fishwaldo/goamazondevices/internal/alexagraphql"
+	"github.com/Fishwaldo/alexactl/internal/alexagraphql"
 )
 
 // TestListEndpoints_RoundTrip uses the existing devices_endpoints fixture

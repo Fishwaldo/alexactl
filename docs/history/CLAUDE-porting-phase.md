@@ -1,4 +1,4 @@
-# goamazondevices — porting phase
+# alexactl — porting phase
 
 This repo is an in-progress Go port of the Python library **aioamazondevices**
 (https://github.com/chemelli74/aioamazondevices). We are NOT vendoring or
@@ -17,13 +17,13 @@ then write idiomatic Go in this tree.
 - Phase 3 (v0.3.0): HTTP/2 push streaming
 - Phase 4 (v1.0.0): API freeze, maintenance-mode CLAUDE.md replaces this one
 
-Design spec: `docs/superpowers/specs/2026-05-24-goamazondevices-design.md`.
-Phase 1 plan: `docs/superpowers/plans/2026-05-24-goamazondevices-phase1.md`.
+Design spec: `docs/superpowers/specs/2026-05-24-alexactl-design.md`.
+Phase 1 plan: `docs/superpowers/plans/2026-05-24-alexactl-phase1.md`.
 Always re-read the spec before architectural changes.
 
 ## Mapping conventions (Python → Go)
 
-- `class AmazonEchoApi` → `*amazondevices.Client` with sub-services
+- `class AmazonEchoApi` → `*alexactl.Client` with sub-services
   (`Auth`, `Devices`, `Media`, and later `Sensors`, `Push`, ...).
 - Each Python handler class → one Go service struct in its own file.
 - `async def foo(...)` → `func (s *FooService) Foo(ctx context.Context, ...) (..., error)`.
