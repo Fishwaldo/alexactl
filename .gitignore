@@ -27,3 +27,6 @@ config.yaml
 
 # Superpowers planning docs — kept locally, not tracked in git history
 /docs/superpowers/
+
+# CHANGELOG — kept locally, not tracked in git history
+/CHANGELOG.md
