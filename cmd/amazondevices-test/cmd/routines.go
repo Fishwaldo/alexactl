@@ -47,16 +47,14 @@ func newRoutinesListCmd() *cobra.Command {
 }
 
 func newRoutinesCallCmd() *cobra.Command {
-	var serial, name string
+	var device string
 	c := &cobra.Command{
-		Use:   "call",
+		Use:   "call <name>",
 		Short: "Trigger a routine by name on a device",
+		Args:  cobra.ExactArgs(1),
 	}
-	c.Flags().StringVar(&serial, "serial", "", "device serial number (required)")
-	c.Flags().StringVar(&name, "name", "", "routine name (required)")
-	_ = c.MarkFlagRequired("serial")
-	_ = c.MarkFlagRequired("name")
-	c.RunE = func(_ *cobra.Command, _ []string) error {
+	registerDeviceFlag(c, &device)
+	c.RunE = func(_ *cobra.Command, args []string) error {
 		ctx, cancel := signalContext()
 		defer cancel()
 		client, sess, err := newClient(true)
@@ -69,11 +67,11 @@ func newRoutinesCallCmd() *cobra.Command {
 		if _, err := client.Auth.Restore(ctx); err != nil {
 			return err
 		}
-		dvc, err := client.Devices.Get(ctx, serial)
+		dvc, err := resolveDevice(ctx, device, client, store)
 		if err != nil {
 			return err
 		}
-		return client.Media.CallRoutine(ctx, dvc, name)
+		return client.Media.CallRoutine(ctx, dvc, args[0])
 	}
 	return c
 }

@@ -15,7 +15,6 @@ import (
 var (
 	alarmsDeviceFlag     string
 	alarmsLsDeviceFlag   string
-	alarmsAtFlag         string
 	alarmsLabelFlag      string
 	alarmsSoundFlag      string
 	alarmsRecurrenceFlag string
@@ -105,13 +104,11 @@ var alarmsLsCmd = &cobra.Command{
 }
 
 var alarmsCreateCmd = &cobra.Command{
-	Use:   "create",
+	Use:   "create <at>",
 	Short: "Create a new alarm",
-	RunE: func(cmd *cobra.Command, _ []string) error {
-		if alarmsAtFlag == "" {
-			return fmt.Errorf("--at is required")
-		}
-		fireAt, err := parseAtFlag(alarmsAtFlag)
+	Args:  cobra.ExactArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		fireAt, err := parseAtFlag(args[0])
 		if err != nil {
 			return err
 		}
@@ -322,7 +319,6 @@ func codeToWeekday(code string) (time.Weekday, error) {
 
 func init() {
 	registerDeviceFlag(alarmsCreateCmd, &alarmsDeviceFlag)
-	alarmsCreateCmd.Flags().StringVar(&alarmsAtFlag, "at", "", "fire time, \"YYYY-MM-DD HH:MM\" or \"HH:MM\"")
 	alarmsCreateCmd.Flags().StringVar(&alarmsLabelFlag, "label", "", "optional label")
 	alarmsCreateCmd.Flags().StringVar(&alarmsSoundFlag, "sound", "", "optional sound id")
 	alarmsCreateCmd.Flags().StringVar(&alarmsRecurrenceFlag, "recurrence", "",

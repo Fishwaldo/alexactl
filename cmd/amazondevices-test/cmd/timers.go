@@ -14,7 +14,6 @@ import (
 var (
 	timersDeviceFlag   string
 	timersLsDeviceFlag string
-	timersDurationFlag string
 	timersLabelFlag    string
 	timersSoundFlag    string
 )
@@ -91,15 +90,13 @@ var timersLsCmd = &cobra.Command{
 }
 
 var timersCreateCmd = &cobra.Command{
-	Use:   "create",
+	Use:   "create <duration>",
 	Short: "Create a new timer",
-	RunE: func(cmd *cobra.Command, _ []string) error {
-		if timersDurationFlag == "" {
-			return fmt.Errorf("--duration is required (e.g. 30m, 1h15m)")
-		}
-		dur, err := time.ParseDuration(timersDurationFlag)
+	Args:  cobra.ExactArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		dur, err := time.ParseDuration(args[0])
 		if err != nil {
-			return fmt.Errorf("invalid --duration %q: %w", timersDurationFlag, err)
+			return fmt.Errorf("invalid duration %q: %w", args[0], err)
 		}
 		ctx, cancel := signalContext()
 		defer cancel()
@@ -193,7 +190,6 @@ func withTimer(action func(ctx context.Context, t *amazondevices.Timer, client *
 
 func init() {
 	registerDeviceFlag(timersCreateCmd, &timersDeviceFlag)
-	timersCreateCmd.Flags().StringVar(&timersDurationFlag, "duration", "", "countdown duration, e.g. 30m / 1h15m / 90s")
 	timersCreateCmd.Flags().StringVar(&timersLabelFlag, "label", "", "optional label")
 	timersCreateCmd.Flags().StringVar(&timersSoundFlag, "sound", "", "optional sound id")
 

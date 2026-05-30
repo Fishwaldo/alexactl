@@ -59,15 +59,14 @@ func newSoundListCmd() *cobra.Command {
 }
 
 func newSoundPlayCmd() *cobra.Command {
-	var device, soundID string
+	var device string
 	c := &cobra.Command{
-		Use:   "play",
+		Use:   "play <sound-id>",
 		Short: "Play a sound effect on a device (cluster fanout)",
+		Args:  cobra.ExactArgs(1),
 	}
 	registerDeviceFlag(c, &device)
-	c.Flags().StringVar(&soundID, "sound-id", "", "sound effect id (e.g. amzn_sfx_doorbell_01) (required)")
-	_ = c.MarkFlagRequired("sound-id")
-	c.RunE = func(_ *cobra.Command, _ []string) error {
+	c.RunE = func(_ *cobra.Command, args []string) error {
 		ctx, cancel := signalContext()
 		defer cancel()
 		client, sess, err := newClient(true)
@@ -84,28 +83,27 @@ func newSoundPlayCmd() *cobra.Command {
 		if err != nil {
 			return err
 		}
-		return client.Media.PlaySound(ctx, dvc, soundID)
+		return client.Media.PlaySound(ctx, dvc, args[0])
 	}
 	return c
 }
 
-// newMusicCmd builds `music` — query is a positional argument.
+// newMusicCmd builds `music` — provider and query are positional
+// arguments (provider first, then the search query).
 //
-// Usage: amazondevices-test music --device "Bedroom" --provider amzn-music "avici"
+// Usage: amazondevices-test music amzn-music "avici" --device "Bedroom"
 func newMusicCmd() *cobra.Command {
-	var device, provider string
+	var device string
 	c := &cobra.Command{
-		Use:   "music <query>",
+		Use:   "music <provider> <query>",
 		Short: "Play music on a device via the named provider",
-		Args:  cobra.ExactArgs(1),
+		Args:  cobra.ExactArgs(2),
 	}
 	registerDeviceFlag(c, &device)
-	c.Flags().StringVar(&provider, "provider", "", "music provider id (required; see `music-providers`)")
-	_ = c.MarkFlagRequired("provider")
 	c.RunE = func(_ *cobra.Command, args []string) error {
 		ctx, cancel := signalContext()
 		defer cancel()
-		query := args[0]
+		provider, query := args[0], args[1]
 		client, sess, err := newClient(true)
 		if err != nil {
 			return err
@@ -126,15 +124,14 @@ func newMusicCmd() *cobra.Command {
 }
 
 func newTextCmd() *cobra.Command {
-	var device, text string
+	var device string
 	c := &cobra.Command{
-		Use:   "text",
+		Use:   "text <command-text>",
 		Short: "Send an Alexa.TextCommand to a device",
+		Args:  cobra.ExactArgs(1),
 	}
 	registerDeviceFlag(c, &device)
-	c.Flags().StringVar(&text, "text", "", "command text (required)")
-	_ = c.MarkFlagRequired("text")
-	c.RunE = func(_ *cobra.Command, _ []string) error {
+	c.RunE = func(_ *cobra.Command, args []string) error {
 		ctx, cancel := signalContext()
 		defer cancel()
 		client, sess, err := newClient(true)
@@ -151,7 +148,7 @@ func newTextCmd() *cobra.Command {
 		if err != nil {
 			return err
 		}
-		return client.Media.TextCommand(ctx, dvc, text)
+		return client.Media.TextCommand(ctx, dvc, args[0])
 	}
 	return c
 }
@@ -186,15 +183,14 @@ func newSkillListCmd() *cobra.Command {
 }
 
 func newSkillLaunchCmd() *cobra.Command {
-	var device, skill string
+	var device string
 	c := &cobra.Command{
-		Use:   "launch",
+		Use:   "launch <skill>",
 		Short: "Launch a skill on a device",
+		Args:  cobra.ExactArgs(1),
 	}
 	registerDeviceFlag(c, &device)
-	c.Flags().StringVar(&skill, "skill", "", "skill name (required)")
-	_ = c.MarkFlagRequired("skill")
-	c.RunE = func(_ *cobra.Command, _ []string) error {
+	c.RunE = func(_ *cobra.Command, args []string) error {
 		ctx, cancel := signalContext()
 		defer cancel()
 		client, sess, err := newClient(true)
@@ -211,7 +207,7 @@ func newSkillLaunchCmd() *cobra.Command {
 		if err != nil {
 			return err
 		}
-		return client.Media.LaunchSkill(ctx, dvc, skill)
+		return client.Media.LaunchSkill(ctx, dvc, args[0])
 	}
 	return c
 }

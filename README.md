@@ -108,18 +108,22 @@ go build -o amazondevices-test ./cmd/amazondevices-test
 ./amazondevices-test devices list --detail
 ./amazondevices-test sensors list
 
-# Media (Echo speakers)
-./amazondevices-test speak    --serial S-KITCHEN-001 --text "hello"
-./amazondevices-test announce --serial S-PAIR-001    --text "dinner ready"
-./amazondevices-test volume   --serial S-KITCHEN-001 --value 30
+# Media (Echo speakers). Every single-device command takes --device
+# (serial or friendly name); omit it to use the configured default-device.
+./amazondevices-test speak    "hello"        --device "Kitchen"
+./amazondevices-test announce "dinner ready" --device "Kitchen"
+./amazondevices-test volume   30             --device "Kitchen"
+./amazondevices-test music    AMAZON_MUSIC "miles davis" --device "Kitchen"
+./amazondevices-test sound play amzn_sfx_doorbell_01     --device "Kitchen"
+./amazondevices-test dnd set  on             --device "Kitchen"
 
 # Smart-home control
-./amazondevices-test devices power      <serial> on
-./amazondevices-test devices brightness <serial> 80
-./amazondevices-test devices color      <serial> ff4000
-./amazondevices-test devices lock       <serial>
-./amazondevices-test devices thermostat <serial> set-target 21 c
-./amazondevices-test devices mode set   <serial> Apparatus.FanSpeed L3
+./amazondevices-test devices power      on --device "Lamp"
+./amazondevices-test devices brightness 80 --device "Lamp"
+./amazondevices-test devices color      ff4000 --device "Lamp"
+./amazondevices-test devices lock       --device "Front Door"
+./amazondevices-test devices thermostat set-target 21 c --device "Hallway"
+./amazondevices-test devices mode set   Apparatus.FanSpeed L3 --device "AC"
 ```
 
 Configuration can also be supplied via `./config.yaml`:

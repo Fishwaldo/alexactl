@@ -14,8 +14,6 @@ import (
 var (
 	remindersDeviceFlag     string
 	remindersLsDeviceFlag   string
-	remindersAtFlag         string
-	remindersLabelFlag      string
 	remindersRecurrenceFlag string
 )
 
@@ -103,19 +101,15 @@ var remindersLsCmd = &cobra.Command{
 }
 
 var remindersCreateCmd = &cobra.Command{
-	Use:   "create",
+	Use:   "create <at> <label>",
 	Short: "Create a new reminder",
-	RunE: func(cmd *cobra.Command, _ []string) error {
-		if remindersAtFlag == "" {
-			return fmt.Errorf("--at is required")
-		}
-		if remindersLabelFlag == "" {
-			return fmt.Errorf("--label is required (this is what Alexa speaks)")
-		}
-		fireAt, err := parseAtFlag(remindersAtFlag)
+	Args:  cobra.ExactArgs(2),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		fireAt, err := parseAtFlag(args[0])
 		if err != nil {
 			return err
 		}
+		label := args[1]
 		var recur *amazondevices.Recurrence
 		if remindersRecurrenceFlag != "" {
 			recur, err = parseRecurrenceFlag(remindersRecurrenceFlag)
@@ -145,7 +139,7 @@ var remindersCreateCmd = &cobra.Command{
 		r := &amazondevices.Reminder{
 			DeviceSerialNumber: dvc.SerialNumber,
 			FireAt:             fireAt,
-			Label:              remindersLabelFlag,
+			Label:              label,
 			Recurrence:         recur,
 		}
 		created, err := client.Reminders.Create(ctx, r)
@@ -242,8 +236,6 @@ func withReminder(action func(ctx context.Context, r *amazondevices.Reminder, cl
 
 func init() {
 	registerDeviceFlag(remindersCreateCmd, &remindersDeviceFlag)
-	remindersCreateCmd.Flags().StringVar(&remindersAtFlag, "at", "", "fire time, \"YYYY-MM-DD HH:MM\" or \"HH:MM\"")
-	remindersCreateCmd.Flags().StringVar(&remindersLabelFlag, "label", "", "what Alexa speaks (REQUIRED)")
 	remindersCreateCmd.Flags().StringVar(&remindersRecurrenceFlag, "recurrence", "",
 		"recurrence: daily | weekdays | weekends | weekly:MO,WE,FR | rrule:\"FREQ=...\"")
 

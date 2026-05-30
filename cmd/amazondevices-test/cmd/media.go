@@ -7,20 +7,18 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// newSpeakCmd builds the `speak` subcommand with its flags scoped to a
-// closure rather than package-level globals. Each invocation has fresh
-// flag-bound variables, so concurrent or sequential test harness reuse
-// can't leak state between runs.
+// newSpeakCmd builds the `speak` subcommand. The text to speak is a
+// positional argument; the target device is the standard --device flag
+// (serial or name, falling back to the configured default-device).
 func newSpeakCmd() *cobra.Command {
-	var serial, text string
+	var device string
 	cmd := &cobra.Command{
-		Use:   "speak",
+		Use:   "speak <text>",
 		Short: "Speak text on a device",
+		Args:  cobra.ExactArgs(1),
 	}
-	cmd.Flags().StringVar(&serial, "serial", "", "device serial number (required)")
-	cmd.Flags().StringVar(&text, "text", "", "text to speak (required)")
-	_ = cmd.MarkFlagRequired("serial")
-	cmd.RunE = func(_ *cobra.Command, _ []string) error {
+	registerDeviceFlag(cmd, &device)
+	cmd.RunE = func(_ *cobra.Command, args []string) error {
 		ctx, cancel := signalContext()
 		defer cancel()
 
@@ -34,26 +32,26 @@ func newSpeakCmd() *cobra.Command {
 		if _, err := client.Auth.Restore(ctx); err != nil {
 			return err
 		}
-		dvc, err := client.Devices.Get(ctx, serial)
+		dvc, err := resolveDevice(ctx, device, client, store)
 		if err != nil {
 			return err
 		}
-		return client.Media.Speak(ctx, dvc, text)
+		return client.Media.Speak(ctx, dvc, args[0])
 	}
 	return cmd
 }
 
-// newAnnounceCmd builds the `announce` subcommand with closure-scoped flags.
+// newAnnounceCmd builds the `announce` subcommand. The message text is a
+// positional argument; the target device is the standard --device flag.
 func newAnnounceCmd() *cobra.Command {
-	var serial, text string
+	var device string
 	cmd := &cobra.Command{
-		Use:   "announce",
+		Use:   "announce <text>",
 		Short: "Announce a message on a device (cluster fanout)",
+		Args:  cobra.ExactArgs(1),
 	}
-	cmd.Flags().StringVar(&serial, "serial", "", "device serial number (required)")
-	cmd.Flags().StringVar(&text, "text", "", "text to announce (required)")
-	_ = cmd.MarkFlagRequired("serial")
-	cmd.RunE = func(_ *cobra.Command, _ []string) error {
+	registerDeviceFlag(cmd, &device)
+	cmd.RunE = func(_ *cobra.Command, args []string) error {
 		ctx, cancel := signalContext()
 		defer cancel()
 
@@ -67,28 +65,27 @@ func newAnnounceCmd() *cobra.Command {
 		if _, err := client.Auth.Restore(ctx); err != nil {
 			return err
 		}
-		dvc, err := client.Devices.Get(ctx, serial)
+		dvc, err := resolveDevice(ctx, device, client, store)
 		if err != nil {
 			return err
 		}
-		return client.Media.Announce(ctx, dvc, text)
+		return client.Media.Announce(ctx, dvc, args[0])
 	}
 	return cmd
 }
 
-// newVolumeCmd builds the `volume` subcommand — value is a positional
-// argument.
+// newVolumeCmd builds the `volume` subcommand — the level is a positional
+// argument and the target device is the standard --device flag.
 //
-// Usage: amazondevices-test volume --serial S 42
+// Usage: amazondevices-test volume 42 --device "Bedroom"
 func newVolumeCmd() *cobra.Command {
-	var serial string
+	var device string
 	cmd := &cobra.Command{
 		Use:   "volume <0..100>",
 		Short: "Set device volume",
 		Args:  cobra.ExactArgs(1),
 	}
-	cmd.Flags().StringVar(&serial, "serial", "", "device serial number (required)")
-	_ = cmd.MarkFlagRequired("serial")
+	registerDeviceFlag(cmd, &device)
 	cmd.RunE = func(_ *cobra.Command, args []string) error {
 		ctx, cancel := signalContext()
 		defer cancel()
@@ -107,7 +104,7 @@ func newVolumeCmd() *cobra.Command {
 		if _, err := client.Auth.Restore(ctx); err != nil {
 			return err
 		}
-		dvc, err := client.Devices.Get(ctx, serial)
+		dvc, err := resolveDevice(ctx, device, client, store)
 		if err != nil {
 			return err
 		}

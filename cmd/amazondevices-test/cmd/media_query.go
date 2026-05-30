@@ -85,13 +85,12 @@ func newVolumeStateCmd() *cobra.Command {
 }
 
 func newMediaStateCmd() *cobra.Command {
-	var serial string
+	var device string
 	c := &cobra.Command{
 		Use:   "media-state",
 		Short: "Print the current playback snapshot for one device",
 	}
-	c.Flags().StringVar(&serial, "serial", "", "device serial number (required)")
-	_ = c.MarkFlagRequired("serial")
+	c.Flags().StringVar(&device, "device", "", "filter to one device (serial or name); omit for all devices")
 	c.RunE = func(_ *cobra.Command, _ []string) error {
 		ctx, cancel := signalContext()
 		defer cancel()
@@ -105,27 +104,49 @@ func newMediaStateCmd() *cobra.Command {
 		if _, err := client.Auth.Restore(ctx); err != nil {
 			return err
 		}
-		dvc, err := client.Devices.Get(ctx, serial)
+		filter, err := resolveFilter(ctx, device, client)
 		if err != nil {
 			return err
 		}
-		states, err := client.Media.MediaStates(ctx, []*amazondevices.Device{dvc})
+		var devices []*amazondevices.Device
+		if filter == "" {
+			devices, err = client.Devices.List(ctx)
+		} else {
+			var dvc *amazondevices.Device
+			dvc, err = client.Devices.Get(ctx, filter)
+			devices = []*amazondevices.Device{dvc}
+		}
 		if err != nil {
 			return err
 		}
-		s, ok := states[serial]
-		if !ok {
-			_, _ = fmt.Fprintln(os.Stdout, "(no media session for this device)")
-			return nil
+		states, err := client.Media.MediaStates(ctx, devices)
+		if err != nil {
+			return err
 		}
-		_, _ = fmt.Fprintf(os.Stdout, "state    : %s\n", s.PlayerState)
-		_, _ = fmt.Fprintf(os.Stdout, "title    : %s\n", s.NowPlayingTitle)
-		_, _ = fmt.Fprintf(os.Stdout, "line1    : %s\n", s.NowPlayingLine1)
-		_, _ = fmt.Fprintf(os.Stdout, "line2    : %s\n", s.NowPlayingLine2)
-		_, _ = fmt.Fprintf(os.Stdout, "provider : %s\n", s.MediaProvider)
-		_, _ = fmt.Fprintf(os.Stdout, "length   : %s\n", s.MediaLength)
-		_, _ = fmt.Fprintf(os.Stdout, "position : %s (as of %s)\n",
-			s.MediaPosition, s.MediaPositionUpdated.Format("15:04:05"))
+		serials := make([]string, 0, len(devices))
+		for _, d := range devices {
+			serials = append(serials, d.SerialNumber)
+		}
+		sort.Strings(serials)
+		for i, serial := range serials {
+			s, ok := states[serial]
+			if i > 0 {
+				_, _ = fmt.Fprintln(os.Stdout)
+			}
+			_, _ = fmt.Fprintf(os.Stdout, "device   : %s\n", serial)
+			if !ok {
+				_, _ = fmt.Fprintln(os.Stdout, "(no media session for this device)")
+				continue
+			}
+			_, _ = fmt.Fprintf(os.Stdout, "state    : %s\n", s.PlayerState)
+			_, _ = fmt.Fprintf(os.Stdout, "title    : %s\n", s.NowPlayingTitle)
+			_, _ = fmt.Fprintf(os.Stdout, "line1    : %s\n", s.NowPlayingLine1)
+			_, _ = fmt.Fprintf(os.Stdout, "line2    : %s\n", s.NowPlayingLine2)
+			_, _ = fmt.Fprintf(os.Stdout, "provider : %s\n", s.MediaProvider)
+			_, _ = fmt.Fprintf(os.Stdout, "length   : %s\n", s.MediaLength)
+			_, _ = fmt.Fprintf(os.Stdout, "position : %s (as of %s)\n",
+				s.MediaPosition, s.MediaPositionUpdated.Format("15:04:05"))
+		}
 		return nil
 	}
 	return c

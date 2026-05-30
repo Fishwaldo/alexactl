@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"sort"
+	"strings"
 
 	"github.com/spf13/cobra"
 )
@@ -52,19 +53,21 @@ func newDnDGetCmd() *cobra.Command {
 }
 
 func newDnDSetCmd() *cobra.Command {
-	var serial string
-	var enable bool
+	var device string
 	cmd := &cobra.Command{
-		Use:   "set",
+		Use:   "set <on|off>",
 		Short: "Toggle Do Not Disturb on one device",
+		Args:  cobra.ExactArgs(1),
 	}
-	cmd.Flags().StringVar(&serial, "serial", "", "device serial number (required)")
-	cmd.Flags().BoolVar(&enable, "enable", false, "true to enable DnD; false to disable")
-	_ = cmd.MarkFlagRequired("serial")
-	cmd.RunE = func(_ *cobra.Command, _ []string) error {
+	registerDeviceFlag(cmd, &device)
+	cmd.RunE = func(_ *cobra.Command, args []string) error {
 		ctx, cancel := signalContext()
 		defer cancel()
 
+		enable, err := parseOnOff(args[0])
+		if err != nil {
+			return err
+		}
 		client, sess, err := newClient(true)
 		if err != nil {
 			return err
@@ -75,13 +78,24 @@ func newDnDSetCmd() *cobra.Command {
 		if _, err := client.Auth.Restore(ctx); err != nil {
 			return err
 		}
-		dvc, err := client.Devices.Get(ctx, serial)
+		dvc, err := resolveDevice(ctx, device, client, store)
 		if err != nil {
 			return err
 		}
 		return client.DnD.Set(ctx, dvc, enable)
 	}
 	return cmd
+}
+
+// parseOnOff maps "on"/"off" (case-insensitive) to a boolean.
+func parseOnOff(s string) (bool, error) {
+	switch strings.ToLower(s) {
+	case "on":
+		return true, nil
+	case "off":
+		return false, nil
+	}
+	return false, fmt.Errorf("expected \"on\" or \"off\", got %q", s)
 }
 
 func init() {
