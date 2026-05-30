@@ -1,11 +1,11 @@
 # Configuration for genqlient (https://github.com/Khan/genqlient).
 # Edit a .graphql file in queries/ then run `go generate ./internal/alexagraphql/...`.
 #
-# The schema lives in research/ alongside the raw introspection JSON it
-# was derived from; codegen pulls from there via a relative path.
+# The schema is the introspected Alexa GraphQL SDL, vendored under schema/.
+# (The raw introspection JSON it was derived from is kept out of the repo.)
 
 schema:
-  - ../../docs/superpowers/research/2026-05-25-alexa-graphql-schema.graphql
+  - schema/schema.graphql
 
 operations:
   - queries/*.graphql
