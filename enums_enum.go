@@ -246,16 +246,102 @@ func (x *Kind) AppendText(b []byte) ([]byte, error) {
 }
 
 const (
-	// ListTypeShopping is a ListType of type ListTypeShopping.
-	ListTypeShopping ListType = "SHOPPING_LIST"
+	// ListItemStatusActive is a ListItemStatus of type ListItemStatusActive.
+	ListItemStatusActive ListItemStatus = "ACTIVE"
+	// ListItemStatusComplete is a ListItemStatus of type ListItemStatusComplete.
+	ListItemStatusComplete ListItemStatus = "COMPLETE"
+)
+
+var ErrInvalidListItemStatus = fmt.Errorf("not a valid ListItemStatus, try [%s]", strings.Join(_ListItemStatusNames, ", "))
+
+var _ListItemStatusNames = []string{
+	string(ListItemStatusActive),
+	string(ListItemStatusComplete),
+}
+
+// ListItemStatusNames returns a list of possible string values of ListItemStatus.
+func ListItemStatusNames() []string {
+	tmp := make([]string, len(_ListItemStatusNames))
+	copy(tmp, _ListItemStatusNames)
+	return tmp
+}
+
+// ListItemStatusValues returns a list of the values for ListItemStatus
+func ListItemStatusValues() []ListItemStatus {
+	return []ListItemStatus{
+		ListItemStatusActive,
+		ListItemStatusComplete,
+	}
+}
+
+// String implements the Stringer interface.
+func (x ListItemStatus) String() string {
+	return string(x)
+}
+
+// IsValid provides a quick way to determine if the typed value is
+// part of the allowed enumerated values
+func (x ListItemStatus) IsValid() bool {
+	_, err := ParseListItemStatus(string(x))
+	return err == nil
+}
+
+var _ListItemStatusValue = map[string]ListItemStatus{
+	"ACTIVE":   ListItemStatusActive,
+	"active":   ListItemStatusActive,
+	"COMPLETE": ListItemStatusComplete,
+	"complete": ListItemStatusComplete,
+}
+
+// ParseListItemStatus attempts to convert a string to a ListItemStatus.
+func ParseListItemStatus(name string) (ListItemStatus, error) {
+	if x, ok := _ListItemStatusValue[name]; ok {
+		return x, nil
+	}
+	// Case insensitive parse, do a separate lookup to prevent unnecessary cost of lowercasing a string if we don't need to.
+	if x, ok := _ListItemStatusValue[strings.ToLower(name)]; ok {
+		return x, nil
+	}
+	return ListItemStatus(""), fmt.Errorf("%s is %w", name, ErrInvalidListItemStatus)
+}
+
+// MarshalText implements the text marshaller method.
+func (x ListItemStatus) MarshalText() ([]byte, error) {
+	return []byte(string(x)), nil
+}
+
+// UnmarshalText implements the text unmarshaller method.
+func (x *ListItemStatus) UnmarshalText(text []byte) error {
+	tmp, err := ParseListItemStatus(string(text))
+	if err != nil {
+		return err
+	}
+	*x = tmp
+	return nil
+}
+
+// AppendText appends the textual representation of itself to the end of b
+// (allocating a larger slice if necessary) and returns the updated slice.
+//
+// Implementations must not retain b, nor mutate any bytes within b[:len(b)].
+func (x *ListItemStatus) AppendText(b []byte) ([]byte, error) {
+	return append(b, x.String()...), nil
+}
+
+const (
+	// ListTypeShop is a ListType of type ListTypeShop.
+	ListTypeShop ListType = "SHOP"
+	// ListTypeTodo is a ListType of type ListTypeTodo.
+	ListTypeTodo ListType = "TODO"
 	// ListTypeCustom is a ListType of type ListTypeCustom.
-	ListTypeCustom ListType = "LIST"
+	ListTypeCustom ListType = "CUSTOM"
 )
 
 var ErrInvalidListType = fmt.Errorf("not a valid ListType, try [%s]", strings.Join(_ListTypeNames, ", "))
 
 var _ListTypeNames = []string{
-	string(ListTypeShopping),
+	string(ListTypeShop),
+	string(ListTypeTodo),
 	string(ListTypeCustom),
 }
 
@@ -269,7 +355,8 @@ func ListTypeNames() []string {
 // ListTypeValues returns a list of the values for ListType
 func ListTypeValues() []ListType {
 	return []ListType{
-		ListTypeShopping,
+		ListTypeShop,
+		ListTypeTodo,
 		ListTypeCustom,
 	}
 }
@@ -287,10 +374,12 @@ func (x ListType) IsValid() bool {
 }
 
 var _ListTypeValue = map[string]ListType{
-	"SHOPPING_LIST": ListTypeShopping,
-	"shopping_list": ListTypeShopping,
-	"LIST":          ListTypeCustom,
-	"list":          ListTypeCustom,
+	"SHOP":   ListTypeShop,
+	"shop":   ListTypeShop,
+	"TODO":   ListTypeTodo,
+	"todo":   ListTypeTodo,
+	"CUSTOM": ListTypeCustom,
+	"custom": ListTypeCustom,
 }
 
 // ParseListType attempts to convert a string to a ListType.

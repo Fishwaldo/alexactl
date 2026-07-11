@@ -131,17 +131,32 @@ type ThermostatMode string
 //go:generate go tool go-enum -f $GOFILE --marshal --names --values --nocase --noprefix
 type LockState string
 
-// ListType is the kind of Alexa list (shopping vs. custom).
+// ListType is the kind of Alexa list on the v2 ToDo API: the default
+// shopping list (SHOP), a to-do list (TODO), or a user-named custom
+// list (CUSTOM).
 //
 // ENUM(
 //
-//	ListTypeShopping="SHOPPING_LIST",
-//	ListTypeCustom="LIST"
+//	ListTypeShop="SHOP",
+//	ListTypeTodo="TODO",
+//	ListTypeCustom="CUSTOM"
 //
 // )
 //
 //go:generate go tool go-enum -f $GOFILE --marshal --names --values --nocase --noprefix
 type ListType string
+
+// ListItemStatus is the completion state of a v2 ToDo list item.
+//
+// ENUM(
+//
+//	ListItemStatusActive="ACTIVE",
+//	ListItemStatusComplete="COMPLETE"
+//
+// )
+//
+//go:generate go tool go-enum -f $GOFILE --marshal --names --values --nocase --noprefix
+type ListItemStatus string
 
 // DropInStatus is the drop-in permission level reported/set for a device.
 //

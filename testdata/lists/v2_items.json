@@ -1,0 +1,16 @@
+{
+  "itemInfoList": [
+    {
+      "itemId": "item-1",
+      "itemName": "milk",
+      "itemStatus": "ACTIVE",
+      "version": 3
+    },
+    {
+      "itemId": "item-2",
+      "itemName": "bread",
+      "itemStatus": "COMPLETE",
+      "version": 5
+    }
+  ]
+}
