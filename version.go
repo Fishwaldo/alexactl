@@ -8,8 +8,8 @@
 package alexactl
 
 // Version is the released version of this library.
-const Version = "0.10.0"
+const Version = "0.11.0"
 
 // UpstreamVersion records the version of aioamazondevices whose behavior
 // this library mirrors. Bumped when this library catches up to a new upstream tag.
-const UpstreamVersion = "13.7.2"
+const UpstreamVersion = "14.2.0"
