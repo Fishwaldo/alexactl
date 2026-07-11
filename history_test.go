@@ -93,6 +93,42 @@ func TestHistoryService_Vocal_FetchesCSRFAndRecords(t *testing.T) {
 		"ASR_TIMEOUT must be filtered; the SetTimer record should win")
 }
 
+func TestVocalHandlesRecordTypeAndArrayDeviceInfo(t *testing.T) {
+	frontend, err := os.ReadFile("testdata/history/frontend.html")
+	require.NoError(t, err)
+	recordsBody, err := os.ReadFile("testdata/history/records.json")
+	require.NoError(t, err)
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case strings.HasSuffix(r.URL.Path, "/alexa-privacy/apd/rvh"):
+			w.Header().Set("Content-Type", "text/html; charset=utf-8")
+			_, _ = w.Write(frontend)
+		case strings.HasSuffix(r.URL.Path, "/alexa-privacy/apd/rah/alexa-history-records-v2"):
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write(recordsBody)
+		default:
+			t.Errorf("unexpected request: %s", r.URL.Path)
+		}
+	}))
+	t.Cleanup(srv.Close)
+
+	c := newHistoryTestClient(t, srv)
+
+	got, err := c.History.Vocal(context.Background())
+	require.NoError(t, err)
+
+	require.NotNil(t, got["SERIAL_ARR"], "array-shaped deviceInfo should be kept")
+
+	require.NotNil(t, got["SERIAL_RT"])
+	assert.Equal(t, "CustomerReview", got["SERIAL_RT"].HistoryType)
+	assert.Equal(t, "Unknown", got["SERIAL_RT"].Intent)
+
+	for serial := range got {
+		assert.NotEqual(t, "", serial, "null deviceInfo record must not add a phantom serial")
+	}
+}
+
 func TestHistoryService_Vocal_MissingCSRFErrors(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if strings.HasSuffix(r.URL.Path, "/alexa-privacy/apd/rvh") {

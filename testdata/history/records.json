@@ -31,6 +31,29 @@
       "intent": "SetTimer",
       "title": "set a five minute timer",
       "subTitle": "Alexa, set a five minute timer"
+    },
+    {
+      "deviceInfo": [{"deviceSerialNumber": "SERIAL_ARR"}],
+      "utteranceType": "GENERAL",
+      "timestamp": 1748180000000,
+      "intent": "PlayMusic",
+      "title": "play the radio",
+      "subTitle": "Alexa, play the radio"
+    },
+    {
+      "deviceInfo": {"deviceSerialNumber": "SERIAL_RT"},
+      "recordType": "CustomerReview",
+      "timestamp": 1748180100000,
+      "title": "left a review",
+      "subTitle": "Customer review recorded"
+    },
+    {
+      "deviceInfo": null,
+      "utteranceType": "GENERAL",
+      "timestamp": 1748180200000,
+      "intent": "Unknown",
+      "title": "no device info",
+      "subTitle": "record with null deviceInfo"
     }
   ]
 }
