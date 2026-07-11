@@ -31,18 +31,19 @@ type Client struct {
 	// cfg.pushCacheBridge is true; nil otherwise.
 	pushBridgeOnce *sync.Once
 
-	Auth      *AuthService
-	Devices   *DevicesService
-	Media     *MediaService
-	Sequence  *SequenceService
-	DnD       *DnDService
-	Sensors   *SensorsService
-	History   *HistoryService
-	Push      *PushService
-	Lists     *ListsService
-	Alarms    *AlarmsService
-	Reminders *RemindersService
-	Timers    *TimersService
+	Auth           *AuthService
+	Devices        *DevicesService
+	Media          *MediaService
+	Sequence       *SequenceService
+	DnD            *DnDService
+	Sensors        *SensorsService
+	History        *HistoryService
+	Push           *PushService
+	Lists          *ListsService
+	Alarms         *AlarmsService
+	Reminders      *RemindersService
+	Timers         *TimersService
+	Communications *CommunicationsService
 }
 
 // NewClient constructs a Client. It performs no I/O.
@@ -87,20 +88,21 @@ func NewClient(opts ...Option) (*Client, error) {
 	}
 
 	c := &Client{
-		cfg:          cfg,
-		wrapper:      wr,
-		cacheManager: mgr,
-		Auth:         &AuthService{wrapper: wr, cacheManager: mgr},
-		Devices:      &DevicesService{wrapper: wr},
-		Media:        &MediaService{wrapper: wr},
-		Sequence:     &SequenceService{wrapper: wr},
-		DnD:          &DnDService{wrapper: wr},
-		Sensors:      &SensorsService{wrapper: wr},
-		History:      &HistoryService{wrapper: wr},
-		Lists:        &ListsService{wrapper: wr},
-		Alarms:       &AlarmsService{wrapper: wr},
-		Reminders:    &RemindersService{wrapper: wr},
-		Timers:       &TimersService{wrapper: wr},
+		cfg:            cfg,
+		wrapper:        wr,
+		cacheManager:   mgr,
+		Auth:           &AuthService{wrapper: wr, cacheManager: mgr},
+		Devices:        &DevicesService{wrapper: wr},
+		Media:          &MediaService{wrapper: wr},
+		Sequence:       &SequenceService{wrapper: wr},
+		DnD:            &DnDService{wrapper: wr},
+		Sensors:        &SensorsService{wrapper: wr},
+		History:        &HistoryService{wrapper: wr},
+		Lists:          &ListsService{wrapper: wr},
+		Alarms:         &AlarmsService{wrapper: wr},
+		Reminders:      &RemindersService{wrapper: wr},
+		Timers:         &TimersService{wrapper: wr},
+		Communications: &CommunicationsService{wrapper: wr},
 	}
 	// Smart-home write client. Same wrapper as Devices so
 	// auth refresh / retry / scrub carry over. Back-referenced on
@@ -237,7 +239,7 @@ func NewClient(opts ...Option) (*Client, error) {
 	}
 	c.Auth.consumers = []sessionConsumer{
 		c.Devices, c.Media, c.Sequence, c.DnD, c.Sensors, c.History, c.Push, c.Lists,
-		c.Alarms, c.Reminders, c.Timers,
+		c.Alarms, c.Reminders, c.Timers, c.Communications,
 	}
 	// Wire devicesLookup closures so Create methods can
 	// resolve DeviceType from a SerialNumber via the Devices cache.

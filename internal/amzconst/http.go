@@ -97,3 +97,9 @@ const (
 	HTTP2SiteTemplate      = "https://bob-dispatch-prod-{region}.amazon.com"
 	HTTP2DirectivesVersion = "20160207"
 )
+
+// Alexa communications service (global host, not marketplace-scoped).
+const (
+	CommSite           = "https://alexa-comms-mobile-service.amazon.com"
+	URICommPreferences = "/devicesTypes/%s/deviceId/%s/preferences" // device_type, serial
+)

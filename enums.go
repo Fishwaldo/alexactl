@@ -142,3 +142,16 @@ type LockState string
 //
 //go:generate go tool go-enum -f $GOFILE --marshal --names --values --nocase --noprefix
 type ListType string
+
+// DropInStatus is the drop-in permission level reported/set for a device.
+//
+// ENUM(
+//
+//	DropInStatusAll="All",
+//	DropInStatusHome="Home",
+//	DropInStatusOff="Off"
+//
+// )
+//
+//go:generate go tool go-enum -f $GOFILE --marshal --names --values --nocase --noprefix
+type DropInStatus string

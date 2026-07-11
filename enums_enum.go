@@ -11,6 +11,95 @@ import (
 )
 
 const (
+	// DropInStatusAll is a DropInStatus of type DropInStatusAll.
+	DropInStatusAll DropInStatus = "All"
+	// DropInStatusHome is a DropInStatus of type DropInStatusHome.
+	DropInStatusHome DropInStatus = "Home"
+	// DropInStatusOff is a DropInStatus of type DropInStatusOff.
+	DropInStatusOff DropInStatus = "Off"
+)
+
+var ErrInvalidDropInStatus = fmt.Errorf("not a valid DropInStatus, try [%s]", strings.Join(_DropInStatusNames, ", "))
+
+var _DropInStatusNames = []string{
+	string(DropInStatusAll),
+	string(DropInStatusHome),
+	string(DropInStatusOff),
+}
+
+// DropInStatusNames returns a list of possible string values of DropInStatus.
+func DropInStatusNames() []string {
+	tmp := make([]string, len(_DropInStatusNames))
+	copy(tmp, _DropInStatusNames)
+	return tmp
+}
+
+// DropInStatusValues returns a list of the values for DropInStatus
+func DropInStatusValues() []DropInStatus {
+	return []DropInStatus{
+		DropInStatusAll,
+		DropInStatusHome,
+		DropInStatusOff,
+	}
+}
+
+// String implements the Stringer interface.
+func (x DropInStatus) String() string {
+	return string(x)
+}
+
+// IsValid provides a quick way to determine if the typed value is
+// part of the allowed enumerated values
+func (x DropInStatus) IsValid() bool {
+	_, err := ParseDropInStatus(string(x))
+	return err == nil
+}
+
+var _DropInStatusValue = map[string]DropInStatus{
+	"All":  DropInStatusAll,
+	"all":  DropInStatusAll,
+	"Home": DropInStatusHome,
+	"home": DropInStatusHome,
+	"Off":  DropInStatusOff,
+	"off":  DropInStatusOff,
+}
+
+// ParseDropInStatus attempts to convert a string to a DropInStatus.
+func ParseDropInStatus(name string) (DropInStatus, error) {
+	if x, ok := _DropInStatusValue[name]; ok {
+		return x, nil
+	}
+	// Case insensitive parse, do a separate lookup to prevent unnecessary cost of lowercasing a string if we don't need to.
+	if x, ok := _DropInStatusValue[strings.ToLower(name)]; ok {
+		return x, nil
+	}
+	return DropInStatus(""), fmt.Errorf("%s is %w", name, ErrInvalidDropInStatus)
+}
+
+// MarshalText implements the text marshaller method.
+func (x DropInStatus) MarshalText() ([]byte, error) {
+	return []byte(string(x)), nil
+}
+
+// UnmarshalText implements the text unmarshaller method.
+func (x *DropInStatus) UnmarshalText(text []byte) error {
+	tmp, err := ParseDropInStatus(string(text))
+	if err != nil {
+		return err
+	}
+	*x = tmp
+	return nil
+}
+
+// AppendText appends the textual representation of itself to the end of b
+// (allocating a larger slice if necessary) and returns the updated slice.
+//
+// Implementations must not retain b, nor mutate any bytes within b[:len(b)].
+func (x *DropInStatus) AppendText(b []byte) ([]byte, error) {
+	return append(b, x.String()...), nil
+}
+
+const (
 	// KindEcho is a Kind of type KindEcho.
 	KindEcho Kind = "echo"
 	// KindLight is a Kind of type KindLight.
