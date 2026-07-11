@@ -300,22 +300,30 @@ func (w *Wrapper) injectInitialCookies(rawURL string) {
 	// Post-login sessionCookies take precedence over the pre-login
 	// initialCookies — this mirrors Python's ternary in `_session_request`:
 	//   _cookies = _load_website_cookies() if login_stored_data else self._cookies
-	domain := "amazon." + w.domain
 	cookies := w.initialCookies
 	if w.sessionCookies != nil {
 		cookies = w.sessionCookies
 	}
-	var cs []*http.Cookie
-	for name, val := range cookies {
-		// #nosec G124 -- outbound request cookies replayed into the jar; Secure/HttpOnly/SameSite are server-response attributes that do not apply here.
-		cs = append(cs, &http.Cookie{
-			Name:   name,
-			Value:  val,
-			Path:   "/",
-			Domain: domain,
-		})
+
+	seed := func(domain string) {
+		var cs []*http.Cookie
+		for name, val := range cookies {
+			// #nosec G124 -- outbound request cookies replayed into the jar; Secure/HttpOnly/SameSite are server-response attributes that do not apply here.
+			cs = append(cs, &http.Cookie{Name: name, Value: val, Path: "/", Domain: domain})
+		}
+		w.httpClient.Jar.SetCookies(u, cs)
 	}
-	w.httpClient.Jar.SetCookies(u, cs)
+
+	seed("amazon." + w.domain)
+	// Global endpoints (api.amazon.com, bob-dispatch-*.amazon.com,
+	// alexa-comms-mobile-service.amazon.com) live on amazon.com regardless
+	// of marketplace TLD. Mirror upstream #926: also scope the same cookies
+	// to amazon.com for non-US accounts. Go's cookiejar only accepts a
+	// cookie whose Domain domain-matches the request's host, so this is a
+	// no-op unless rawURL's host is actually under amazon.com.
+	if w.domain != "com" {
+		seed("amazon.com")
+	}
 }
 
 // boolToInt returns 1 for true, 0 for false. Used by the mutual-exclusion
