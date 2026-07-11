@@ -93,6 +93,6 @@ const (
 
 // HTTP/2 AVS gateway template (formatted with the home region).
 const (
-	HTTP2SiteTemplate      = "https://alexa.{region}.gateway.devices.a2z.com"
+	HTTP2SiteTemplate      = "https://bob-dispatch-prod-{region}.amazon.com"
 	HTTP2DirectivesVersion = "20160207"
 )
