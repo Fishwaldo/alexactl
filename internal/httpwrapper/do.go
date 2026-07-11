@@ -22,13 +22,13 @@ import (
 //
 // retryMaxAttempts is the maximum number of retries after the initial
 // attempt (so total attempts = retryMaxAttempts + 1). retryWaitMin and
-// retryWaitMax bound the exponential backoff. The 21s cap keeps total
-// worst-case time per request bounded under a minute while still giving
-// Amazon's 429-throttling some breathing room.
+// retryWaitMax bound the exponential backoff. Mirrors upstream's trimmed
+// [0, 2, 5]-second schedule (v14.x #929): 2 retries, short waits, so a
+// throttled request settles in a few seconds rather than ~50s.
 const (
-	retryMaxAttempts = 6
-	retryWaitMin     = 1 * time.Second
-	retryWaitMax     = 21 * time.Second
+	retryMaxAttempts = 2
+	retryWaitMin     = 2 * time.Second
+	retryWaitMax     = 5 * time.Second
 )
 
 // Request describes a single Amazon API request. Either JSONBody, RawBody,
