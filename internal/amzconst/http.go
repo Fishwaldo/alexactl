@@ -74,6 +74,7 @@ const (
 	URISchedules        = "/api/notifications"
 	URISignin           = "/ap/signin"
 	URIBehaviorsPreview = "/api/behaviors/preview"
+	URIReboot           = "/v1/alexa/device/reboot/%s/%s" // device_type, serial
 )
 
 // URI paths on the www.amazon.<domain> host. These hit Amazon's legacy

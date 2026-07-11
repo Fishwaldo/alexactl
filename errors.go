@@ -48,6 +48,10 @@ var (
 	// (which return ErrCannotConnect / ErrCannotRetrieveData).
 	ErrCannotControlDevice = errors.New("alexactl: cannot control device")
 
+	// ErrCannotRestartDevice is returned when the reboot endpoint rejects
+	// a DevicesService.Restart call. Mirrors upstream CannotRestartDevice.
+	ErrCannotRestartDevice = errors.New("alexactl: cannot restart device")
+
 	// ErrControllerNotImplemented is returned by typed control accessors
 	// whose wire payload shape has not yet been confirmed against real
 	// hardware. The stub Device.Range / Device.Toggle
