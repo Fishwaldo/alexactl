@@ -1,0 +1,14 @@
+{
+  "listInfoList": [
+    {
+      "listId": "list-shop-1",
+      "listType": "SHOP",
+      "listName": ""
+    },
+    {
+      "listId": "list-custom-1",
+      "listType": "CUSTOM",
+      "listName": "house to-do"
+    }
+  ]
+}

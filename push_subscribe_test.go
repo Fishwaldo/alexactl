@@ -491,6 +491,65 @@ func TestPush_PingLoop_FiresAfterConnect(t *testing.T) {
 	assert.GreaterOrEqual(t, pings.Load(), int32(1))
 }
 
+// TestPush_PingLoop_NonReauthErrorClosesConnAndReconnects ports upstream
+// #899: a ping failure that is NOT reauth-class (e.g. a transient 500)
+// must close the stream so streamLoop reconnects, instead of looping
+// forever on a half-open connection. The /directives handler never
+// EOFs or closes on its own — the only way a second open happens is if
+// pingLoop closes the first conn after the /ping 500.
+func TestPush_PingLoop_NonReauthErrorClosesConnAndReconnects(t *testing.T) {
+	var opens atomic.Int32
+	var pings atomic.Int32
+	mux := http.NewServeMux()
+	mux.HandleFunc("/v1/devices/@self/capabilities", func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusNoContent)
+	})
+	mux.HandleFunc("/ping", func(w http.ResponseWriter, _ *http.Request) {
+		pings.Add(1)
+		w.WriteHeader(http.StatusInternalServerError) // non-reauth failure
+	})
+	mux.HandleFunc("/directives", func(w http.ResponseWriter, r *http.Request) {
+		opens.Add(1)
+		w.Header().Set("Content-Type", "multipart/related; boundary=B")
+		w.WriteHeader(http.StatusOK)
+		if f, ok := w.(http.Flusher); ok {
+			f.Flush()
+		}
+		// Half-open: no more data, no EOF, no close — only the client
+		// (via a fixed pingLoop closing conn) ends this request.
+		<-r.Context().Done()
+	})
+	srv := httptest.NewServer(mux)
+	defer srv.Close()
+
+	ps := &PushService{streamClient: srv.Client()}
+	ps.setSession(&Session{AccessToken: "atok"})
+	ps.capabilitiesURLFn = func() string { return srv.URL + "/v1/devices/@self/capabilities" }
+	ps.streamURLFn = func() string { return srv.URL + "/directives" }
+	ps.pingURLFn = func() string { return srv.URL + "/ping" }
+	ps.sleepFn = func(ctx context.Context, _ time.Duration) error {
+		// Fire immediately instead of waiting pingInterval/backoff —
+		// used both by pingLoop's interval sleep and streamLoop's
+		// backoffSleep.
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+		}
+		return nil
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	_, err := ps.Subscribe(ctx)
+	require.NoError(t, err)
+
+	require.Eventually(t, func() bool { return opens.Load() >= 2 }, 3*time.Second, 10*time.Millisecond,
+		"streamLoop never reconnected after a non-reauth ping failure — "+
+			"pingLoop must close the conn instead of looping on a dead connection")
+	assert.GreaterOrEqual(t, pings.Load(), int32(1))
+}
+
 func TestPush_Subscribe_InitialSyncOnFirstEvent(t *testing.T) {
 	rig := newPushTestRig(t)
 	rig.ps.initialSyncFn = func(_ context.Context) (map[string]*VolumeState, error) {

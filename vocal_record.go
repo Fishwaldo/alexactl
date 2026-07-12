@@ -12,11 +12,14 @@ type VocalRecord struct {
 	// Timestamp is the time Amazon recorded the utterance, in UTC.
 	Timestamp time.Time
 
-	// UtteranceType is Amazon's classification string (e.g.,
-	// "GENERAL", "ROUTINES_OR_TAP_TO_ALEXA"). The four upstream
-	// "ignore" types (ASR_TIMEOUT, DEVICE_ARBITRATION, NO_EXPRESSED_INTENT,
-	// WAKE_WORD_ONLY) are filtered out before construction.
-	UtteranceType string
+	// HistoryType holds Amazon's classification string for the record:
+	// the utteranceType when present (e.g., "GENERAL",
+	// "ROUTINES_OR_TAP_TO_ALEXA"); otherwise recordType (e.g.,
+	// "CustomerReview"); otherwise "Unknown". The four upstream
+	// "ignore" utteranceType values (ASR_TIMEOUT, DEVICE_ARBITRATION,
+	// NO_EXPRESSED_INTENT, WAKE_WORD_ONLY) are filtered out before
+	// construction.
+	HistoryType string
 
 	// Intent is the Alexa intent that matched (may be empty for free-form
 	// requests).

@@ -12,56 +12,10 @@ import (
 	"os"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
-
-func TestListItem_ServerShape_ReturnsDefensiveCopy(t *testing.T) {
-	original := map[string]any{
-		"id":             "item-1",
-		"value":          "milk",
-		"encryptedValue": "ENCRYPTED-MILK",
-		"version":        float64(3),
-	}
-	item := &ListItem{
-		ID:          "item-1",
-		Value:       "milk",
-		serverShape: original,
-	}
-
-	copy1 := item.ServerShape()
-	assert.Equal(t, "milk", copy1["value"])
-
-	// Mutating the returned copy must not affect the item's internal state.
-	copy1["value"] = "stolen"
-	copy1["newKey"] = "injected"
-
-	copy2 := item.ServerShape()
-	assert.Equal(t, "milk", copy2["value"], "internal serverShape was mutated by caller")
-	_, hasInjected := copy2["newKey"]
-	assert.False(t, hasInjected, "internal serverShape gained a key from caller mutation")
-
-	// The original map (still held internally) must also be unchanged.
-	assert.Equal(t, "milk", original["value"])
-}
-
-func TestListItem_ServerShape_NilReturnsEmptyMap(t *testing.T) {
-	item := &ListItem{ID: "item-x", Value: "x"}
-	// serverShape intentionally left nil.
-
-	got := item.ServerShape()
-	require.NotNil(t, got, "ServerShape() must return a non-nil map even when serverShape is nil")
-	assert.Empty(t, got)
-
-	// Mutating the returned empty map must not allocate-and-cache a
-	// shape on the item.
-	got["sneak"] = "in"
-	got2 := item.ServerShape()
-	_, leaked := got2["sneak"]
-	assert.False(t, leaked, "mutating the empty map leaked back into item state")
-}
 
 // newListsTestClient mirrors newNotificationsTestClient. Uses the
 // hostRewriter Transport so URLs built from wrapper.Domain() are
@@ -87,82 +41,174 @@ func newListsTestClient(t *testing.T, srv *httptest.Server) *Client {
 	return c
 }
 
-func TestListsService_Get_ParsesBothListTypes(t *testing.T) {
-	body, err := os.ReadFile("testdata/lists/get_response.json")
+// v2ListsHandler routes the v2 ToDo API surface used by ListsService:
+// POST .../v2/lists/fetch (lists), POST .../v2/lists/{id}/items/fetch
+// (items), POST .../v2/lists/{id}/items (add), PUT/DELETE
+// .../v2/lists/{id}/items/{itemId} (mutate). addBody/putFunc let
+// individual tests script per-endpoint response bodies; the *Status
+// fields override the default 200. Response shapes are the real ones
+// confirmed against live Amazon 2026-07-12.
+type v2ListsHandler struct {
+	t *testing.T
+
+	listsBody []byte
+	itemsBody []byte
+
+	addStatus int
+	addBody   []byte
+
+	putStatus int
+	putFunc   func(body map[string]any) []byte // nil => echo-free 200 {}
+
+	deleteStatus int
+
+	// Captured request details for assertions.
+	gotPath   string
+	gotMethod string
+	gotUA     string
+	gotQuery  string
+	gotBody   map[string]any
+}
+
+func (h *v2ListsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	h.gotPath = r.URL.Path
+	h.gotMethod = r.Method
+	h.gotUA = r.Header.Get("User-Agent")
+	h.gotQuery = r.URL.RawQuery
+
+	var body map[string]any
+	if r.Body != nil {
+		b, _ := io.ReadAll(r.Body)
+		if len(b) > 0 {
+			_ = json.Unmarshal(b, &body)
+		}
+	}
+	h.gotBody = body
+
+	path := r.URL.Path
+	w.Header().Set("Content-Type", "application/json")
+
+	switch {
+	case strings.HasSuffix(path, "/v2/lists/fetch"):
+		_, _ = w.Write(h.listsBody)
+	case strings.HasSuffix(path, "/items/fetch"):
+		_, _ = w.Write(h.itemsBody)
+	case r.Method == http.MethodPost && strings.HasSuffix(path, "/items"):
+		status := h.addStatus
+		if status == 0 {
+			status = http.StatusOK
+		}
+		w.WriteHeader(status)
+		if h.addBody != nil {
+			_, _ = w.Write(h.addBody)
+		}
+	case r.Method == http.MethodPut:
+		status := h.putStatus
+		if status == 0 {
+			status = http.StatusOK
+		}
+		w.WriteHeader(status)
+		if h.putFunc != nil {
+			_, _ = w.Write(h.putFunc(body))
+		} else {
+			_, _ = w.Write([]byte(`{}`))
+		}
+	case r.Method == http.MethodDelete:
+		status := h.deleteStatus
+		if status == 0 {
+			status = http.StatusOK
+		}
+		w.WriteHeader(status)
+	default:
+		h.t.Fatalf("unexpected request: %s %s", r.Method, path)
+	}
+}
+
+func newV2ListsHandler(t *testing.T) *v2ListsHandler {
+	t.Helper()
+	listsBody, err := os.ReadFile("testdata/lists/v2_lists.json")
+	require.NoError(t, err)
+	itemsBody, err := os.ReadFile("testdata/lists/v2_items.json")
+	require.NoError(t, err)
+	return &v2ListsHandler{t: t, listsBody: listsBody, itemsBody: itemsBody}
+}
+
+func TestListsV2FetchAndItems(t *testing.T) {
+	h := newV2ListsHandler(t)
+	srv := httptest.NewServer(h)
+	t.Cleanup(srv.Close)
+
+	c := newListsTestClient(t, srv)
+	lists, err := c.Lists.Get(context.Background())
+	require.NoError(t, err)
+	require.Len(t, lists, 2)
+
+	// Default (SHOP) list sorts first.
+	shop := lists[0]
+	assert.Equal(t, ListTypeShop, shop.Type)
+	assert.Equal(t, "list-shop-1", shop.ID)
+	assert.Equal(t, "", shop.Name)
+	require.Len(t, shop.Items, 2)
+
+	// Active-first ordering: milk (ACTIVE) before bread (COMPLETE).
+	assert.Equal(t, "milk", shop.Items[0].Value)
+	assert.False(t, shop.Items[0].Completed)
+	assert.Equal(t, 3, shop.Items[0].Version)
+	assert.Equal(t, "bread", shop.Items[1].Value)
+	assert.True(t, shop.Items[1].Completed)
+	assert.Equal(t, 5, shop.Items[1].Version)
+
+	for _, it := range shop.Items {
+		assert.Same(t, shop, it.list, "item %q missing back-ref", it.ID)
+	}
+
+	custom := lists[1]
+	assert.Equal(t, ListTypeCustom, custom.Type)
+	assert.Equal(t, "house to-do", custom.Name)
+	require.Len(t, custom.Items, 2)
+}
+
+func TestListsV2_UsesFetchPathsAndUserAgent(t *testing.T) {
+	h := newV2ListsHandler(t)
+	srv := httptest.NewServer(h)
+	t.Cleanup(srv.Close)
+
+	c := newListsTestClient(t, srv)
+	_, err := c.Lists.Get(context.Background())
 	require.NoError(t, err)
 
-	var gotPath, gotMethod, gotUA string
+	// The last request observed is an items/fetch call (lists come
+	// first, then per-list items); assert its shape here, and assert
+	// the lists/fetch shape via a fresh single-list-less capture below.
+	assert.True(t, strings.Contains(h.gotPath, "/items/fetch"), "unexpected path: %s", h.gotPath)
+	assert.Equal(t, http.MethodPost, h.gotMethod)
+	assert.Equal(t, "limit=100", h.gotQuery)
+	assert.Contains(t, h.gotUA, "AmazonWebView")
+}
+
+func TestListsV2_FetchListsPathAndBody(t *testing.T) {
+	var gotPath, gotMethod, gotUA, gotBody string
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		gotPath = r.URL.Path
 		gotMethod = r.Method
 		gotUA = r.Header.Get("User-Agent")
+		b, _ := io.ReadAll(r.Body)
+		gotBody = string(b)
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write(body)
+		_, _ = w.Write([]byte(`{"listInfoList":[]}`))
 	}))
 	t.Cleanup(srv.Close)
 
 	c := newListsTestClient(t, srv)
 	lists, err := c.Lists.Get(context.Background())
 	require.NoError(t, err)
+	assert.Empty(t, lists)
 
-	assert.True(t, strings.HasSuffix(gotPath, "/alexashoppinglists/api/getlistitems"),
+	assert.True(t, strings.HasSuffix(gotPath, "/alexashoppinglists/api/v2/lists/fetch"),
 		"unexpected path: %s", gotPath)
-	assert.Equal(t, http.MethodGet, gotMethod)
-	// iOS-app UA per spec (legacy endpoint is permissive but we match
-	// the shape that's been observed working).
+	assert.Equal(t, http.MethodPost, gotMethod)
 	assert.Contains(t, gotUA, "AmazonWebView")
-
-	require.Len(t, lists, 2)
-
-	// Default (shopping) list first; remaining lists sorted by (Type, Name).
-	shopping := lists[0]
-	assert.Equal(t, ListTypeShopping, shopping.Type)
-	assert.True(t, shopping.Default)
-	assert.Equal(t, "", shopping.Name)
-	assert.Equal(t, 42, shopping.Version)
-	require.Len(t, shopping.Items, 2)
-
-	todo := lists[1]
-	assert.Equal(t, ListTypeCustom, todo.Type)
-	assert.False(t, todo.Default)
-	assert.Equal(t, "house to-do", todo.Name)
-	assert.Equal(t, 7, todo.Version)
-	require.Len(t, todo.Items, 2)
-
-	// Items carry the back-ref to their parent.
-	for _, item := range shopping.Items {
-		assert.Same(t, shopping, item.list, "item %q missing back-ref", item.ID)
-		assert.NotNil(t, item.serverShape, "item %q missing serverShape", item.ID)
-	}
-}
-
-func TestListsService_Get_SortsItemsActiveFirst(t *testing.T) {
-	body, err := os.ReadFile("testdata/lists/get_response.json")
-	require.NoError(t, err)
-
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write(body)
-	}))
-	t.Cleanup(srv.Close)
-
-	c := newListsTestClient(t, srv)
-	lists, err := c.Lists.Get(context.Background())
-	require.NoError(t, err)
-
-	// SHOPPING_LIST: milk (active, created 2026-05-27) and bread
-	// (completed). Active first.
-	shopping := lists[0]
-	assert.Equal(t, "milk", shopping.Items[0].Value)
-	assert.False(t, shopping.Items[0].Completed)
-	assert.Equal(t, "bread", shopping.Items[1].Value)
-	assert.True(t, shopping.Items[1].Completed)
-
-	// "house to-do": fix the door (active) before buy paint (completed).
-	todo := lists[1]
-	assert.Equal(t, "fix the door", todo.Items[0].Value)
-	assert.False(t, todo.Items[0].Completed)
-	assert.Equal(t, "buy paint", todo.Items[1].Value)
+	assert.Equal(t, "{}", gotBody)
 }
 
 func TestListsService_Get_WrapsTransportError(t *testing.T) {
@@ -193,356 +239,267 @@ func TestListsService_Get_WrapsAPIError(t *testing.T) {
 	var apiErr *APIError
 	require.ErrorAs(t, err, &apiErr)
 	assert.Equal(t, http.StatusUnauthorized, apiErr.StatusCode)
-	assert.Equal(t, http.MethodGet, apiErr.Method)
+	assert.Equal(t, http.MethodPost, apiErr.Method)
 	assert.ErrorIs(t, err, ErrCannotRetrieveData)
 }
 
-func TestList_AddItem_PostsAndAppendsItem(t *testing.T) {
-	getBody, err := os.ReadFile("testdata/lists/get_response.json")
-	require.NoError(t, err)
-
-	var gotMethod, gotPath, gotBody string
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		gotMethod = r.Method
-		gotPath = r.URL.Path
-		switch {
-		case strings.HasSuffix(gotPath, "/getlistitems"):
-			w.Header().Set("Content-Type", "application/json")
-			_, _ = w.Write(getBody)
-		case strings.Contains(gotPath, "/addlistitem/"):
-			b, _ := io.ReadAll(r.Body)
-			gotBody = string(b)
-			w.Header().Set("Content-Type", "application/json")
-			_, _ = w.Write([]byte(`{
-				"id": "item-new",
-				"value": "eggs",
-				"categoryValue": "Dairy",
-				"completed": false,
-				"version": 1,
-				"customerId": "S-CUSTOMER",
-				"encryptedValue": "ENCRYPTED-EGGS",
-				"createdDateTime": "2026-05-28T12:00:00.000Z",
-				"updatedDateTime": "2026-05-28T12:00:00.000Z",
-				"listItemMetadata": {}
-			}`))
-		}
-	}))
+func TestList_AddItem_PostsItemsEndpointAndAppendsItem(t *testing.T) {
+	h := newV2ListsHandler(t)
+	// Real add-response shape (confirmed against live Amazon 2026-07-12):
+	// the created item is nested under itemInfoList, alongside failures.
+	h.addBody = []byte(`{"failures":[],"itemInfoList":[{"itemId":"a336-new","itemName":"eggs","itemStatus":"ACTIVE","itemType":"KEYWORD","version":1}]}`)
+	srv := httptest.NewServer(h)
 	t.Cleanup(srv.Close)
 
 	c := newListsTestClient(t, srv)
 	lists, err := c.Lists.Get(context.Background())
 	require.NoError(t, err)
-	shopping := lists[0]
-	beforeLen := len(shopping.Items)
+	shop := lists[0]
+	beforeLen := len(shop.Items)
 
-	added, err := shopping.AddItem(context.Background(), "eggs")
+	added, err := shop.AddItem(context.Background(), "eggs")
 	require.NoError(t, err)
 	require.NotNil(t, added)
 
-	assert.Equal(t, http.MethodPost, gotMethod)
-	assert.True(t, strings.Contains(gotPath, "/alexashoppinglists/api/addlistitem/"+shopping.ID),
-		"unexpected path: %s", gotPath)
-	assert.Contains(t, gotBody, `"value":"eggs"`)
-	assert.Contains(t, gotBody, `"type":"TASK"`)
+	assert.Equal(t, http.MethodPost, h.gotMethod)
+	assert.True(t, strings.HasSuffix(h.gotPath, "/v2/lists/"+shop.ID+"/items"),
+		"unexpected path: %s", h.gotPath)
 
-	assert.Equal(t, "item-new", added.ID)
+	items, ok := h.gotBody["items"].([]any)
+	require.True(t, ok)
+	require.Len(t, items, 1)
+	entry, ok := items[0].(map[string]any)
+	require.True(t, ok)
+	assert.Equal(t, "eggs", entry["itemName"])
+	assert.Equal(t, "KEYWORD", entry["itemType"])
+
+	// The returned item carries the REAL server-assigned itemId +
+	// version parsed from itemInfoList[0] — not an empty placeholder.
+	assert.Equal(t, "a336-new", added.ID)
+	assert.NotEmpty(t, added.ID)
 	assert.Equal(t, "eggs", added.Value)
 	assert.False(t, added.Completed)
 	assert.Equal(t, 1, added.Version)
-	assert.NotNil(t, added.serverShape)
-	assert.Len(t, shopping.Items, beforeLen+1)
-	assert.Same(t, added, shopping.Items[beforeLen])
+	assert.Same(t, shop, added.list)
+	assert.Len(t, shop.Items, beforeLen+1)
+	assert.Same(t, added, shop.Items[beforeLen])
 }
 
-func TestList_AddItem_BackRefWiredOnReturnedItem(t *testing.T) {
-	getBody, err := os.ReadFile("testdata/lists/get_response.json")
-	require.NoError(t, err)
-
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch {
-		case strings.HasSuffix(r.URL.Path, "/getlistitems"):
-			w.Header().Set("Content-Type", "application/json")
-			_, _ = w.Write(getBody)
-		case strings.Contains(r.URL.Path, "/addlistitem/"):
-			w.Header().Set("Content-Type", "application/json")
-			_, _ = w.Write([]byte(`{"id":"item-x","value":"x","completed":false,"version":1}`))
-		}
-	}))
+func TestList_AddItem_ErrorsWhenResponseMissingItemInfoList(t *testing.T) {
+	h := newV2ListsHandler(t)
+	h.addBody = []byte(`{"failures":[]}`) // 2xx but no itemInfoList
+	srv := httptest.NewServer(h)
 	t.Cleanup(srv.Close)
 
 	c := newListsTestClient(t, srv)
 	lists, err := c.Lists.Get(context.Background())
 	require.NoError(t, err)
-	shopping := lists[0]
+	shop := lists[0]
 
-	added, err := shopping.AddItem(context.Background(), "x")
-	require.NoError(t, err)
-	assert.Same(t, shopping, added.list)
+	added, err := shop.AddItem(context.Background(), "paper towels")
+	require.Error(t, err)
+	assert.Nil(t, added, "must not return a zero-ID item write methods could misuse")
+	assert.ErrorIs(t, err, ErrCannotRetrieveData)
 }
 
-func TestList_Complete_PutsFullEchoWithFlippedFlag(t *testing.T) {
-	getBody, err := os.ReadFile("testdata/lists/get_response.json")
-	require.NoError(t, err)
-
-	var gotMethod, gotPath string
-	var gotBody map[string]any
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch {
-		case strings.HasSuffix(r.URL.Path, "/getlistitems"):
-			w.Header().Set("Content-Type", "application/json")
-			_, _ = w.Write(getBody)
-		case strings.HasSuffix(r.URL.Path, "/updatelistitem"):
-			gotMethod = r.Method
-			gotPath = r.URL.Path
-			b, _ := io.ReadAll(r.Body)
-			_ = json.Unmarshal(b, &gotBody)
-			w.Header().Set("Content-Type", "application/json")
-			gotBody["version"] = float64(4)
-			gotBody["updatedDateTime"] = "2026-05-28T13:00:00.000Z"
-			out, _ := json.Marshal(gotBody)
-			_, _ = w.Write(out)
-		}
-	}))
+func TestList_Complete_PutsItemStatusCompleteWithVersionQuery(t *testing.T) {
+	h := newV2ListsHandler(t)
+	// Real PUT-response shape (confirmed against live Amazon 2026-07-12):
+	// the updated item is nested under singular "itemInfo" with a bumped
+	// version.
+	h.putFunc = func(body map[string]any) []byte {
+		return []byte(`{"itemInfo":{"itemId":"item-1","itemName":"milk","itemStatus":"COMPLETE","version":4}}`)
+	}
+	srv := httptest.NewServer(h)
 	t.Cleanup(srv.Close)
 
 	c := newListsTestClient(t, srv)
 	lists, err := c.Lists.Get(context.Background())
 	require.NoError(t, err)
-	shopping := lists[0]
-	item := shopping.Items[0]
+	shop := lists[0]
+	item := shop.Items[0] // milk, ACTIVE, version 3
 
-	err = shopping.Complete(context.Background(), item)
+	err = shop.Complete(context.Background(), item)
 	require.NoError(t, err)
 
-	assert.Equal(t, http.MethodPut, gotMethod)
-	assert.True(t, strings.HasSuffix(gotPath, "/alexashoppinglists/api/updatelistitem"))
-	assert.Equal(t, true, gotBody["completed"])
-	assert.Equal(t, "ENCRYPTED-MILK", gotBody["encryptedValue"])
-	assert.Equal(t, "S-CUSTOMER", gotBody["customerId"])
+	assert.Equal(t, http.MethodPut, h.gotMethod)
+	assert.True(t, strings.HasSuffix(h.gotPath, "/v2/lists/"+shop.ID+"/items/"+item.ID),
+		"unexpected path: %s", h.gotPath)
+	assert.Equal(t, "version=3", h.gotQuery)
+
+	updates, ok := h.gotBody["itemAttributesToUpdate"].([]any)
+	require.True(t, ok)
+	require.Len(t, updates, 1)
+	entry, ok := updates[0].(map[string]any)
+	require.True(t, ok)
+	assert.Equal(t, "itemStatus", entry["type"])
+	assert.Equal(t, "COMPLETE", entry["value"])
 
 	assert.True(t, item.Completed)
+	// Version bumped from the itemInfo response (3 -> 4), so a
+	// subsequent Delete sends the correct version.
 	assert.Equal(t, 4, item.Version)
-	assert.Equal(t,
-		time.Date(2026, 5, 28, 13, 0, 0, 0, time.UTC),
-		item.UpdatedAt.UTC())
 }
 
 func TestList_Complete_NoOpWhenAlreadyCompleted(t *testing.T) {
-	getBody, err := os.ReadFile("testdata/lists/get_response.json")
-	require.NoError(t, err)
-
-	var updateCalls int
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch {
-		case strings.HasSuffix(r.URL.Path, "/getlistitems"):
-			w.Header().Set("Content-Type", "application/json")
-			_, _ = w.Write(getBody)
-		case strings.HasSuffix(r.URL.Path, "/updatelistitem"):
-			updateCalls++
-			w.WriteHeader(http.StatusOK)
-			_, _ = w.Write([]byte(`{}`))
-		}
-	}))
+	h := newV2ListsHandler(t)
+	srv := httptest.NewServer(h)
 	t.Cleanup(srv.Close)
 
 	c := newListsTestClient(t, srv)
 	lists, err := c.Lists.Get(context.Background())
 	require.NoError(t, err)
-	shopping := lists[0]
-	already := shopping.Items[1]
+	shop := lists[0]
+	already := shop.Items[1] // bread, COMPLETE
 
-	err = shopping.Complete(context.Background(), already)
+	h.gotMethod = "" // reset capture
+	err = shop.Complete(context.Background(), already)
 	require.NoError(t, err)
-	assert.Zero(t, updateCalls, "Complete on an already-completed item should not hit the network")
+	assert.Empty(t, h.gotMethod, "Complete on an already-completed item should not hit the network")
 }
 
 func TestList_Complete_LeavesItemUntouchedOnError(t *testing.T) {
-	getBody, err := os.ReadFile("testdata/lists/get_response.json")
-	require.NoError(t, err)
-
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch {
-		case strings.HasSuffix(r.URL.Path, "/getlistitems"):
-			w.Header().Set("Content-Type", "application/json")
-			_, _ = w.Write(getBody)
-		case strings.HasSuffix(r.URL.Path, "/updatelistitem"):
-			w.WriteHeader(http.StatusConflict)
-		}
-	}))
+	h := newV2ListsHandler(t)
+	h.putStatus = http.StatusConflict
+	srv := httptest.NewServer(h)
 	t.Cleanup(srv.Close)
 
 	c := newListsTestClient(t, srv)
 	lists, err := c.Lists.Get(context.Background())
 	require.NoError(t, err)
-	shopping := lists[0]
-	item := shopping.Items[0]
+	shop := lists[0]
+	item := shop.Items[0]
 	originalCompleted := item.Completed
 	originalVersion := item.Version
 
-	err = shopping.Complete(context.Background(), item)
+	err = shop.Complete(context.Background(), item)
 	require.Error(t, err)
+	var apiErr *APIError
+	require.ErrorAs(t, err, &apiErr)
 	assert.Equal(t, originalCompleted, item.Completed)
 	assert.Equal(t, originalVersion, item.Version)
 }
 
 func TestList_Uncomplete_MirrorsComplete(t *testing.T) {
-	getBody, err := os.ReadFile("testdata/lists/get_response.json")
-	require.NoError(t, err)
-
-	var gotBody map[string]any
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch {
-		case strings.HasSuffix(r.URL.Path, "/getlistitems"):
-			w.Header().Set("Content-Type", "application/json")
-			_, _ = w.Write(getBody)
-		case strings.HasSuffix(r.URL.Path, "/updatelistitem"):
-			b, _ := io.ReadAll(r.Body)
-			_ = json.Unmarshal(b, &gotBody)
-			gotBody["version"] = float64(6)
-			gotBody["updatedDateTime"] = "2026-05-28T14:00:00.000Z"
-			out, _ := json.Marshal(gotBody)
-			w.Header().Set("Content-Type", "application/json")
-			_, _ = w.Write(out)
-		}
-	}))
+	h := newV2ListsHandler(t)
+	h.putFunc = func(body map[string]any) []byte {
+		return []byte(`{"itemInfo":{"itemId":"item-2","itemName":"bread","itemStatus":"ACTIVE","version":6}}`)
+	}
+	srv := httptest.NewServer(h)
 	t.Cleanup(srv.Close)
 
 	c := newListsTestClient(t, srv)
 	lists, err := c.Lists.Get(context.Background())
 	require.NoError(t, err)
-	shopping := lists[0]
-	item := shopping.Items[1]
+	shop := lists[0]
+	item := shop.Items[1] // bread, COMPLETE
 
-	err = shopping.Uncomplete(context.Background(), item)
+	err = shop.Uncomplete(context.Background(), item)
 	require.NoError(t, err)
-	assert.Equal(t, false, gotBody["completed"])
+
+	updates, ok := h.gotBody["itemAttributesToUpdate"].([]any)
+	require.True(t, ok)
+	entry := updates[0].(map[string]any)
+	assert.Equal(t, "ACTIVE", entry["value"])
 	assert.False(t, item.Completed)
 	assert.Equal(t, 6, item.Version)
 }
 
-func TestList_Delete_SendsDeleteWithEchoBody(t *testing.T) {
-	getBody, err := os.ReadFile("testdata/lists/get_response.json")
-	require.NoError(t, err)
-
-	var gotMethod string
-	var gotBody map[string]any
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch {
-		case strings.HasSuffix(r.URL.Path, "/getlistitems"):
-			w.Header().Set("Content-Type", "application/json")
-			_, _ = w.Write(getBody)
-		case strings.HasSuffix(r.URL.Path, "/deletelistitem"):
-			gotMethod = r.Method
-			b, _ := io.ReadAll(r.Body)
-			_ = json.Unmarshal(b, &gotBody)
-			w.WriteHeader(http.StatusOK)
-		}
-	}))
+func TestList_Rename_PutsItemNameAndUpdatesValue(t *testing.T) {
+	h := newV2ListsHandler(t)
+	h.putFunc = func(body map[string]any) []byte {
+		return []byte(`{"itemInfo":{"itemId":"item-1","itemName":"organic milk","itemStatus":"ACTIVE","version":10}}`)
+	}
+	srv := httptest.NewServer(h)
 	t.Cleanup(srv.Close)
 
 	c := newListsTestClient(t, srv)
 	lists, err := c.Lists.Get(context.Background())
 	require.NoError(t, err)
-	shopping := lists[0]
-	item := shopping.Items[0]
+	shop := lists[0]
+	item := shop.Items[0]
 
-	err = shopping.Delete(context.Background(), item)
+	err = shop.Rename(context.Background(), item, "organic milk")
 	require.NoError(t, err)
 
-	assert.Equal(t, http.MethodDelete, gotMethod)
-	assert.Equal(t, "item-shopping-1", gotBody["id"])
-	assert.Equal(t, "ENCRYPTED-MILK", gotBody["encryptedValue"])
-	assert.Equal(t, "S-CUSTOMER", gotBody["customerId"])
+	updates, ok := h.gotBody["itemAttributesToUpdate"].([]any)
+	require.True(t, ok)
+	entry := updates[0].(map[string]any)
+	assert.Equal(t, "itemName", entry["type"])
+	assert.Equal(t, "organic milk", entry["value"])
+
+	assert.Equal(t, "organic milk", item.Value)
+	assert.Equal(t, 10, item.Version)
 }
 
-func TestList_Delete_RemovesFromParentItemsOnSuccess(t *testing.T) {
-	getBody, err := os.ReadFile("testdata/lists/get_response.json")
-	require.NoError(t, err)
-
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch {
-		case strings.HasSuffix(r.URL.Path, "/getlistitems"):
-			w.Header().Set("Content-Type", "application/json")
-			_, _ = w.Write(getBody)
-		case strings.HasSuffix(r.URL.Path, "/deletelistitem"):
-			w.WriteHeader(http.StatusOK)
-		}
-	}))
+func TestList_Delete_SendsDeleteWithVersionQuery(t *testing.T) {
+	h := newV2ListsHandler(t)
+	srv := httptest.NewServer(h)
 	t.Cleanup(srv.Close)
 
 	c := newListsTestClient(t, srv)
 	lists, err := c.Lists.Get(context.Background())
 	require.NoError(t, err)
-	shopping := lists[0]
-	target := shopping.Items[0]
-	beforeLen := len(shopping.Items)
+	shop := lists[0]
+	item := shop.Items[0]
+	beforeLen := len(shop.Items)
 
-	err = shopping.Delete(context.Background(), target)
+	err = shop.Delete(context.Background(), item)
 	require.NoError(t, err)
-	assert.Len(t, shopping.Items, beforeLen-1)
-	for _, it := range shopping.Items {
-		assert.NotEqual(t, target.ID, it.ID, "deleted item still present")
+
+	assert.Equal(t, http.MethodDelete, h.gotMethod)
+	assert.True(t, strings.HasSuffix(h.gotPath, "/v2/lists/"+shop.ID+"/items/"+item.ID),
+		"unexpected path: %s", h.gotPath)
+	assert.Equal(t, "version=3", h.gotQuery)
+	assert.Len(t, shop.Items, beforeLen-1)
+	for _, it := range shop.Items {
+		assert.NotEqual(t, item.ID, it.ID, "deleted item still present")
 	}
 }
 
-func TestList_Delete_ItemNotInParentReturnsSentinel(t *testing.T) {
-	getBody, err := os.ReadFile("testdata/lists/get_response.json")
-	require.NoError(t, err)
-
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write(getBody)
-	}))
+func TestList_CompleteThenDelete_UsesBumpedVersion(t *testing.T) {
+	// A caller holding the item across Complete -> Delete must send the
+	// version bumped by the Complete response on the Delete, not the
+	// original fetched version. Confirms fix for the itemInfo version
+	// parse (live Amazon 2026-07-12).
+	h := newV2ListsHandler(t)
+	h.putFunc = func(body map[string]any) []byte {
+		return []byte(`{"itemInfo":{"itemId":"item-1","itemName":"milk","itemStatus":"COMPLETE","version":4}}`)
+	}
+	srv := httptest.NewServer(h)
 	t.Cleanup(srv.Close)
 
 	c := newListsTestClient(t, srv)
 	lists, err := c.Lists.Get(context.Background())
 	require.NoError(t, err)
-	shopping := lists[0]
-	todo := lists[1]
-	wrongItem := todo.Items[0]
+	shop := lists[0]
+	item := shop.Items[0] // version 3
 
-	err = shopping.Delete(context.Background(), wrongItem)
-	require.Error(t, err)
-	assert.ErrorIs(t, err, ErrListItemNotFound)
+	require.NoError(t, shop.Complete(context.Background(), item))
+	require.Equal(t, 4, item.Version)
 
-	err = shopping.Delete(context.Background(), nil)
-	require.Error(t, err)
-	assert.ErrorIs(t, err, ErrListItemNotFound)
+	require.NoError(t, shop.Delete(context.Background(), item))
+	assert.Equal(t, http.MethodDelete, h.gotMethod)
+	assert.Equal(t, "version=4", h.gotQuery, "Delete must send the version bumped by Complete")
 }
 
-func TestList_Rename_UpdatesValueAndVersion(t *testing.T) {
-	getBody, err := os.ReadFile("testdata/lists/get_response.json")
-	require.NoError(t, err)
-
-	var gotBody map[string]any
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch {
-		case strings.HasSuffix(r.URL.Path, "/getlistitems"):
-			w.Header().Set("Content-Type", "application/json")
-			_, _ = w.Write(getBody)
-		case strings.HasSuffix(r.URL.Path, "/updatelistitem"):
-			b, _ := io.ReadAll(r.Body)
-			_ = json.Unmarshal(b, &gotBody)
-			gotBody["version"] = float64(10)
-			gotBody["updatedDateTime"] = "2026-05-28T15:00:00.000Z"
-			out, _ := json.Marshal(gotBody)
-			w.Header().Set("Content-Type", "application/json")
-			_, _ = w.Write(out)
-		}
-	}))
+func TestList_Delete_ItemNotInParentReturnsSentinel(t *testing.T) {
+	h := newV2ListsHandler(t)
+	srv := httptest.NewServer(h)
 	t.Cleanup(srv.Close)
 
 	c := newListsTestClient(t, srv)
 	lists, err := c.Lists.Get(context.Background())
 	require.NoError(t, err)
-	shopping := lists[0]
-	item := shopping.Items[0]
+	shop := lists[0]
+	custom := lists[1]
+	wrongItem := custom.Items[0]
 
-	err = shopping.Rename(context.Background(), item, "organic milk")
-	require.NoError(t, err)
-	assert.Equal(t, "organic milk", gotBody["value"])
-	assert.Equal(t, "ENCRYPTED-MILK", gotBody["encryptedValue"])
-	assert.Equal(t, "organic milk", item.Value)
-	assert.Equal(t, 10, item.Version)
+	err = shop.Delete(context.Background(), wrongItem)
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrListItemNotFound)
+
+	err = shop.Delete(context.Background(), nil)
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrListItemNotFound)
 }

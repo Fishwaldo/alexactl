@@ -119,6 +119,18 @@ func TestRegisterCapabilities_NonNoContentReturnsAPIError(t *testing.T) {
 	}
 }
 
+func TestStreamAndPingURLUseBobDispatchHost(t *testing.T) {
+	s := &PushService{}
+	s.setSession(&Session{CustomerInfo: CustomerInfo{HomeRegion: "NA"}})
+
+	if got, want := s.streamURL(), "https://bob-dispatch-prod-na.amazon.com/v20160207/directives"; got != want {
+		t.Errorf("streamURL = %q, want %q", got, want)
+	}
+	if got, want := s.pingURL(), "https://bob-dispatch-prod-na.amazon.com/ping"; got != want {
+		t.Errorf("pingURL = %q, want %q", got, want)
+	}
+}
+
 // Compile-time check: PushService satisfies sessionConsumer (it
 // implements setSession). Future tasks add Push to Auth.consumers; this
 // assertion locks the contract now so a future signature change

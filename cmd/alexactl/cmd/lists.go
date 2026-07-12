@@ -55,8 +55,8 @@ With no subcommand, prints a summary of all lists with item counts.`,
 					active++
 				}
 			}
-			fmt.Printf("%-30s  type=%s  default=%t  items=%d (active=%d, completed=%d)\n",
-				label, l.Type, l.Default, len(l.Items), active, completed)
+			fmt.Printf("%-30s  type=%s  items=%d (active=%d, completed=%d)\n",
+				label, l.Type, len(l.Items), active, completed)
 		}
 		return nil
 	},
@@ -86,32 +86,22 @@ var listsLsCmd = &cobra.Command{
 			return err
 		}
 
-		var target *alexactl.List
 		wantName := ""
 		if len(args) == 1 {
 			wantName = args[0]
 		}
-		for _, l := range lists {
-			if wantName == "" && l.Default {
-				target = l
-				break
-			}
-			if wantName != "" && strings.EqualFold(l.Name, wantName) {
-				target = l
-				break
-			}
-		}
+		target := findListByName(lists, wantName)
 		if target == nil {
 			return fmt.Errorf("list %q not found", wantName)
 		}
 
-		fmt.Printf("%-40s  %-10s  %-20s  %s\n", "ID", "STATUS", "CATEGORY", "VALUE")
+		fmt.Printf("%-40s  %-10s  %s\n", "ID", "STATUS", "VALUE")
 		for _, it := range target.Items {
 			status := "active"
 			if it.Completed {
 				status = "done"
 			}
-			fmt.Printf("%-40s  %-10s  %-20s  %s\n", it.ID, status, it.Category, it.Value)
+			fmt.Printf("%-40s  %-10s  %s\n", it.ID, status, it.Value)
 		}
 		return nil
 	},
@@ -151,7 +141,7 @@ var listsAddCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		fmt.Printf("added: %s  (id=%s, category=%s)\n", item.Value, item.ID, item.Category)
+		fmt.Printf("added: %s  (id=%s)\n", item.Value, item.ID)
 		return nil
 	},
 }
@@ -197,15 +187,13 @@ var listsRenameCmd = &cobra.Command{
 
 var listsShowCmd = &cobra.Command{
 	Use:   "show <item-id>",
-	Short: "Print the raw server dict for an item as pretty JSON",
-	Long: `Dumps the underlying ServerShape() map (the unfiltered JSON
-dict Amazon returned for this item) as indented JSON. Useful for
-inspecting fields the typed *ListItem hides — encryptedValue, full
-listItemMetadata audit trail, customerId — and for diagnosing wire
-shape changes.`,
+	Short: "Print an item's fields as pretty JSON",
+	Long: `Dumps the typed *ListItem fields (id, value, completed,
+version) as indented JSON. Useful for scripting and for diagnosing
+wire shape changes.`,
 	Args: cobra.ExactArgs(1),
 	RunE: withItem(func(_ ctxAlias, _ *alexactl.List, item *alexactl.ListItem, _ []string) error {
-		out, err := json.MarshalIndent(item.ServerShape(), "", "  ")
+		out, err := json.MarshalIndent(item, "", "  ")
 		if err != nil {
 			return err
 		}
@@ -250,10 +238,11 @@ func withItem(action func(ctx ctxAlias, parent *alexactl.List, item *alexactl.Li
 }
 
 // findListByName returns the matching *List by case-insensitive name,
-// or the default shopping list when name == "". Nil if no match.
+// or the default shopping list (Type == ListTypeShop) when name == "".
+// Nil if no match.
 func findListByName(lists []*alexactl.List, name string) *alexactl.List {
 	for _, l := range lists {
-		if name == "" && l.Default {
+		if name == "" && l.Type == alexactl.ListTypeShop {
 			return l
 		}
 		if name != "" && strings.EqualFold(l.Name, name) {

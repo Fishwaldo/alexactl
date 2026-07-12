@@ -16,23 +16,18 @@ import (
 	"github.com/Fishwaldo/alexactl/internal/httpwrapper"
 )
 
-// ListsService exposes the legacy /alexashoppinglists/api/ endpoints on
-// www.amazon.<tld>. Surfaces both the default unnamed SHOPPING_LIST and
-// any user-named custom LIST entries with full item CRUD.
+// ListsService exposes the v2 /alexashoppinglists/api/v2/lists ToDo
+// API on www.amazon.<tld>. Surfaces both the default unnamed SHOP list
+// and any user-named TODO/CUSTOM list entries with full item CRUD.
 //
 // AUTH: cookie-based — the session restorer already populates the
 // cookie jar with at-main / sess-at-main / session-id / ubid-main /
 // x-main scoped to .amazon.<tld>, so requests to www.amazon.<tld>
 // pick them up transparently.
 //
-// NO CACHING: every Get(ctx) is a fresh fetch. Callers cache if needed.
-//
-// ENDPOINT STABILITY WARNING: the /alexashoppinglists/api/ endpoints
-// are undocumented and have survived multiple Lists-skill backend
-// migrations (last seen working May 2026). Amazon could deprecate
-// them without notice. Treat this service as best-effort; use the
-// ItemChangeEvent push notification (PUSH_LIST_ITEM_CHANGE) as the
-// canonical change signal.
+// CACHING: Get(ctx) is served from the Short-class cache; item-mutation
+// methods on *List invalidate it so the next Get triggers a fresh
+// fetch.
 //
 // SCOPE: items added via the new Alexa+ web UI ("Metis") may not
 // appear here — that UI uses a separate conversational data store.
@@ -47,7 +42,7 @@ type ListsService struct {
 	session *Session
 
 	// itemsCache caches Get() for the Short-class TTL. Item-mutation
-	// methods on *List/*Item invalidate it; callers needing strictly-fresh
+	// methods on *List invalidate it; callers needing strictly-fresh
 	// data invoke Invalidate() before Get().
 	itemsCache *cache.Cache[[]*List]
 }
@@ -59,67 +54,44 @@ func (s *ListsService) setSession(sess *Session) {
 	s.mu.Unlock()
 }
 
-// ListType is the typed enum that distinguishes the default shopping
-// list (SHOPPING_LIST) from user-named custom lists (LIST).
-// Generated values live in enums_enum.go: ListTypeShopping, ListTypeCustom.
+// site returns the retail host requests are built against
+// (https://www.amazon.<tld>).
+func (s *ListsService) site() string {
+	return fmt.Sprintf("https://www.amazon.%s", s.wrapper.Domain())
+}
 
-// List is one logical list — either the default shopping list or a
-// user-named custom list. Items are loaded with the parent on Get;
-// the slice is sorted by (Completed, -CreatedAt) so active items
-// show first.
+// ListType is the typed enum that distinguishes the default shopping
+// list (SHOP) from to-do (TODO) and user-named custom (CUSTOM) lists.
+// Generated values live in enums_enum.go: ListTypeShop, ListTypeTodo,
+// ListTypeCustom.
+
+// List is one logical list on the v2 ToDo API. Items are loaded with
+// the parent on Get; the slice is sorted active-first, then by Value.
 type List struct {
-	ID        string // base64-encoded amzn1.account.<id>-SHOPPING_ITEM
-	Name      string // empty for the default shopping list
-	Type      ListType
-	Default   bool // true for the SHOPPING_LIST with defaultList:true
-	Items     []*ListItem
-	CreatedAt time.Time
-	UpdatedAt time.Time
-	Version   int
+	ID    string
+	Name  string // empty for the default shopping list
+	Type  ListType
+	Items []*ListItem
 
 	service *ListsService // unexported back-ref for typed methods
 }
 
-// ListItem is the user-meaningful subset of the server's listItem dict.
-// Fields hidden by design (encryptedValue, customerId, listItemMetadata)
-// are accessible via ServerShape() for callers who need them.
+// ListItem is the user-meaningful subset of the server's v2 item
+// dict.
 type ListItem struct {
 	ID        string
 	Value     string
 	Completed bool
-	Category  string // "Other", "Dairy", "Baking & Cooking", ...
-	CreatedAt time.Time
-	UpdatedAt time.Time
-	Version   int // optimistic-concurrency token, bumped server-side per Update
+	Version   int // optimistic-concurrency token, required by every write call
 
-	list        *List          // back-ref for write methods
-	serverShape map[string]any // raw response dict, echoed back on Update/Delete
+	list *List // back-ref for write methods
 }
 
-// ServerShape returns a top-level copy of the raw server-shape map for
-// this item — the unfiltered JSON dict as Amazon returned it. Useful
-// for callers who need fields ListItem hides (encryptedValue,
-// customerId, full listItemMetadata audit trail).
-//
-// The returned map is a shallow (depth-1) copy. Overwriting or
-// injecting top-level keys does NOT affect the item's internal state,
-// but nested maps and slices (notably listItemMetadata) are SHARED
-// references — callers must not mutate them.
-func (i *ListItem) ServerShape() map[string]any {
-	if i.serverShape == nil {
-		return map[string]any{}
-	}
-	out := make(map[string]any, len(i.serverShape))
-	for k, v := range i.serverShape {
-		out[k] = v
-	}
-	return out
-}
-
-// Get fetches every list on the account (both the default
-// SHOPPING_LIST and named LIST entries) in a single round-trip.
-// Lists are sorted by (Type, Name); items within each list are
-// sorted by (Completed, -CreatedAt) so active entries come first.
+// Get fetches every list on the account (the default SHOP list and
+// any named TODO/CUSTOM entries) along with their items. The default
+// shopping list (Type == ListTypeShop) sorts first; remaining lists
+// are sorted by (Type, Name). Items within each list are sorted
+// active-first, then by Value.
 //
 // Cached for the Short-class TTL. Callers needing strictly-fresh data
 // either pass DisableCache(ClassShort) at construction or invoke
@@ -142,14 +114,15 @@ func (s *ListsService) Invalidate() {
 	}
 }
 
-// fetchItems is the loader for lists.items.
+// fetchItems is the loader for lists.items: fetch the list of lists,
+// then fetch each list's items.
 func (s *ListsService) fetchItems(ctx context.Context) ([]*List, error) {
-	url := fmt.Sprintf("https://www.amazon.%s%s",
-		s.wrapper.Domain(), amzconst.URIListsGetItems)
+	url := s.site() + amzconst.URIToDoBase + "/fetch"
 
 	resp, err := s.wrapper.Do(ctx, httpwrapper.Request{
-		Method:       http.MethodGet,
+		Method:       http.MethodPost,
 		URL:          url,
+		JSONBody:     map[string]any{},
 		ExtraHeaders: http.Header{"User-Agent": []string{amzconst.UserAgentAmazon}},
 	})
 	if err != nil {
@@ -159,7 +132,7 @@ func (s *ListsService) fetchItems(ctx context.Context) ([]*List, error) {
 	if resp.StatusCode >= 400 {
 		return nil, &APIError{
 			Category:   ErrCannotRetrieveData,
-			Method:     http.MethodGet,
+			Method:     http.MethodPost,
 			StatusCode: resp.StatusCode,
 			URL:        url,
 		}
@@ -169,9 +142,10 @@ func (s *ListsService) fetchItems(ctx context.Context) ([]*List, error) {
 		return nil, fmt.Errorf("%w: %w", ErrCannotRetrieveData, err)
 	}
 
-	out := make([]*List, 0, len(data))
-	for _, raw := range data {
-		entry, _ := raw.(map[string]any)
+	rawLists, _ := data["listInfoList"].([]any)
+	out := make([]*List, 0, len(rawLists))
+	for _, ri := range rawLists {
+		entry, _ := ri.(map[string]any)
 		if entry == nil {
 			continue
 		}
@@ -182,10 +156,19 @@ func (s *ListsService) fetchItems(ctx context.Context) ([]*List, error) {
 		out = append(out, l)
 	}
 
+	for _, l := range out {
+		items, ferr := s.fetchListItems(ctx, l)
+		if ferr != nil {
+			return nil, ferr
+		}
+		l.Items = items
+	}
+
 	sort.SliceStable(out, func(i, j int) bool {
 		// Default (shopping) list first; remaining sorted by (Type, Name).
-		if out[i].Default != out[j].Default {
-			return out[i].Default
+		iShop, jShop := out[i].Type == ListTypeShop, out[j].Type == ListTypeShop
+		if iShop != jShop {
+			return iShop
 		}
 		if out[i].Type != out[j].Type {
 			return out[i].Type < out[j].Type
@@ -195,42 +178,36 @@ func (s *ListsService) fetchItems(ctx context.Context) ([]*List, error) {
 	return out, nil
 }
 
-// buildList constructs a *List from one entry of the getlistitems
-// response. Returns nil for entries missing the required listInfo
-// block (defensive — the live shape always has it).
-func buildList(s *ListsService, entry map[string]any) *List {
-	info, _ := entry["listInfo"].(map[string]any)
-	if info == nil {
-		return nil
-	}
-	id, _ := info["listId"].(string)
-	if id == "" {
-		return nil
-	}
-	// Field names on the live wire: listName, listType, createAt,
-	// updateAt (NO "DateTime" suffix on the list-level timestamps —
-	// item-level ones do carry it). Timestamps are numeric unix-ms,
-	// not ISO strings.
-	name, _ := info["listName"].(string)
-	typeStr, _ := info["listType"].(string)
-	listType, _ := ParseListType(typeStr)
-	def, _ := info["defaultList"].(bool)
-	version := intFromAny(info["version"])
-	createdAt := parseListTime(info["createAt"])
-	updatedAt := parseListTime(info["updateAt"])
+// fetchListItems fetches every item on a single list via the v2
+// items/fetch endpoint.
+func (s *ListsService) fetchListItems(ctx context.Context, l *List) ([]*ListItem, error) {
+	url := fmt.Sprintf("%s%s/%s/items/fetch?limit=100", s.site(), amzconst.URIToDoBase, l.ID)
 
-	l := &List{
-		ID:        id,
-		Name:      name,
-		Type:      listType,
-		Default:   def,
-		CreatedAt: createdAt,
-		UpdatedAt: updatedAt,
-		Version:   version,
-		service:   s,
+	resp, err := s.wrapper.Do(ctx, httpwrapper.Request{
+		Method:       http.MethodPost,
+		URL:          url,
+		JSONBody:     map[string]any{},
+		ExtraHeaders: http.Header{"User-Agent": []string{amzconst.UserAgentAmazon}},
+	})
+	if err != nil {
+		return nil, fmt.Errorf("%w: %w", ErrCannotConnect, err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+	if resp.StatusCode >= 400 {
+		return nil, &APIError{
+			Category:   ErrCannotRetrieveData,
+			Method:     http.MethodPost,
+			StatusCode: resp.StatusCode,
+			URL:        url,
+		}
+	}
+	data, err := httpwrapper.DecodeJSON(resp)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %w", ErrCannotRetrieveData, err)
 	}
 
-	rawItems, _ := entry["listItems"].([]any)
+	rawItems, _ := data["itemInfoList"].([]any)
+	items := make([]*ListItem, 0, len(rawItems))
 	for _, ri := range rawItems {
 		im, _ := ri.(map[string]any)
 		if im == nil {
@@ -240,51 +217,67 @@ func buildList(s *ListsService, entry map[string]any) *List {
 		if item == nil {
 			continue
 		}
-		l.Items = append(l.Items, item)
+		items = append(items, item)
 	}
 
-	sort.SliceStable(l.Items, func(i, j int) bool {
-		if l.Items[i].Completed != l.Items[j].Completed {
-			return !l.Items[i].Completed
+	sort.SliceStable(items, func(i, j int) bool {
+		if items[i].Completed != items[j].Completed {
+			return !items[i].Completed
 		}
-		return l.Items[i].CreatedAt.After(l.Items[j].CreatedAt)
+		return items[i].Value < items[j].Value
 	})
-	return l
+	return items, nil
 }
 
-// buildListItem constructs a *ListItem from a single listItems entry.
-// Stores the raw entry as serverShape so write methods can echo it
-// back for optimistic-concurrency checks.
-func buildListItem(l *List, raw map[string]any) *ListItem {
-	id, _ := raw["id"].(string)
+// buildList constructs a *List from one entry of the v2 listInfoList
+// response. Returns nil for entries missing a listId (defensive — the
+// live shape always has it).
+func buildList(s *ListsService, entry map[string]any) *List {
+	id, _ := entry["listId"].(string)
 	if id == "" {
 		return nil
 	}
-	value, _ := raw["value"].(string)
-	category, _ := raw["categoryValue"].(string)
-	completed, _ := raw["completed"].(bool)
-	version := intFromAny(raw["version"])
-	createdAt := parseListTime(raw["createdDateTime"])
-	updatedAt := parseListTime(raw["updatedDateTime"])
+	name, _ := entry["listName"].(string)
+	typeStr, _ := entry["listType"].(string)
+	listType, _ := ParseListType(typeStr)
 
-	return &ListItem{
-		ID:          id,
-		Value:       value,
-		Completed:   completed,
-		Category:    category,
-		CreatedAt:   createdAt,
-		UpdatedAt:   updatedAt,
-		Version:     version,
-		list:        l,
-		serverShape: raw,
+	return &List{
+		ID:      id,
+		Name:    name,
+		Type:    listType,
+		service: s,
 	}
 }
 
-// parseListTime parses timestamps from Amazon's lists API. The live
-// wire shape uses numeric unix milliseconds (e.g. 1.779937670634e+12),
-// but earlier captures had ISO-8601 strings — accept both so the
-// parser is robust across server-side format changes. Returns zero
-// time on unrecognised input (caller treats as "unknown").
+// buildListItem constructs a *ListItem from a single v2 itemInfoList
+// entry. Returns nil for entries missing an itemId (defensive).
+func buildListItem(l *List, raw map[string]any) *ListItem {
+	id, _ := raw["itemId"].(string)
+	if id == "" {
+		return nil
+	}
+	name, _ := raw["itemName"].(string)
+	statusStr, _ := raw["itemStatus"].(string)
+	status, _ := ParseListItemStatus(statusStr)
+	version := intFromAny(raw["version"])
+
+	return &ListItem{
+		ID:        id,
+		Value:     name,
+		Completed: status == ListItemStatusComplete,
+		Version:   version,
+		list:      l,
+	}
+}
+
+// parseListTime parses timestamps from Amazon's schedules/lists APIs.
+// Accepts both numeric unix milliseconds and ISO-8601 strings, since
+// different endpoints have used different formats. Returns zero time
+// on unrecognised input (caller treats as "unknown").
+//
+// Shared by alarms.go, reminders.go, and timers.go — not used by
+// ListsService itself (the v2 ToDo API doesn't return timestamps for
+// lists/items), but kept here as the historical home of this helper.
 func parseListTime(v any) time.Time {
 	switch x := v.(type) {
 	case float64:
@@ -330,21 +323,30 @@ func intFromAny(v any) int {
 	return 0
 }
 
-// AddItem POSTs a new item to this list. Returns the server-assigned
-// *ListItem (with its new ID, timestamps, version, and any
-// auto-categorisation metadata). The returned item has its back-ref
-// to this *List wired up and its serverShape cached for later
-// Update / Delete calls.
+// AddItem POSTs a new item to this list as a KEYWORD item. On success
+// the v2 API echoes the newly-created item nested under itemInfoList;
+// the returned *ListItem is built from itemInfoList[0] so it carries
+// the server-assigned itemId, version, and status. The cache is
+// invalidated so the next Get(ctx) reconciles with the server's
+// canonical state.
+//
+// If the add succeeds (2xx) but the response omits itemInfoList,
+// AddItem returns ErrCannotRetrieveData rather than a zero-ID item
+// (which write methods could misuse); the item was created server-side
+// and a fresh Get(ctx) will surface it.
 //
 // On success the new *ListItem is appended to list.Items in place.
 func (l *List) AddItem(ctx context.Context, value string) (*ListItem, error) {
-	url := fmt.Sprintf("https://www.amazon.%s%s/%s",
-		l.service.wrapper.Domain(), amzconst.URIListsAddItem, l.ID)
+	url := fmt.Sprintf("%s%s/%s/items", l.service.site(), amzconst.URIToDoBase, l.ID)
 
 	resp, err := l.service.wrapper.Do(ctx, httpwrapper.Request{
-		Method:       http.MethodPost,
-		URL:          url,
-		JSONBody:     map[string]any{"value": value, "type": "TASK"},
+		Method: http.MethodPost,
+		URL:    url,
+		JSONBody: map[string]any{
+			"items": []map[string]any{
+				{"itemType": "KEYWORD", "itemName": value},
+			},
+		},
 		ExtraHeaders: http.Header{"User-Agent": []string{amzconst.UserAgentAmazon}},
 	})
 	if err != nil {
@@ -359,14 +361,25 @@ func (l *List) AddItem(ctx context.Context, value string) (*ListItem, error) {
 			URL:        url,
 		}
 	}
+
+	// Invalidate up-front: the item was created server-side regardless
+	// of whether we can parse the echo, so the cache is now stale.
+	l.service.Invalidate()
+
 	raw, err := httpwrapper.DecodeJSON(resp)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", ErrCannotRetrieveData, err)
 	}
-
-	item := buildListItem(l, raw)
+	// The created item is nested under itemInfoList (confirmed against
+	// live Amazon 2026-07-12).
+	infos, _ := raw["itemInfoList"].([]any)
+	if len(infos) == 0 {
+		return nil, fmt.Errorf("%w: add succeeded but response missing itemInfoList", ErrCannotRetrieveData)
+	}
+	first, _ := infos[0].(map[string]any)
+	item := buildListItem(l, first)
 	if item == nil {
-		return nil, fmt.Errorf("%w: addlistitem response missing id", ErrCannotRetrieveData)
+		return nil, fmt.Errorf("%w: add succeeded but itemInfoList entry missing itemId", ErrCannotRetrieveData)
 	}
 	l.Items = append(l.Items, item)
 	return item, nil
@@ -374,50 +387,70 @@ func (l *List) AddItem(ctx context.Context, value string) (*ListItem, error) {
 
 // Complete marks the item completed. No-op + nil error if already
 // completed. On success: item.Completed=true, item.Version bumped to
-// the server's value, item.UpdatedAt rewritten, item.serverShape
-// replaced with the response dict.
+// the server's value from the itemInfo response.
 func (l *List) Complete(ctx context.Context, item *ListItem) error {
 	if item == nil || item.list != l {
-		id := ""
-		if item != nil {
-			id = item.ID
-		}
-		return fmt.Errorf("%w: item %q", ErrListItemNotFound, id)
+		return fmt.Errorf("%w: item %q", ErrListItemNotFound, itemID(item))
 	}
 	if item.Completed {
 		return nil
 	}
-	return l.updateItem(ctx, item, map[string]any{"completed": true})
+	if err := l.updateItemAttribute(ctx, item, "itemStatus", string(ListItemStatusComplete)); err != nil {
+		return err
+	}
+	item.Completed = true
+	return nil
 }
 
 // Uncomplete is the inverse of Complete.
 func (l *List) Uncomplete(ctx context.Context, item *ListItem) error {
 	if item == nil || item.list != l {
-		id := ""
-		if item != nil {
-			id = item.ID
-		}
-		return fmt.Errorf("%w: item %q", ErrListItemNotFound, id)
+		return fmt.Errorf("%w: item %q", ErrListItemNotFound, itemID(item))
 	}
 	if !item.Completed {
 		return nil
 	}
-	return l.updateItem(ctx, item, map[string]any{"completed": false})
+	if err := l.updateItemAttribute(ctx, item, "itemStatus", string(ListItemStatusActive)); err != nil {
+		return err
+	}
+	item.Completed = false
+	return nil
 }
 
-// updateItem builds the PUT echo body by cloning item.serverShape and
-// overlaying overrides, sends it, and applies the response back to
-// the in-memory item on success. Leaves item untouched on error.
-func (l *List) updateItem(ctx context.Context, item *ListItem, overrides map[string]any) error {
-	url := fmt.Sprintf("https://www.amazon.%s%s",
-		l.service.wrapper.Domain(), amzconst.URIListsUpdateItem)
-
-	body := make(map[string]any, len(item.serverShape))
-	for k, v := range item.serverShape {
-		body[k] = v
+// Rename rewrites the item's Value to newValue via an itemName
+// attribute update. On success: item.Value rewritten, item.Version
+// bumped from the itemInfo response.
+func (l *List) Rename(ctx context.Context, item *ListItem, newValue string) error {
+	if item == nil || item.list != l {
+		return fmt.Errorf("%w: item %q", ErrListItemNotFound, itemID(item))
 	}
-	for k, v := range overrides {
-		body[k] = v
+	if err := l.updateItemAttribute(ctx, item, "itemName", newValue); err != nil {
+		return err
+	}
+	item.Value = newValue
+	return nil
+}
+
+// updateItemAttribute PUTs a single itemAttributesToUpdate entry for
+// item, keyed by its current Version for optimistic concurrency
+// (.../items/{id}?version={item.Version}). On a 2xx it parses the
+// response's singular "itemInfo" object and bumps item.Version from it
+// so a caller holding the item across a subsequent write (e.g.
+// Complete then Delete) sends the correct bumped version. Callers
+// apply the field-specific state (Completed / Value) themselves.
+//
+// The itemInfo response shape was confirmed against live Amazon
+// 2026-07-12: PUT returns {"itemInfo":{"itemId":..,"version":<bumped>,
+// "itemStatus":..,"itemName":..}}.
+func (l *List) updateItemAttribute(ctx context.Context, item *ListItem, attrType, value string) error {
+	url := fmt.Sprintf("%s%s/%s/items/%s?version=%d",
+		l.service.site(), amzconst.URIToDoBase, l.ID, item.ID, item.Version)
+
+	body := map[string]any{
+		"itemAttributesToUpdate": []map[string]any{
+			{"type": attrType, "value": value},
+		},
+		"itemAttributesToRemove": []string{},
 	}
 
 	resp, err := l.service.wrapper.Do(ctx, httpwrapper.Request{
@@ -438,24 +471,14 @@ func (l *List) updateItem(ctx context.Context, item *ListItem, overrides map[str
 			URL:        url,
 		}
 	}
-	raw, err := httpwrapper.DecodeJSON(resp)
-	if err != nil {
-		return fmt.Errorf("%w: %w", ErrCannotRetrieveData, err)
-	}
 
-	if v, ok := raw["completed"].(bool); ok {
-		item.Completed = v
+	if raw, derr := httpwrapper.DecodeJSON(resp); derr == nil {
+		if info, ok := raw["itemInfo"].(map[string]any); ok {
+			if v := intFromAny(info["version"]); v != 0 {
+				item.Version = v
+			}
+		}
 	}
-	if v, ok := raw["value"].(string); ok {
-		item.Value = v
-	}
-	if v := intFromAny(raw["version"]); v != 0 {
-		item.Version = v
-	}
-	if t := parseListTime(raw["updatedDateTime"]); !t.IsZero() {
-		item.UpdatedAt = t
-	}
-	item.serverShape = raw
 	return nil
 }
 
@@ -464,25 +487,15 @@ func (l *List) updateItem(ctx context.Context, item *ListItem, overrides map[str
 // item is nil or belongs to a different list.
 func (l *List) Delete(ctx context.Context, item *ListItem) error {
 	if item == nil || item.list != l {
-		id := ""
-		if item != nil {
-			id = item.ID
-		}
-		return fmt.Errorf("%w: item %q", ErrListItemNotFound, id)
+		return fmt.Errorf("%w: item %q", ErrListItemNotFound, itemID(item))
 	}
 
-	url := fmt.Sprintf("https://www.amazon.%s%s",
-		l.service.wrapper.Domain(), amzconst.URIListsDeleteItem)
-
-	body := make(map[string]any, len(item.serverShape))
-	for k, v := range item.serverShape {
-		body[k] = v
-	}
+	url := fmt.Sprintf("%s%s/%s/items/%s?version=%d",
+		l.service.site(), amzconst.URIToDoBase, l.ID, item.ID, item.Version)
 
 	resp, err := l.service.wrapper.Do(ctx, httpwrapper.Request{
 		Method:       http.MethodDelete,
 		URL:          url,
-		JSONBody:     body,
 		ExtraHeaders: http.Header{"User-Agent": []string{amzconst.UserAgentAmazon}},
 	})
 	if err != nil {
@@ -507,16 +520,10 @@ func (l *List) Delete(ctx context.Context, item *ListItem) error {
 	return nil
 }
 
-// Rename rewrites the item's Value to newValue. On success:
-// item.Value rewritten, item.Version bumped, item.UpdatedAt
-// rewritten, item.serverShape refreshed.
-func (l *List) Rename(ctx context.Context, item *ListItem, newValue string) error {
-	if item == nil || item.list != l {
-		id := ""
-		if item != nil {
-			id = item.ID
-		}
-		return fmt.Errorf("%w: item %q", ErrListItemNotFound, id)
+// itemID safely extracts an item's ID for error messages, tolerating nil.
+func itemID(item *ListItem) string {
+	if item == nil {
+		return ""
 	}
-	return l.updateItem(ctx, item, map[string]any{"value": newValue})
+	return item.ID
 }

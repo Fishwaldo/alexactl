@@ -74,25 +74,23 @@ const (
 	URISchedules        = "/api/notifications"
 	URISignin           = "/ap/signin"
 	URIBehaviorsPreview = "/api/behaviors/preview"
+	URIReboot           = "/v1/alexa/device/reboot/%s/%s" // device_type, serial
 )
 
-// URI paths on the www.amazon.<domain> host. These hit Amazon's legacy
-// shopping-list backend, which is separate from the alexa.amazon.<tld>
-// service host used by every other URI constant above. Used by the
-// ListsService.
-//
-// Endpoint stability: the /alexashoppinglists/api/ surface is
-// undocumented and could be deprecated by Amazon at any time. See
-// the Lists service GoDoc for the user-facing warning.
-const (
-	URIListsGetItems   = "/alexashoppinglists/api/getlistitems"
-	URIListsAddItem    = "/alexashoppinglists/api/addlistitem"
-	URIListsUpdateItem = "/alexashoppinglists/api/updatelistitem"
-	URIListsDeleteItem = "/alexashoppinglists/api/deletelistitem"
-)
+// URIToDoBase is the v2 Alexa lists (to-do / shopping) API on the retail
+// host (www.amazon.<tld>). Replaces the deprecated v1 alexashoppinglists
+// endpoints. Separate from the alexa.amazon.<tld> service host used by
+// every other URI constant above. Used by the ListsService.
+const URIToDoBase = "/alexashoppinglists/api/v2/lists"
 
 // HTTP/2 AVS gateway template (formatted with the home region).
 const (
-	HTTP2SiteTemplate      = "https://alexa.{region}.gateway.devices.a2z.com"
+	HTTP2SiteTemplate      = "https://bob-dispatch-prod-{region}.amazon.com"
 	HTTP2DirectivesVersion = "20160207"
+)
+
+// Alexa communications service (global host, not marketplace-scoped).
+const (
+	CommSite           = "https://alexa-comms-mobile-service.amazon.com"
+	URICommPreferences = "/devicesTypes/%s/deviceId/%s/preferences" // device_type, serial
 )

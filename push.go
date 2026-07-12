@@ -409,9 +409,11 @@ func (s *PushService) pingLoop(ctx context.Context, conn *http2stream.Conn, ping
 				_ = conn.Close()
 				return
 			}
-			logger.WarnContext(ctx, "alexactl: ping error (will continue)",
+			logger.WarnContext(ctx,
+				"alexactl: ping failed — closing stream to force reconnect",
 				"err", err)
-			continue
+			_ = conn.Close()
+			return
 		}
 		pingHealthy.Store(true)
 		logger.DebugContext(ctx, "alexactl: push ping ok")

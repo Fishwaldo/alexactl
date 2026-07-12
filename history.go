@@ -109,7 +109,18 @@ func (s *HistoryService) Vocal(ctx context.Context) (map[string]*VocalRecord, er
 		case "ASR_TIMEOUT", "DEVICE_ARBITRATION", "NO_EXPRESSED_INTENT", "WAKE_WORD_ONLY":
 			continue
 		}
-		di, _ := rec["deviceInfo"].(map[string]any)
+		var di map[string]any
+		switch v := rec["deviceInfo"].(type) {
+		case map[string]any:
+			di = v
+		case []any:
+			if len(v) == 0 {
+				continue
+			}
+			di, _ = v[0].(map[string]any)
+		default:
+			continue
+		}
 		serial, _ := di["deviceSerialNumber"].(string)
 		if serial == "" {
 			continue
@@ -119,15 +130,26 @@ func (s *HistoryService) Vocal(ctx context.Context) (map[string]*VocalRecord, er
 			continue
 		}
 		ts := time.UnixMilli(tsMs).UTC()
+		historyType := ut
+		if historyType == "" {
+			if rt, _ := rec["recordType"].(string); rt != "" {
+				historyType = rt
+			} else {
+				historyType = "Unknown"
+			}
+		}
 		intent, _ := rec["intent"].(string)
+		if intent == "" {
+			intent = "Unknown"
+		}
 		title, _ := rec["title"].(string)
 		subTitle, _ := rec["subTitle"].(string)
 		entry := &VocalRecord{
-			Timestamp:     ts,
-			UtteranceType: ut,
-			Intent:        intent,
-			Title:         title,
-			SubTitle:      subTitle,
+			Timestamp:   ts,
+			HistoryType: historyType,
+			Intent:      intent,
+			Title:       title,
+			SubTitle:    subTitle,
 		}
 		if existing, present := out[serial]; !present || entry.Timestamp.After(existing.Timestamp) {
 			out[serial] = entry

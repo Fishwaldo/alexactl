@@ -27,6 +27,15 @@ type Device struct {
 	SchedulesSupported    bool
 	MediaPlayerSupported  bool
 
+	// CommunicationSettings is reserved for future enrichment that would
+	// attach the allowed comms preferences (keys: "communications",
+	// "dropin", "announcements"; values are the per-pref state) to each
+	// device. It is NOT currently populated:
+	// Client.Communications.GetPreferences returns the preference data
+	// directly as a standalone map keyed by serial and never writes back
+	// to *Device. This field is always nil today.
+	CommunicationSettings map[string]string
+
 	// Typed schedule slices populated by DevicesService.Refresh's
 	// sensors-enrichment hook (one shared /api/notifications fetch routed
 	// across all devices). Slice is nil for devices that don't support
