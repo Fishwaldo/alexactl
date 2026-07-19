@@ -5,7 +5,7 @@
 // TTLs, single-flight loader semantics, tag invalidation, and a
 // persistence-adapter contract for save/restore between runs.
 //
-// Sealed under internal/ — not part of the v1.0.0 public API surface.
+// Sealed under internal/ — not part of the public API surface.
 package cache
 
 import (

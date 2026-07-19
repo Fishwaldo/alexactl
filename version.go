@@ -7,8 +7,14 @@
 // (https://github.com/chemelli74/aioamazondevices) using idiomatic Go.
 package alexactl
 
-// Version is the released version of this library.
-const Version = "0.11.0"
+// Version is the build version of this library. It defaults to "dev" for
+// builds made outside CI; release builds override it at link time via
+//
+//	-ldflags "-X github.com/Fishwaldo/alexactl.Version=<version>"
+//
+// set by the GitHub release workflow on tag push. Treat version.go as the
+// single source of truth — read this var rather than hard-coding a version.
+var Version = "dev"
 
 // UpstreamVersion records the version of aioamazondevices whose behavior
 // this library mirrors. Bumped when this library catches up to a new upstream tag.

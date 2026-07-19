@@ -1,7 +1,8 @@
-# alexactl — maintenance phase
+# alexactl — MVP (v0.1.0)
 
 Heavily inspired by the Python library **aioamazondevices**
-(https://github.com/chemelli74/aioamazondevices), API frozen at v1.0.0.
+(https://github.com/chemelli74/aioamazondevices). MVP release at v0.1.0;
+the API is still stabilizing pre-1.0 (breaking changes may land in `MINOR`).
 The porting-phase guide lives at `docs/history/CLAUDE-porting-phase.md`
 and may still help when reading older commits.
 
@@ -16,7 +17,7 @@ updates), `Push` (HTTP/2 multipart event stream). All public methods take
 perspective. Internal HTTP wrapping (`internal/httpwrapper`), GraphQL
 codegen (`internal/alexagraphql` via `genqlient`), and credential
 scrubbing (`internal/scrub`) are sealed under `internal/` and not part of
-the v1.0.0 API surface. Typed enums (`internal/amzconst` for constants +
+the public API surface. Typed enums (`internal/amzconst` for constants +
 root-package `enums_enum.go` for `go-enum` generated string enums) carry
 all wire-vocabulary.
 
@@ -59,13 +60,21 @@ breaking change (e.g. `feat(cli)!: drop --serial flag`).
 
 ## Release process
 
-1. Promote `[Unreleased]` to `[X.Y.Z] - YYYY-MM-DD` in `CHANGELOG.md`.
+The version is **not** hard-coded in `version.go` — `Version` defaults to
+`dev` and is injected at link time from the git tag by the release
+workflow (`-ldflags "-X github.com/Fishwaldo/alexactl.Version=<version>"`).
+The tag *is* the version; there is no `Version` const to bump. (`version.go`
+still carries `UpstreamVersion` as parity metadata — bump that separately.)
+
+1. Promote `[Unreleased]` to `[X.Y.Z] - YYYY-MM-DD` in `CHANGELOG.md`,
+   and update the compare/tag links at the bottom.
 2. `go test -race ./...` + `golangci-lint run` clean.
 3. Single commit `docs: promote [Unreleased] to [X.Y.Z]`.
 4. `git tag -a vX.Y.Z -m "vX.Y.Z — <one-line summary>"`.
 5. `git push origin main && git push origin vX.Y.Z` (only after explicit
    sign-off — never push tags without confirmation).
-6. Goreleaser-driven binary builds for the test CLI run on tag push.
+6. `.github/workflows/release.yml` builds the CLI binaries with the version
+   injected via ldflags and publishes them to a GitHub Release on tag push.
 
 ## CI expectations
 

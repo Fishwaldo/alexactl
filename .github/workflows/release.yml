@@ -1,0 +1,49 @@
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.25.x"
+          cache: true
+
+      - name: Build CLI binaries
+        env:
+          # Strip the leading "v" so the injected version matches version.go's
+          # style (e.g. tag v0.1.0 -> Version "0.1.0").
+          VERSION: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          VERSION="${VERSION#v}"
+          LDFLAGS="-s -w -X github.com/Fishwaldo/alexactl.Version=${VERSION}"
+          mkdir -p dist
+          for platform in linux/amd64 linux/arm64 darwin/amd64 darwin/arm64; do
+            GOOS="${platform%/*}"
+            GOARCH="${platform#*/}"
+            out="dist/alexactl_${VERSION}_${GOOS}_${GOARCH}"
+            echo "building ${out}"
+            CGO_ENABLED=0 GOOS="$GOOS" GOARCH="$GOARCH" \
+              go build -trimpath -ldflags "$LDFLAGS" -o "$out" ./cmd/alexactl
+            tar -czf "${out}.tar.gz" -C dist "$(basename "$out")"
+            rm "$out"
+          done
+          ( cd dist && sha256sum *.tar.gz > checksums.txt )
+
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${{ github.ref_name }}" \
+            --title "${{ github.ref_name }}" \
+            --notes "See CHANGELOG.md for details." \
+            dist/*.tar.gz dist/checksums.txt

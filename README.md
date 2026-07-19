@@ -7,10 +7,10 @@
 A Go library for controlling Amazon Echo / Alexa devices and skill-discovered
 smart-home endpoints (lights, switches, locks, thermostats, fans, …).
 
-> **Status: v1.0 — API frozen.** Mirrors functionality of the Python library
+> **Status: v0.1.0 — MVP.** Mirrors functionality of the Python library
 > [aioamazondevices](https://github.com/chemelli74/aioamazondevices). The
-> public surface follows semver: additive ports go in `MINOR`, signature
-> changes in `MAJOR`. See `CHANGELOG.md` for per-release detail.
+> API is still stabilizing pre-1.0; expect breaking changes in `MINOR`
+> releases. See `CHANGELOG.md` for per-release detail.
 
 ## Install
 
