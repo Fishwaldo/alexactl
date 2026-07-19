@@ -3,19 +3,18 @@ module github.com/Fishwaldo/alexactl
 go 1.25.0
 
 require (
+	github.com/Khan/genqlient v0.8.1
 	github.com/PuerkitoBio/goquery v1.12.0
 	github.com/hashicorp/go-retryablehttp v0.7.8
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/viper v1.21.0
 	github.com/stretchr/testify v1.11.1
-	github.com/teambition/rrule-go v1.8.2
-	golang.org/x/sync v0.20.0
+	golang.org/x/sync v0.22.0
 	golang.org/x/text v0.37.0
 )
 
 require (
 	dario.cat/mergo v1.0.1 // indirect
-	github.com/Khan/genqlient v0.8.1 // indirect
 	github.com/Masterminds/goutils v1.1.1 // indirect
 	github.com/Masterminds/semver/v3 v3.3.0 // indirect
 	github.com/Masterminds/sprig/v3 v3.3.0 // indirect
