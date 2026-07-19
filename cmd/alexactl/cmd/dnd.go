@@ -5,7 +5,6 @@ package cmd
 
 import (
 	"fmt"
-	"os"
 	"sort"
 	"strings"
 
@@ -21,7 +20,8 @@ func newDnDGetCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "get",
 		Short: "List the Do Not Disturb state of every device",
-		RunE: func(_ *cobra.Command, _ []string) error {
+		Args:  cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			ctx, cancel := signalContext()
 			defer cancel()
 
@@ -46,9 +46,10 @@ func newDnDGetCmd() *cobra.Command {
 			}
 			sort.Strings(serials)
 
-			_, _ = fmt.Fprintf(os.Stdout, "%-32s  %s\n", "SERIAL", "DND")
+			out := cmd.OutOrStdout()
+			_, _ = fmt.Fprintf(out, "%-32s  %s\n", "SERIAL", "DND")
 			for _, s := range serials {
-				_, _ = fmt.Fprintf(os.Stdout, "%-32s  %v\n", s, status[s].Value)
+				_, _ = fmt.Fprintf(out, "%-32s  %v\n", s, status[s].Value)
 			}
 			return nil
 		},

@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -23,6 +24,7 @@ var listsCmd = &cobra.Command{
 (default shopping list + any user-named lists).
 
 With no subcommand, prints a summary of all lists with item counts.`,
+	Args: cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		ctx, cancel := signalContext()
 		defer cancel()
@@ -42,6 +44,7 @@ With no subcommand, prints a summary of all lists with item counts.`,
 		if err != nil {
 			return err
 		}
+		out := cmd.OutOrStdout()
 		for _, l := range lists {
 			label := l.Name
 			if label == "" {
@@ -55,17 +58,17 @@ With no subcommand, prints a summary of all lists with item counts.`,
 					active++
 				}
 			}
-			fmt.Printf("%-30s  type=%s  items=%d (active=%d, completed=%d)\n",
+			_, _ = fmt.Fprintf(out, "%-30s  type=%s  items=%d (active=%d, completed=%d)\n",
 				label, l.Type, len(l.Items), active, completed)
 		}
 		return nil
 	},
 }
 
-var listsLsCmd = &cobra.Command{
-	Use:   "ls [<list-name>]",
-	Short: "Show items in a list (default: the shopping list)",
-	Args:  cobra.MaximumNArgs(1),
+var listsListCmd = &cobra.Command{
+	Use:   "list",
+	Short: "Show items in a list (--list defaults to the shopping list)",
+	Args:  cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		ctx, cancel := signalContext()
 		defer cancel()
@@ -86,29 +89,29 @@ var listsLsCmd = &cobra.Command{
 			return err
 		}
 
-		wantName := ""
-		if len(args) == 1 {
-			wantName = args[0]
-		}
-		target := findListByName(lists, wantName)
+		target := findListByName(lists, listsListFlag)
 		if target == nil {
-			return fmt.Errorf("list %q not found", wantName)
+			if listsListFlag == "" {
+				return fmt.Errorf("no default shopping list found")
+			}
+			return fmt.Errorf("list %q not found", listsListFlag)
 		}
 
-		fmt.Printf("%-40s  %-10s  %s\n", "ID", "STATUS", "VALUE")
+		out := cmd.OutOrStdout()
+		_, _ = fmt.Fprintf(out, "%-40s  %-10s  %s\n", "ID", "STATUS", "VALUE")
 		for _, it := range target.Items {
 			status := "active"
 			if it.Completed {
 				status = "done"
 			}
-			fmt.Printf("%-40s  %-10s  %s\n", it.ID, status, it.Value)
+			_, _ = fmt.Fprintf(out, "%-40s  %-10s  %s\n", it.ID, status, it.Value)
 		}
 		return nil
 	},
 }
 
-var listsAddCmd = &cobra.Command{
-	Use:   "add <value>",
+var listsCreateCmd = &cobra.Command{
+	Use:   "create <value>",
 	Short: "Add an item; --list defaults to the shopping list",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -141,7 +144,7 @@ var listsAddCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		fmt.Printf("added: %s  (id=%s)\n", item.Value, item.ID)
+		_, _ = fmt.Fprintf(cmd.OutOrStdout(), "added: %s  (id=%s)\n", item.Value, item.ID)
 		return nil
 	},
 }
@@ -153,7 +156,7 @@ var listsCompleteCmd = &cobra.Command{
 	Use:   "complete <item-id>",
 	Short: "Mark item complete (looked up across all lists)",
 	Args:  cobra.ExactArgs(1),
-	RunE: withItem(func(ctx ctxAlias, parent *alexactl.List, item *alexactl.ListItem, _ []string) error {
+	RunE: withItem(func(ctx ctxAlias, parent *alexactl.List, item *alexactl.ListItem, _ []string, _ io.Writer) error {
 		return parent.Complete(ctx, item)
 	}),
 }
@@ -162,7 +165,7 @@ var listsUncompleteCmd = &cobra.Command{
 	Use:   "uncomplete <item-id>",
 	Short: "Flip a completed item back to active",
 	Args:  cobra.ExactArgs(1),
-	RunE: withItem(func(ctx ctxAlias, parent *alexactl.List, item *alexactl.ListItem, _ []string) error {
+	RunE: withItem(func(ctx ctxAlias, parent *alexactl.List, item *alexactl.ListItem, _ []string, _ io.Writer) error {
 		return parent.Uncomplete(ctx, item)
 	}),
 }
@@ -171,7 +174,7 @@ var listsDeleteCmd = &cobra.Command{
 	Use:   "delete <item-id>",
 	Short: "Remove an item",
 	Args:  cobra.ExactArgs(1),
-	RunE: withItem(func(ctx ctxAlias, parent *alexactl.List, item *alexactl.ListItem, _ []string) error {
+	RunE: withItem(func(ctx ctxAlias, parent *alexactl.List, item *alexactl.ListItem, _ []string, _ io.Writer) error {
 		return parent.Delete(ctx, item)
 	}),
 }
@@ -180,7 +183,7 @@ var listsRenameCmd = &cobra.Command{
 	Use:   "rename <item-id> <new-value>",
 	Short: "Rewrite an item's value",
 	Args:  cobra.ExactArgs(2),
-	RunE: withItem(func(ctx ctxAlias, parent *alexactl.List, item *alexactl.ListItem, args []string) error {
+	RunE: withItem(func(ctx ctxAlias, parent *alexactl.List, item *alexactl.ListItem, args []string, _ io.Writer) error {
 		return parent.Rename(ctx, item, args[1])
 	}),
 }
@@ -192,12 +195,12 @@ var listsShowCmd = &cobra.Command{
 version) as indented JSON. Useful for scripting and for diagnosing
 wire shape changes.`,
 	Args: cobra.ExactArgs(1),
-	RunE: withItem(func(_ ctxAlias, _ *alexactl.List, item *alexactl.ListItem, _ []string) error {
+	RunE: withItem(func(_ ctxAlias, _ *alexactl.List, item *alexactl.ListItem, _ []string, w io.Writer) error {
 		out, err := json.MarshalIndent(item, "", "  ")
 		if err != nil {
 			return err
 		}
-		fmt.Println(string(out))
+		_, _ = fmt.Fprintln(w, string(out))
 		return nil
 	}),
 }
@@ -205,7 +208,7 @@ wire shape changes.`,
 // withItem builds a RunE that looks up an item by ID across all lists
 // (item IDs are UUIDs, so collision-free) and hands the resolved
 // (parent, item) tuple to the action. ID is always args[0].
-func withItem(action func(ctx ctxAlias, parent *alexactl.List, item *alexactl.ListItem, args []string) error) func(*cobra.Command, []string) error {
+func withItem(action func(ctx ctxAlias, parent *alexactl.List, item *alexactl.ListItem, args []string, w io.Writer) error) func(*cobra.Command, []string) error {
 	return func(cmd *cobra.Command, args []string) error {
 		ctx, cancel := signalContext()
 		defer cancel()
@@ -229,7 +232,7 @@ func withItem(action func(ctx ctxAlias, parent *alexactl.List, item *alexactl.Li
 		for _, l := range lists {
 			for _, it := range l.Items {
 				if it.ID == id {
-					return action(ctx, l, it, args)
+					return action(ctx, l, it, args, cmd.OutOrStdout())
 				}
 			}
 		}
@@ -253,10 +256,11 @@ func findListByName(lists []*alexactl.List, name string) *alexactl.List {
 }
 
 func init() {
-	listsAddCmd.Flags().StringVar(&listsListFlag, "list", "", "target list name (default: the shopping list)")
+	listsListCmd.Flags().StringVar(&listsListFlag, "list", "", "target list name (default: the shopping list)")
+	listsCreateCmd.Flags().StringVar(&listsListFlag, "list", "", "target list name (default: the shopping list)")
 
-	listsCmd.AddCommand(listsLsCmd)
-	listsCmd.AddCommand(listsAddCmd)
+	listsCmd.AddCommand(listsListCmd)
+	listsCmd.AddCommand(listsCreateCmd)
 	listsCmd.AddCommand(listsCompleteCmd)
 	listsCmd.AddCommand(listsUncompleteCmd)
 	listsCmd.AddCommand(listsDeleteCmd)

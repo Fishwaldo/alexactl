@@ -7,6 +7,7 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 
@@ -19,21 +20,23 @@ import (
 var loginCmd = &cobra.Command{
 	Use:   "login",
 	Short: "Interactively log in and save the session to disk",
+	Args:  cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		ctx, cancel := signalContext()
 		defer cancel()
 
+		out := cmd.OutOrStdout()
 		client, existing, err := newClient(true)
 		if err != nil {
 			return err
 		}
 		if existing != nil {
-			fmt.Println("Restoring existing session...")
+			_, _ = fmt.Fprintln(out, "Restoring existing session...")
 			s, err := client.Auth.Restore(ctx)
 			if err == nil {
-				return saveSession(s)
+				return saveSession(out, s)
 			}
-			fmt.Printf("Restore failed: %v — falling back to interactive login\n", err)
+			_, _ = fmt.Fprintf(out, "Restore failed: %v — falling back to interactive login\n", err)
 		}
 
 		email := viper.GetString("email")
@@ -46,7 +49,7 @@ var loginCmd = &cobra.Command{
 			if v := viper.GetString("otp"); v != "" {
 				return v, nil
 			}
-			fmt.Print("Enter Amazon OTP: ")
+			_, _ = fmt.Fprint(out, "Enter Amazon OTP: ")
 			r := bufio.NewReader(os.Stdin)
 			line, _, err := r.ReadLine()
 			if err != nil {
@@ -59,15 +62,15 @@ var loginCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		return saveSession(sess)
+		return saveSession(out, sess)
 	},
 }
 
-func saveSession(s *alexactl.Session) error {
+func saveSession(w io.Writer, s *alexactl.Session) error {
 	if err := store.SaveSession(s); err != nil {
 		return err
 	}
-	fmt.Printf("Session saved to %s\n", store.SessionPath())
+	_, _ = fmt.Fprintf(w, "Session saved to %s\n", store.SessionPath())
 	return nil
 }
 

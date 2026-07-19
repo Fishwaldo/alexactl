@@ -5,7 +5,6 @@ package cmd
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/spf13/cobra"
 )
@@ -24,7 +23,8 @@ func newRoutinesListCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "list",
 		Short: "List enabled routines on the account",
-		RunE: func(_ *cobra.Command, _ []string) error {
+		Args:  cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			ctx, cancel := signalContext()
 			defer cancel()
 			client, sess, err := newClient(true)
@@ -41,8 +41,9 @@ func newRoutinesListCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			out := cmd.OutOrStdout()
 			for _, n := range names {
-				_, _ = fmt.Fprintln(os.Stdout, n)
+				_, _ = fmt.Fprintln(out, n)
 			}
 			return nil
 		},

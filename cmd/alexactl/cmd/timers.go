@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -15,15 +16,16 @@ import (
 )
 
 var (
-	timersDeviceFlag   string
-	timersLsDeviceFlag string
-	timersLabelFlag    string
-	timersSoundFlag    string
+	timersDeviceFlag     string
+	timersListDeviceFlag string
+	timersLabelFlag      string
+	timersSoundFlag      string
 )
 
 var timersCmd = &cobra.Command{
 	Use:   "timers",
 	Short: "List, create, and delete countdown timers on Echo devices",
+	Args:  cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, _ []string) error {
 		ctx, cancel := signalContext()
 		defer cancel()
@@ -41,14 +43,15 @@ var timersCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
+		out := cmd.OutOrStdout()
 		byDevice := map[string][]*alexactl.Timer{}
 		for _, t := range timers {
 			byDevice[t.DeviceSerialNumber] = append(byDevice[t.DeviceSerialNumber], t)
 		}
 		for serial, list := range byDevice {
-			fmt.Printf("%s — %d active timer(s)\n", serial, len(list))
+			_, _ = fmt.Fprintf(out, "%s — %d active timer(s)\n", serial, len(list))
 			for _, t := range list {
-				fmt.Printf("  %s  %s  %s  fires at %s\n",
+				_, _ = fmt.Fprintf(out, "  %s  %s  %s  fires at %s\n",
 					t.ID, t.Duration, t.Label, t.FireAt.Format(time.RFC3339))
 			}
 		}
@@ -56,9 +59,10 @@ var timersCmd = &cobra.Command{
 	},
 }
 
-var timersLsCmd = &cobra.Command{
-	Use:   "ls",
+var timersListCmd = &cobra.Command{
+	Use:   "list",
 	Short: "Detailed timer list",
+	Args:  cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, _ []string) error {
 		ctx, cancel := signalContext()
 		defer cancel()
@@ -72,7 +76,7 @@ var timersLsCmd = &cobra.Command{
 		if _, err := client.Auth.Restore(ctx); err != nil {
 			return err
 		}
-		filter, err := resolveFilter(ctx, timersLsDeviceFlag, client)
+		filter, err := resolveFilter(ctx, timersListDeviceFlag, client)
 		if err != nil {
 			return err
 		}
@@ -80,12 +84,13 @@ var timersLsCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		fmt.Printf("%-60s %-15s %-20s %s\n", "ID", "DURATION", "FIRE_AT", "LABEL")
+		out := cmd.OutOrStdout()
+		_, _ = fmt.Fprintf(out, "%-60s %-15s %-20s %s\n", "ID", "DURATION", "FIRE_AT", "LABEL")
 		for _, t := range timers {
 			if filter != "" && t.DeviceSerialNumber != filter {
 				continue
 			}
-			fmt.Printf("%-60s %-15s %-20s %s\n",
+			_, _ = fmt.Fprintf(out, "%-60s %-15s %-20s %s\n",
 				t.ID, t.Duration, t.FireAt.Format("2006-01-02 15:04"), t.Label)
 		}
 		return nil
@@ -130,7 +135,7 @@ var timersCreateCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		fmt.Printf("created: %s  (id=%s, fires in %s at %s)\n",
+		_, _ = fmt.Fprintf(cmd.OutOrStdout(), "created: %s  (id=%s, fires in %s at %s)\n",
 			created.Label, created.ID, created.Duration, created.FireAt.Format(time.RFC3339))
 		return nil
 	},
@@ -140,7 +145,7 @@ var timersDeleteCmd = &cobra.Command{
 	Use:   "delete <timer-id>",
 	Short: "Cancel a timer",
 	Args:  cobra.ExactArgs(1),
-	RunE: withTimer(func(ctx context.Context, t *alexactl.Timer, client *alexactl.Client, _ []string) error {
+	RunE: withTimer(func(ctx context.Context, t *alexactl.Timer, client *alexactl.Client, _ []string, _ io.Writer) error {
 		return client.Timers.Delete(ctx, t)
 	}),
 }
@@ -149,18 +154,18 @@ var timersShowCmd = &cobra.Command{
 	Use:   "show <timer-id>",
 	Short: "Print the raw server-shape map for a timer as pretty JSON",
 	Args:  cobra.ExactArgs(1),
-	RunE: withTimer(func(_ context.Context, t *alexactl.Timer, _ *alexactl.Client, _ []string) error {
+	RunE: withTimer(func(_ context.Context, t *alexactl.Timer, _ *alexactl.Client, _ []string, w io.Writer) error {
 		raw := alexactl.TimerServerShape(t)
 		out, err := json.MarshalIndent(raw, "", "  ")
 		if err != nil {
 			return err
 		}
-		fmt.Println(string(out))
+		_, _ = fmt.Fprintln(w, string(out))
 		return nil
 	}),
 }
 
-func withTimer(action func(ctx context.Context, t *alexactl.Timer, client *alexactl.Client, args []string) error) func(*cobra.Command, []string) error {
+func withTimer(action func(ctx context.Context, t *alexactl.Timer, client *alexactl.Client, args []string, w io.Writer) error) func(*cobra.Command, []string) error {
 	return func(cmd *cobra.Command, args []string) error {
 		ctx, cancel := signalContext()
 		defer cancel()
@@ -184,7 +189,7 @@ func withTimer(action func(ctx context.Context, t *alexactl.Timer, client *alexa
 		id := args[0]
 		for _, t := range timers {
 			if t.ID == id {
-				return action(ctx, t, client, args)
+				return action(ctx, t, client, args, cmd.OutOrStdout())
 			}
 		}
 		return fmt.Errorf("timer id %q not found", id)
@@ -196,9 +201,9 @@ func init() {
 	timersCreateCmd.Flags().StringVar(&timersLabelFlag, "label", "", "optional label")
 	timersCreateCmd.Flags().StringVar(&timersSoundFlag, "sound", "", "optional sound id")
 
-	timersLsCmd.Flags().StringVar(&timersLsDeviceFlag, "device", "", "filter to one device (serial or name); omit for all devices")
+	registerDeviceFilterFlag(timersListCmd, &timersListDeviceFlag)
 
-	timersCmd.AddCommand(timersLsCmd)
+	timersCmd.AddCommand(timersListCmd)
 	timersCmd.AddCommand(timersCreateCmd)
 	timersCmd.AddCommand(timersDeleteCmd)
 	timersCmd.AddCommand(timersShowCmd)

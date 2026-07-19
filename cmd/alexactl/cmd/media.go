@@ -84,7 +84,7 @@ func newAnnounceCmd() *cobra.Command {
 func newVolumeCmd() *cobra.Command {
 	var device string
 	cmd := &cobra.Command{
-		Use:   "volume <0..100>",
+		Use:   "volume <percent>",
 		Short: "Set device volume",
 		Args:  cobra.ExactArgs(1),
 	}

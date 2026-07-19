@@ -6,13 +6,14 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
-	"os"
 	"sort"
 
 	"github.com/spf13/cobra"
 
 	"github.com/Fishwaldo/alexactl"
 )
+
+var sensorsDeviceFlag string
 
 var sensorsCmd = &cobra.Command{
 	Use:   "sensors",
@@ -21,7 +22,8 @@ var sensorsCmd = &cobra.Command{
 prints Device.Sensors for every device. Sensor keys depend on the device:
 Echos report 'reachability' and optionally 'temperature'/'dnd'; Air
 Quality Monitors report Humidity, VOC, PM25, PM10, CO, Air Quality.`,
-	RunE: func(_ *cobra.Command, _ []string) error {
+	Args: cobra.NoArgs,
+	RunE: func(cmd *cobra.Command, _ []string) error {
 		ctx, cancel := signalContext()
 		defer cancel()
 
@@ -36,16 +38,24 @@ Quality Monitors report Humidity, VOC, PM25, PM10, CO, Air Quality.`,
 			return err
 		}
 
+		filter, err := resolveFilter(ctx, sensorsDeviceFlag, client)
+		if err != nil {
+			return err
+		}
 		devs, err := client.Devices.List(ctx)
 		if err != nil {
 			return err
 		}
 
+		out := cmd.OutOrStdout()
 		for _, d := range devs {
-			_, _ = fmt.Fprintf(os.Stdout, "%s (%s, online=%v)\n",
+			if filter != "" && d.SerialNumber != filter {
+				continue
+			}
+			_, _ = fmt.Fprintf(out, "%s (%s, online=%v)\n",
 				d.AccountName, d.SerialNumber, d.Online)
 			if len(d.Sensors) == 0 {
-				_, _ = fmt.Fprintln(os.Stdout, "  (no sensors)")
+				_, _ = fmt.Fprintln(out, "  (no sensors)")
 				continue
 			}
 			names := make([]string, 0, len(d.Sensors))
@@ -63,10 +73,10 @@ Quality Monitors report Humidity, VOC, PM25, PM10, CO, Air Quality.`,
 				if s.Scale != "" {
 					scale = " " + s.Scale
 				}
-				_, _ = fmt.Fprintf(os.Stdout, "  %-20s  %v%s%s\n", n, s.Value, scale, flags)
+				_, _ = fmt.Fprintf(out, "  %-20s  %v%s%s\n", n, s.Value, scale, flags)
 				if detailFlag {
 					if line := formatSensorDetail(s); line != "" {
-						_, _ = fmt.Fprintf(os.Stdout, "    %s\n", line)
+						_, _ = fmt.Fprintf(out, "    %s\n", line)
 					}
 				}
 			}
@@ -76,6 +86,7 @@ Quality Monitors report Humidity, VOC, PM25, PM10, CO, Air Quality.`,
 }
 
 func init() {
+	registerDeviceFilterFlag(sensorsCmd, &sensorsDeviceFlag)
 	rootCmd.AddCommand(sensorsCmd)
 }
 

@@ -12,16 +12,23 @@ import (
 var lockDevice string
 
 var devicesLockCmd = &cobra.Command{
-	Use:   "lock",
-	Short: "Lock a smart lock",
-	Long: `Issues an Alexa.LockController lock directive against the given
-device. The device must advertise Alexa.LockController in its
-AlexaInterfaces (the discovery query populates this) and
-have a non-empty EndpointID. Run 'devices list' first to confirm.
+	Use:   "lock <lock|unlock>",
+	Short: "Lock or unlock a smart lock",
+	Long: `Issues an Alexa.LockController directive against the given device.
+The device must advertise Alexa.LockController in its AlexaInterfaces
+(the discovery query populates this) and have a non-empty EndpointID.
+Run 'devices list' first to confirm.
 
-Example:
-  alexactl devices lock --device "Front Door"`,
-	Args: cobra.NoArgs,
+Many locks disable remote unlock by policy (Yale's "remote unlock
+disabled" setting, August's "owner-only" policy, BHMA/Z-Wave
+"auto-relock only" modes). When the device refuses an unlock, Amazon
+returns a structured error which surfaces as ErrCannotControlDevice
+with a clear message.
+
+Examples:
+  alexactl devices lock lock --device "Front Door"
+  alexactl devices lock unlock --device "Front Door"`,
+	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		ctx, cancel := signalContext()
 		defer cancel()
@@ -48,7 +55,14 @@ Example:
 		if l == nil {
 			return fmt.Errorf("device %q does not expose Alexa.LockController", d.SerialNumber)
 		}
-		return l.Lock(ctx)
+		switch args[0] {
+		case "lock":
+			return l.Lock(ctx)
+		case "unlock":
+			return l.Unlock(ctx)
+		default:
+			return fmt.Errorf("unknown action %q: use lock or unlock", args[0])
+		}
 	},
 }
 

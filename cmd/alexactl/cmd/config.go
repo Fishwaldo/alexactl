@@ -53,7 +53,7 @@ var configGetCmd = &cobra.Command{
 		if len(args) == 0 {
 			for key := range configKeys {
 				if v, ok := store.Get(key); ok {
-					fmt.Printf("%s = %s\n", key, v)
+					_, _ = fmt.Fprintf(cmd.OutOrStdout(), "%s = %s\n", key, v)
 				}
 			}
 			return nil
@@ -61,10 +61,10 @@ var configGetCmd = &cobra.Command{
 		key := args[0]
 		v, ok := store.Get(key)
 		if !ok {
-			fmt.Printf("%s is not set\n", key)
+			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "%s is not set\n", key)
 			return nil
 		}
-		fmt.Println(v)
+		_, _ = fmt.Fprintln(cmd.OutOrStdout(), v)
 		return nil
 	},
 }
@@ -85,7 +85,7 @@ var configSetCmd = &cobra.Command{
 		if err := store.Set(key, val); err != nil {
 			return err
 		}
-		fmt.Printf("%s = %s\n", key, val)
+		_, _ = fmt.Fprintf(cmd.OutOrStdout(), "%s = %s\n", key, val)
 		return nil
 	},
 }

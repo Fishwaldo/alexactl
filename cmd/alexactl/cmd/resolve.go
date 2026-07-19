@@ -12,10 +12,21 @@ import (
 	"github.com/Fishwaldo/alexactl"
 )
 
-// registerDeviceFlag adds the standard optional --device flag bound to p.
+// registerDeviceFlag adds the standard optional --device flag bound to p,
+// for single-target action commands: an empty value falls back to the
+// configured default-device (see resolveTarget).
 func registerDeviceFlag(c *cobra.Command, p *string) {
 	c.Flags().StringVar(p, "device", "",
 		"target device serial or name (overrides configured default-device)")
+}
+
+// registerDeviceFilterFlag adds the optional --device filter flag bound to p,
+// for list/read commands. Unlike registerDeviceFlag, an empty value means
+// "all devices" and it never falls back to the configured default-device
+// (see resolveFilter).
+func registerDeviceFilterFlag(c *cobra.Command, p *string) {
+	c.Flags().StringVar(p, "device", "",
+		"filter to one device (serial or name); omit for all devices")
 }
 
 // resolveTarget picks the target serial from the --device flag (serial or

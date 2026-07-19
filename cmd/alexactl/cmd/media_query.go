@@ -5,7 +5,6 @@ package cmd
 
 import (
 	"fmt"
-	"os"
 	"sort"
 
 	"github.com/spf13/cobra"
@@ -17,7 +16,8 @@ func newMusicProvidersCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "music-providers",
 		Short: "List available music providers",
-		RunE: func(_ *cobra.Command, _ []string) error {
+		Args:  cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			ctx, cancel := signalContext()
 			defer cancel()
 			client, sess, err := newClient(true)
@@ -39,11 +39,12 @@ func newMusicProvidersCmd() *cobra.Command {
 				ids = append(ids, id)
 			}
 			sort.Strings(ids)
-			_, _ = fmt.Fprintf(os.Stdout, "%-30s  %-25s  %-12s  %s\n",
+			out := cmd.OutOrStdout()
+			_, _ = fmt.Fprintf(out, "%-30s  %-25s  %-12s  %s\n",
 				"ID", "NAME", "AVAILABILITY", "DEFAULT")
 			for _, id := range ids {
 				p := providers[id]
-				_, _ = fmt.Fprintf(os.Stdout, "%-30s  %-25s  %-12s  %v\n",
+				_, _ = fmt.Fprintf(out, "%-30s  %-25s  %-12s  %v\n",
 					p.ProviderID, p.ProviderName, p.Availability, p.DefaultProvider)
 			}
 			return nil
@@ -55,7 +56,8 @@ func newVolumeStateCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "volume-state",
 		Short: "Print per-device volume + mute state",
-		RunE: func(_ *cobra.Command, _ []string) error {
+		Args:  cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			ctx, cancel := signalContext()
 			defer cancel()
 			client, sess, err := newClient(true)
@@ -77,10 +79,11 @@ func newVolumeStateCmd() *cobra.Command {
 				serials = append(serials, s)
 			}
 			sort.Strings(serials)
-			_, _ = fmt.Fprintf(os.Stdout, "%-32s  %-7s  %s\n", "SERIAL", "VOLUME", "MUTED")
+			out := cmd.OutOrStdout()
+			_, _ = fmt.Fprintf(out, "%-32s  %-7s  %s\n", "SERIAL", "VOLUME", "MUTED")
 			for _, s := range serials {
 				v := volumes[s]
-				_, _ = fmt.Fprintf(os.Stdout, "%-32s  %-7d  %v\n", s, v.Volume, v.Muted)
+				_, _ = fmt.Fprintf(out, "%-32s  %-7d  %v\n", s, v.Volume, v.Muted)
 			}
 			return nil
 		},
@@ -92,9 +95,10 @@ func newMediaStateCmd() *cobra.Command {
 	c := &cobra.Command{
 		Use:   "media-state",
 		Short: "Print the current playback snapshot for one device",
+		Args:  cobra.NoArgs,
 	}
-	c.Flags().StringVar(&device, "device", "", "filter to one device (serial or name); omit for all devices")
-	c.RunE = func(_ *cobra.Command, _ []string) error {
+	registerDeviceFilterFlag(c, &device)
+	c.RunE = func(cmd *cobra.Command, _ []string) error {
 		ctx, cancel := signalContext()
 		defer cancel()
 		client, sess, err := newClient(true)
@@ -131,23 +135,24 @@ func newMediaStateCmd() *cobra.Command {
 			serials = append(serials, d.SerialNumber)
 		}
 		sort.Strings(serials)
+		out := cmd.OutOrStdout()
 		for i, serial := range serials {
 			s, ok := states[serial]
 			if i > 0 {
-				_, _ = fmt.Fprintln(os.Stdout)
+				_, _ = fmt.Fprintln(out)
 			}
-			_, _ = fmt.Fprintf(os.Stdout, "device   : %s\n", serial)
+			_, _ = fmt.Fprintf(out, "device   : %s\n", serial)
 			if !ok {
-				_, _ = fmt.Fprintln(os.Stdout, "(no media session for this device)")
+				_, _ = fmt.Fprintln(out, "(no media session for this device)")
 				continue
 			}
-			_, _ = fmt.Fprintf(os.Stdout, "state    : %s\n", s.PlayerState)
-			_, _ = fmt.Fprintf(os.Stdout, "title    : %s\n", s.NowPlayingTitle)
-			_, _ = fmt.Fprintf(os.Stdout, "line1    : %s\n", s.NowPlayingLine1)
-			_, _ = fmt.Fprintf(os.Stdout, "line2    : %s\n", s.NowPlayingLine2)
-			_, _ = fmt.Fprintf(os.Stdout, "provider : %s\n", s.MediaProvider)
-			_, _ = fmt.Fprintf(os.Stdout, "length   : %s\n", s.MediaLength)
-			_, _ = fmt.Fprintf(os.Stdout, "position : %s (as of %s)\n",
+			_, _ = fmt.Fprintf(out, "state    : %s\n", s.PlayerState)
+			_, _ = fmt.Fprintf(out, "title    : %s\n", s.NowPlayingTitle)
+			_, _ = fmt.Fprintf(out, "line1    : %s\n", s.NowPlayingLine1)
+			_, _ = fmt.Fprintf(out, "line2    : %s\n", s.NowPlayingLine2)
+			_, _ = fmt.Fprintf(out, "provider : %s\n", s.MediaProvider)
+			_, _ = fmt.Fprintf(out, "length   : %s\n", s.MediaLength)
+			_, _ = fmt.Fprintf(out, "position : %s (as of %s)\n",
 				s.MediaPosition, s.MediaPositionUpdated.Format("15:04:05"))
 		}
 		return nil

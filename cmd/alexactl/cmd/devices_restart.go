@@ -5,7 +5,6 @@ package cmd
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/spf13/cobra"
 )
@@ -25,6 +24,7 @@ Requires a saved OAuth access token (the same session established by
 Examples:
   alexactl devices restart --device "Kitchen"
   alexactl devices restart --device AB1234567890`,
+	Args: cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		ctx, cancel := signalContext()
 		defer cancel()
@@ -52,7 +52,7 @@ Examples:
 			return err
 		}
 
-		_, _ = fmt.Fprintf(os.Stdout, "restart requested for %s (%s); it will reconnect shortly\n",
+		_, _ = fmt.Fprintf(cmd.OutOrStdout(), "restart requested for %s (%s); it will reconnect shortly\n",
 			d.AccountName, d.SerialNumber)
 		return nil
 	},

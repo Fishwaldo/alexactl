@@ -77,7 +77,7 @@ field names when wiring new typed accessors.`,
 		if err := d.SendDirective(ctx, args[0], sendDirectiveInstance, args[1], payload); err != nil {
 			return err
 		}
-		fmt.Printf("OK: %s/%s on %s\n", args[0], args[1], d.SerialNumber)
+		_, _ = fmt.Fprintf(cmd.OutOrStdout(), "OK: %s/%s on %s\n", args[0], args[1], d.SerialNumber)
 		return nil
 	},
 }

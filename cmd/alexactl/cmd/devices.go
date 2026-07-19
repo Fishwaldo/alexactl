@@ -5,13 +5,14 @@ package cmd
 
 import (
 	"fmt"
-	"os"
 	"strings"
 
 	"github.com/spf13/cobra"
 
 	"github.com/Fishwaldo/alexactl"
 )
+
+var devicesListDeviceFlag string
 
 var devicesCmd = &cobra.Command{
 	Use:   "devices",
@@ -21,6 +22,7 @@ var devicesCmd = &cobra.Command{
 var devicesListCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List Amazon devices on the account",
+	Args:  cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		ctx, cancel := signalContext()
 		defer cancel()
@@ -36,30 +38,38 @@ var devicesListCmd = &cobra.Command{
 			return err
 		}
 
+		filter, err := resolveFilter(ctx, devicesListDeviceFlag, client)
+		if err != nil {
+			return err
+		}
 		devs, err := client.Devices.List(ctx)
 		if err != nil {
 			return err
 		}
-		_, _ = fmt.Fprintf(os.Stdout, "%-32s  %-20s  %-16s  %-7s  %s\n",
+		out := cmd.OutOrStdout()
+		_, _ = fmt.Fprintf(out, "%-32s  %-20s  %-16s  %-7s  %s\n",
 			"SERIAL", "KIND", "TYPE", "ONLINE", "NAME")
 		for _, d := range devs {
-			_, _ = fmt.Fprintf(os.Stdout, "%-32s  %-20s  %-16s  %-7v  %s\n",
+			if filter != "" && d.SerialNumber != filter {
+				continue
+			}
+			_, _ = fmt.Fprintf(out, "%-32s  %-20s  %-16s  %-7v  %s\n",
 				d.SerialNumber, kindOrUnknown(d.Kind), d.DeviceType, d.Online, d.AccountName)
 			if hw := summarizeHardware(d); hw != "" {
-				_, _ = fmt.Fprintf(os.Stdout, "  %s\n", hw)
+				_, _ = fmt.Fprintf(out, "  %s\n", hw)
 			}
 			if summary := summarizeDevice(d); summary != "" {
-				_, _ = fmt.Fprintf(os.Stdout, "  %s\n", summary)
+				_, _ = fmt.Fprintf(out, "  %s\n", summary)
 			}
 			if detailFlag {
 				if len(d.DisplayCategories) > 0 {
-					_, _ = fmt.Fprintf(os.Stdout, "    categories=%v\n", d.DisplayCategories)
+					_, _ = fmt.Fprintf(out, "    categories=%v\n", d.DisplayCategories)
 				}
 				if len(d.AlexaInterfaces) > 0 {
-					_, _ = fmt.Fprintf(os.Stdout, "    interfaces=%v\n", d.AlexaInterfaces)
+					_, _ = fmt.Fprintf(out, "    interfaces=%v\n", d.AlexaInterfaces)
 				}
 				if d.SoftwareVersion != "" {
-					_, _ = fmt.Fprintf(os.Stdout, "    software=%q\n", d.SoftwareVersion)
+					_, _ = fmt.Fprintf(out, "    software=%q\n", d.SoftwareVersion)
 				}
 			}
 		}
@@ -73,6 +83,7 @@ func sessionFilePath() string {
 }
 
 func init() {
+	registerDeviceFilterFlag(devicesListCmd, &devicesListDeviceFlag)
 	devicesCmd.AddCommand(devicesListCmd)
 	rootCmd.AddCommand(devicesCmd)
 }

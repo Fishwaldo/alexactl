@@ -5,7 +5,6 @@ package cmd
 
 import (
 	"fmt"
-	"os"
 	"sort"
 	"strings"
 
@@ -24,7 +23,8 @@ func newCommsPrefsCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "prefs",
 		Short: "Show the allowed comms preferences for one device",
-		RunE: func(_ *cobra.Command, _ []string) error {
+		Args:  cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			ctx, cancel := signalContext()
 			defer cancel()
 
@@ -51,8 +51,9 @@ func newCommsPrefsCmd() *cobra.Command {
 				return err
 			}
 			p, ok := prefs[dvc.SerialNumber]
+			out := cmd.OutOrStdout()
 			if !ok {
-				_, _ = fmt.Fprintf(os.Stdout, "no allowed comms preferences for %s (%s)\n",
+				_, _ = fmt.Fprintf(out, "no allowed comms preferences for %s (%s)\n",
 					dvc.AccountName, dvc.SerialNumber)
 				return nil
 			}
@@ -61,9 +62,9 @@ func newCommsPrefsCmd() *cobra.Command {
 				names = append(names, k)
 			}
 			sort.Strings(names)
-			_, _ = fmt.Fprintf(os.Stdout, "%-20s  %s\n", "PREFERENCE", "STATE")
+			_, _ = fmt.Fprintf(out, "%-20s  %s\n", "PREFERENCE", "STATE")
 			for _, n := range names {
-				_, _ = fmt.Fprintf(os.Stdout, "%-20s  %s\n", n, p[n])
+				_, _ = fmt.Fprintf(out, "%-20s  %s\n", n, p[n])
 			}
 			return nil
 		},

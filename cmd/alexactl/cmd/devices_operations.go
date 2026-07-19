@@ -5,7 +5,6 @@ package cmd
 
 import (
 	"fmt"
-	"os"
 	"sort"
 
 	"github.com/spf13/cobra"
@@ -27,10 +26,12 @@ controllable in theory (Amazon's web UI hides controls based on a
 UI-side decision rather than missing capability), but in practice
 the absence of feature.operations means we have no idea what payload
 shape to send — capture a HAR first.`,
+	Args: cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		ctx, cancel := signalContext()
 		defer cancel()
 
+		out := cmd.OutOrStdout()
 		client, sess, err := newClient(true)
 		if err != nil {
 			return err
@@ -51,14 +52,14 @@ shape to send — capture a HAR first.`,
 
 		for _, d := range devs {
 			// Header line per device.
-			_, _ = fmt.Fprintf(os.Stdout, "%s  (%s, %s)\n",
+			_, _ = fmt.Fprintf(out, "%s  (%s, %s)\n",
 				d.AccountName, d.SerialNumber, kindOrUnknown(d.Kind))
 
 			endpointOps := "(none)"
 			if len(d.Operations) > 0 {
 				endpointOps = fmt.Sprintf("%v", d.Operations)
 			}
-			_, _ = fmt.Fprintf(os.Stdout, "  endpoint:                 %s\n", endpointOps)
+			_, _ = fmt.Fprintf(out, "  endpoint:                 %s\n", endpointOps)
 
 			// Per-feature operations from Sensors[].Operations. Sorted by
 			// sensor key for stable output across runs.
@@ -70,19 +71,19 @@ shape to send — capture a HAR first.`,
 			}
 			sort.Strings(featureKeys)
 			if len(featureKeys) == 0 {
-				_, _ = fmt.Fprintln(os.Stdout, "  (no per-feature operations)")
+				_, _ = fmt.Fprintln(out, "  (no per-feature operations)")
 			} else {
 				for _, k := range featureKeys {
 					s := d.Sensors[k]
-					_, _ = fmt.Fprintf(os.Stdout, "  %-25s %v\n", k+":", s.Operations)
+					_, _ = fmt.Fprintf(out, "  %-25s %v\n", k+":", s.Operations)
 					if detailFlag && len(s.Configuration) > 0 {
 						if line := formatSensorDetail(s); line != "" {
-							_, _ = fmt.Fprintf(os.Stdout, "    %s\n", line)
+							_, _ = fmt.Fprintf(out, "    %s\n", line)
 						}
 					}
 				}
 			}
-			_, _ = fmt.Fprintln(os.Stdout)
+			_, _ = fmt.Fprintln(out)
 		}
 		return nil
 	},

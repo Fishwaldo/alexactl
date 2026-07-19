@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"strings"
 	"time"
 
@@ -17,7 +18,7 @@ import (
 
 var (
 	alarmsDeviceFlag     string
-	alarmsLsDeviceFlag   string
+	alarmsListDeviceFlag string
 	alarmsLabelFlag      string
 	alarmsSoundFlag      string
 	alarmsRecurrenceFlag string
@@ -30,6 +31,7 @@ var alarmsCmd = &cobra.Command{
 
 With no subcommand, prints a summary of all active alarms grouped
 by device.`,
+	Args: cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		ctx, cancel := signalContext()
 		defer cancel()
@@ -48,27 +50,29 @@ by device.`,
 		if err != nil {
 			return err
 		}
+		out := cmd.OutOrStdout()
 		byDevice := map[string][]*alexactl.Alarm{}
 		for _, a := range alarms {
 			byDevice[a.DeviceSerialNumber] = append(byDevice[a.DeviceSerialNumber], a)
 		}
 		for serial, list := range byDevice {
-			fmt.Printf("%s — %d active alarm(s)\n", serial, len(list))
+			_, _ = fmt.Fprintf(out, "%s — %d active alarm(s)\n", serial, len(list))
 			for _, a := range list {
 				rec := "(one-shot)"
 				if a.Recurrence != nil {
 					rec = a.Recurrence.Describe()
 				}
-				fmt.Printf("  %s  %s  %s  [%s]\n", a.ID, a.FireAt.Format(time.RFC3339), a.Label, rec)
+				_, _ = fmt.Fprintf(out, "  %s  %s  %s  [%s]\n", a.ID, a.FireAt.Format(time.RFC3339), a.Label, rec)
 			}
 		}
 		return nil
 	},
 }
 
-var alarmsLsCmd = &cobra.Command{
-	Use:   "ls",
+var alarmsListCmd = &cobra.Command{
+	Use:   "list",
 	Short: "Detailed alarm list",
+	Args:  cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, _ []string) error {
 		ctx, cancel := signalContext()
 		defer cancel()
@@ -82,7 +86,7 @@ var alarmsLsCmd = &cobra.Command{
 		if _, err := client.Auth.Restore(ctx); err != nil {
 			return err
 		}
-		filter, err := resolveFilter(ctx, alarmsLsDeviceFlag, client)
+		filter, err := resolveFilter(ctx, alarmsListDeviceFlag, client)
 		if err != nil {
 			return err
 		}
@@ -90,7 +94,8 @@ var alarmsLsCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		fmt.Printf("%-50s %-20s %-30s %s\n", "ID", "FIRE_AT", "LABEL", "RECURRENCE")
+		out := cmd.OutOrStdout()
+		_, _ = fmt.Fprintf(out, "%-50s %-20s %-30s %s\n", "ID", "FIRE_AT", "LABEL", "RECURRENCE")
 		for _, a := range alarms {
 			if filter != "" && a.DeviceSerialNumber != filter {
 				continue
@@ -99,7 +104,7 @@ var alarmsLsCmd = &cobra.Command{
 			if a.Recurrence != nil {
 				rec = a.Recurrence.Describe()
 			}
-			fmt.Printf("%-50s %-20s %-30s %s\n",
+			_, _ = fmt.Fprintf(out, "%-50s %-20s %-30s %s\n",
 				a.ID, a.FireAt.Format("2006-01-02 15:04"), a.Label, rec)
 		}
 		return nil
@@ -152,7 +157,7 @@ var alarmsCreateCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		fmt.Printf("created: %s  (id=%s, fires at %s)\n",
+		_, _ = fmt.Fprintf(cmd.OutOrStdout(), "created: %s  (id=%s, fires at %s)\n",
 			created.Label, created.ID, created.FireAt.Format(time.RFC3339))
 		return nil
 	},
@@ -162,7 +167,7 @@ var alarmsEnableCmd = &cobra.Command{
 	Use:   "enable <alarm-id>",
 	Short: "Set status=ON on an alarm",
 	Args:  cobra.ExactArgs(1),
-	RunE: withAlarm(func(ctx context.Context, a *alexactl.Alarm, client *alexactl.Client, _ []string) error {
+	RunE: withAlarm(func(ctx context.Context, a *alexactl.Alarm, client *alexactl.Client, _ []string, _ io.Writer) error {
 		return client.Alarms.Enable(ctx, a)
 	}),
 }
@@ -171,7 +176,7 @@ var alarmsDisableCmd = &cobra.Command{
 	Use:   "disable <alarm-id>",
 	Short: "Set status=OFF on an alarm",
 	Args:  cobra.ExactArgs(1),
-	RunE: withAlarm(func(ctx context.Context, a *alexactl.Alarm, client *alexactl.Client, _ []string) error {
+	RunE: withAlarm(func(ctx context.Context, a *alexactl.Alarm, client *alexactl.Client, _ []string, _ io.Writer) error {
 		return client.Alarms.Disable(ctx, a)
 	}),
 }
@@ -180,7 +185,7 @@ var alarmsSnoozeCmd = &cobra.Command{
 	Use:   "snooze <alarm-id> <duration>",
 	Short: "Snooze an alarm by a duration (e.g. 10m, 1h)",
 	Args:  cobra.ExactArgs(2),
-	RunE: withAlarm(func(ctx context.Context, a *alexactl.Alarm, client *alexactl.Client, args []string) error {
+	RunE: withAlarm(func(ctx context.Context, a *alexactl.Alarm, client *alexactl.Client, args []string, _ io.Writer) error {
 		dur, err := time.ParseDuration(args[1])
 		if err != nil {
 			return fmt.Errorf("invalid duration %q: %w", args[1], err)
@@ -193,7 +198,7 @@ var alarmsDeleteCmd = &cobra.Command{
 	Use:   "delete <alarm-id>",
 	Short: "Delete an alarm",
 	Args:  cobra.ExactArgs(1),
-	RunE: withAlarm(func(ctx context.Context, a *alexactl.Alarm, client *alexactl.Client, _ []string) error {
+	RunE: withAlarm(func(ctx context.Context, a *alexactl.Alarm, client *alexactl.Client, _ []string, _ io.Writer) error {
 		return client.Alarms.Delete(ctx, a)
 	}),
 }
@@ -202,20 +207,21 @@ var alarmsShowCmd = &cobra.Command{
 	Use:   "show <alarm-id>",
 	Short: "Print the raw server-shape map for an alarm as pretty JSON",
 	Args:  cobra.ExactArgs(1),
-	RunE: withAlarm(func(_ context.Context, a *alexactl.Alarm, _ *alexactl.Client, _ []string) error {
+	RunE: withAlarm(func(_ context.Context, a *alexactl.Alarm, _ *alexactl.Client, _ []string, w io.Writer) error {
 		raw := alexactl.AlarmServerShape(a)
 		out, err := json.MarshalIndent(raw, "", "  ")
 		if err != nil {
 			return err
 		}
-		fmt.Println(string(out))
+		_, _ = fmt.Fprintln(w, string(out))
 		return nil
 	}),
 }
 
 // withAlarm builds a RunE that resolves an *Alarm by ID across all
-// alarms on the account and dispatches.
-func withAlarm(action func(ctx context.Context, a *alexactl.Alarm, client *alexactl.Client, args []string) error) func(*cobra.Command, []string) error {
+// alarms on the account and dispatches. The action receives the command's
+// output writer for any user-facing output.
+func withAlarm(action func(ctx context.Context, a *alexactl.Alarm, client *alexactl.Client, args []string, w io.Writer) error) func(*cobra.Command, []string) error {
 	return func(cmd *cobra.Command, args []string) error {
 		ctx, cancel := signalContext()
 		defer cancel()
@@ -239,7 +245,7 @@ func withAlarm(action func(ctx context.Context, a *alexactl.Alarm, client *alexa
 		id := args[0]
 		for _, a := range alarms {
 			if a.ID == id {
-				return action(ctx, a, client, args)
+				return action(ctx, a, client, args, cmd.OutOrStdout())
 			}
 		}
 		return fmt.Errorf("alarm id %q not found", id)
@@ -327,9 +333,9 @@ func init() {
 	alarmsCreateCmd.Flags().StringVar(&alarmsRecurrenceFlag, "recurrence", "",
 		"recurrence: daily | weekdays | weekends | weekly:MO,WE,FR | rrule:\"FREQ=...\"")
 
-	alarmsLsCmd.Flags().StringVar(&alarmsLsDeviceFlag, "device", "", "filter to one device (serial or name); omit for all devices")
+	registerDeviceFilterFlag(alarmsListCmd, &alarmsListDeviceFlag)
 
-	alarmsCmd.AddCommand(alarmsLsCmd)
+	alarmsCmd.AddCommand(alarmsListCmd)
 	alarmsCmd.AddCommand(alarmsCreateCmd)
 	alarmsCmd.AddCommand(alarmsEnableCmd)
 	alarmsCmd.AddCommand(alarmsDisableCmd)

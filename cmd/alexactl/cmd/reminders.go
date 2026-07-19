@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -16,13 +17,14 @@ import (
 
 var (
 	remindersDeviceFlag     string
-	remindersLsDeviceFlag   string
+	remindersListDeviceFlag string
 	remindersRecurrenceFlag string
 )
 
 var remindersCmd = &cobra.Command{
 	Use:   "reminders",
 	Short: "List, create, and modify reminders on Echo devices",
+	Args:  cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, _ []string) error {
 		ctx, cancel := signalContext()
 		defer cancel()
@@ -40,12 +42,13 @@ var remindersCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
+		out := cmd.OutOrStdout()
 		byDevice := map[string][]*alexactl.Reminder{}
 		for _, r := range reminders {
 			byDevice[r.DeviceSerialNumber] = append(byDevice[r.DeviceSerialNumber], r)
 		}
 		for serial, list := range byDevice {
-			fmt.Printf("%s — %d active reminder(s)\n", serial, len(list))
+			_, _ = fmt.Fprintf(out, "%s — %d active reminder(s)\n", serial, len(list))
 			for _, r := range list {
 				rec := "(one-shot)"
 				if r.Recurrence != nil {
@@ -55,7 +58,7 @@ var remindersCmd = &cobra.Command{
 				if r.Acknowledged {
 					ack = "  [ACKNOWLEDGED]"
 				}
-				fmt.Printf("  %s  %s  %s  [%s]%s\n",
+				_, _ = fmt.Fprintf(out, "  %s  %s  %s  [%s]%s\n",
 					r.ID, r.FireAt.Format(time.RFC3339), r.Label, rec, ack)
 			}
 		}
@@ -63,9 +66,10 @@ var remindersCmd = &cobra.Command{
 	},
 }
 
-var remindersLsCmd = &cobra.Command{
-	Use:   "ls",
+var remindersListCmd = &cobra.Command{
+	Use:   "list",
 	Short: "Detailed reminder list",
+	Args:  cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, _ []string) error {
 		ctx, cancel := signalContext()
 		defer cancel()
@@ -79,7 +83,7 @@ var remindersLsCmd = &cobra.Command{
 		if _, err := client.Auth.Restore(ctx); err != nil {
 			return err
 		}
-		filter, err := resolveFilter(ctx, remindersLsDeviceFlag, client)
+		filter, err := resolveFilter(ctx, remindersListDeviceFlag, client)
 		if err != nil {
 			return err
 		}
@@ -87,7 +91,8 @@ var remindersLsCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		fmt.Printf("%-60s %-20s %-30s %s\n", "ID", "FIRE_AT", "LABEL", "RECURRENCE")
+		out := cmd.OutOrStdout()
+		_, _ = fmt.Fprintf(out, "%-60s %-20s %-30s %s\n", "ID", "FIRE_AT", "LABEL", "RECURRENCE")
 		for _, r := range reminders {
 			if filter != "" && r.DeviceSerialNumber != filter {
 				continue
@@ -96,7 +101,7 @@ var remindersLsCmd = &cobra.Command{
 			if r.Recurrence != nil {
 				rec = r.Recurrence.Describe()
 			}
-			fmt.Printf("%-60s %-20s %-30s %s\n",
+			_, _ = fmt.Fprintf(out, "%-60s %-20s %-30s %s\n",
 				r.ID, r.FireAt.Format("2006-01-02 15:04"), r.Label, rec)
 		}
 		return nil
@@ -149,7 +154,7 @@ var remindersCreateCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		fmt.Printf("created: %s  (id=%s, fires at %s)\n",
+		_, _ = fmt.Fprintf(cmd.OutOrStdout(), "created: %s  (id=%s, fires at %s)\n",
 			created.Label, created.ID, created.FireAt.Format(time.RFC3339))
 		return nil
 	},
@@ -159,7 +164,7 @@ var remindersEnableCmd = &cobra.Command{
 	Use:   "enable <reminder-id>",
 	Short: "Set status=ON on a reminder",
 	Args:  cobra.ExactArgs(1),
-	RunE: withReminder(func(ctx context.Context, r *alexactl.Reminder, client *alexactl.Client, _ []string) error {
+	RunE: withReminder(func(ctx context.Context, r *alexactl.Reminder, client *alexactl.Client, _ []string, _ io.Writer) error {
 		return client.Reminders.Enable(ctx, r)
 	}),
 }
@@ -168,7 +173,7 @@ var remindersDisableCmd = &cobra.Command{
 	Use:   "disable <reminder-id>",
 	Short: "Set status=OFF on a reminder",
 	Args:  cobra.ExactArgs(1),
-	RunE: withReminder(func(ctx context.Context, r *alexactl.Reminder, client *alexactl.Client, _ []string) error {
+	RunE: withReminder(func(ctx context.Context, r *alexactl.Reminder, client *alexactl.Client, _ []string, _ io.Writer) error {
 		return client.Reminders.Disable(ctx, r)
 	}),
 }
@@ -177,7 +182,7 @@ var remindersAcknowledgeCmd = &cobra.Command{
 	Use:   "acknowledge <reminder-id>",
 	Short: "Mark a reminder as acknowledged",
 	Args:  cobra.ExactArgs(1),
-	RunE: withReminder(func(ctx context.Context, r *alexactl.Reminder, client *alexactl.Client, _ []string) error {
+	RunE: withReminder(func(ctx context.Context, r *alexactl.Reminder, client *alexactl.Client, _ []string, _ io.Writer) error {
 		return client.Reminders.Acknowledge(ctx, r)
 	}),
 }
@@ -186,7 +191,7 @@ var remindersDeleteCmd = &cobra.Command{
 	Use:   "delete <reminder-id>",
 	Short: "Delete a reminder",
 	Args:  cobra.ExactArgs(1),
-	RunE: withReminder(func(ctx context.Context, r *alexactl.Reminder, client *alexactl.Client, _ []string) error {
+	RunE: withReminder(func(ctx context.Context, r *alexactl.Reminder, client *alexactl.Client, _ []string, _ io.Writer) error {
 		return client.Reminders.Delete(ctx, r)
 	}),
 }
@@ -195,18 +200,18 @@ var remindersShowCmd = &cobra.Command{
 	Use:   "show <reminder-id>",
 	Short: "Print the raw server-shape map for a reminder as pretty JSON",
 	Args:  cobra.ExactArgs(1),
-	RunE: withReminder(func(_ context.Context, r *alexactl.Reminder, _ *alexactl.Client, _ []string) error {
+	RunE: withReminder(func(_ context.Context, r *alexactl.Reminder, _ *alexactl.Client, _ []string, w io.Writer) error {
 		raw := alexactl.ReminderServerShape(r)
 		out, err := json.MarshalIndent(raw, "", "  ")
 		if err != nil {
 			return err
 		}
-		fmt.Println(string(out))
+		_, _ = fmt.Fprintln(w, string(out))
 		return nil
 	}),
 }
 
-func withReminder(action func(ctx context.Context, r *alexactl.Reminder, client *alexactl.Client, args []string) error) func(*cobra.Command, []string) error {
+func withReminder(action func(ctx context.Context, r *alexactl.Reminder, client *alexactl.Client, args []string, w io.Writer) error) func(*cobra.Command, []string) error {
 	return func(cmd *cobra.Command, args []string) error {
 		ctx, cancel := signalContext()
 		defer cancel()
@@ -230,7 +235,7 @@ func withReminder(action func(ctx context.Context, r *alexactl.Reminder, client 
 		id := args[0]
 		for _, r := range reminders {
 			if r.ID == id {
-				return action(ctx, r, client, args)
+				return action(ctx, r, client, args, cmd.OutOrStdout())
 			}
 		}
 		return fmt.Errorf("reminder id %q not found", id)
@@ -242,9 +247,9 @@ func init() {
 	remindersCreateCmd.Flags().StringVar(&remindersRecurrenceFlag, "recurrence", "",
 		"recurrence: daily | weekdays | weekends | weekly:MO,WE,FR | rrule:\"FREQ=...\"")
 
-	remindersLsCmd.Flags().StringVar(&remindersLsDeviceFlag, "device", "", "filter to one device (serial or name); omit for all devices")
+	registerDeviceFilterFlag(remindersListCmd, &remindersListDeviceFlag)
 
-	remindersCmd.AddCommand(remindersLsCmd)
+	remindersCmd.AddCommand(remindersListCmd)
 	remindersCmd.AddCommand(remindersCreateCmd)
 	remindersCmd.AddCommand(remindersEnableCmd)
 	remindersCmd.AddCommand(remindersDisableCmd)

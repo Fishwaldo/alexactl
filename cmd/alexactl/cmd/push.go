@@ -6,7 +6,7 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
-	"os"
+	"io"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -30,12 +30,13 @@ func newPushTailCmd() *cobra.Command {
 		Use:   "tail",
 		Short: "Subscribe to the push stream and print events to stdout until Ctrl+C",
 		Long:  "Useful as a manual smoke test against real Amazon endpoints. Run after `login`.",
+		Args:  cobra.NoArgs,
 	}
 	c.Flags().IntVar(&capacity, "capacity", 16,
 		"per-subscriber channel buffer size (drop-oldest backpressure)")
 	c.Flags().BoolVar(&initialSync, "initial-sync", false,
 		"emit synthetic *VolumeChangeEvent per known device on first live event")
-	c.RunE = func(_ *cobra.Command, _ []string) error {
+	c.RunE = func(cmd *cobra.Command, _ []string) error {
 		ctx, cancel := signalContext()
 		defer cancel()
 
@@ -62,28 +63,29 @@ func newPushTailCmd() *cobra.Command {
 			return err
 		}
 
-		fmt.Fprintln(os.Stderr, "push tail: streaming events — Ctrl+C to stop")
+		_, _ = fmt.Fprintln(cmd.ErrOrStderr(), "push tail: streaming events — Ctrl+C to stop")
+		out := cmd.OutOrStdout()
 		for evt := range ch {
-			printEvent(evt)
+			printEvent(out, evt)
 		}
 		return nil
 	}
 	return c
 }
 
-func printEvent(evt alexactl.PushEvent) {
+func printEvent(w io.Writer, evt alexactl.PushEvent) {
 	ts := time.Now().UTC().Format(time.RFC3339)
 	if _, ok := evt.(*alexactl.ReauthRequiredEvent); ok {
-		_, _ = fmt.Fprintf(os.Stdout, "%s REAUTH_REQUIRED — run `login` again\n", ts)
+		_, _ = fmt.Fprintf(w, "%s REAUTH_REQUIRED — run `login` again\n", ts)
 		return
 	}
 	rawBytes, _ := json.Marshal(evt.RawPayload())
 	if u, ok := evt.(*alexactl.UnknownPushEvent); ok {
-		_, _ = fmt.Fprintf(os.Stdout, "%s UNKNOWN[%s] serial=%s raw=%s\n",
+		_, _ = fmt.Fprintf(w, "%s UNKNOWN[%s] serial=%s raw=%s\n",
 			ts, u.WireType, u.SerialNumber(), rawBytes)
 		return
 	}
-	_, _ = fmt.Fprintf(os.Stdout, "%s %s serial=%s raw=%s\n",
+	_, _ = fmt.Fprintf(w, "%s %s serial=%s raw=%s\n",
 		ts, evt.Type(), evt.SerialNumber(), rawBytes)
 }
 

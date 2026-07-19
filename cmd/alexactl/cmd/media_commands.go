@@ -5,7 +5,6 @@ package cmd
 
 import (
 	"fmt"
-	"os"
 	"sort"
 	"strings"
 
@@ -30,6 +29,7 @@ func newSoundListCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "list",
 		Short: "List available sound effect IDs and labels",
+		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			ctx := cmd.Context()
 			client, sess, err := newClient(true)
@@ -51,10 +51,11 @@ func newSoundListCmd() *cobra.Command {
 				ids = append(ids, id)
 			}
 			sort.Strings(ids)
-			_, _ = fmt.Fprintf(os.Stdout, "%-46s  %-26s  %s\n", "ID", "CATEGORY", "LABEL")
+			out := cmd.OutOrStdout()
+			_, _ = fmt.Fprintf(out, "%-46s  %-26s  %s\n", "ID", "CATEGORY", "LABEL")
 			for _, id := range ids {
 				s := sounds[id]
-				_, _ = fmt.Fprintf(os.Stdout, "%-46s  %-26s  %s\n", id, s.Category, s.DisplayName)
+				_, _ = fmt.Fprintf(out, "%-46s  %-26s  %s\n", id, s.Category, s.DisplayName)
 			}
 			return nil
 		},
@@ -172,13 +173,15 @@ func newSkillListCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "list",
 		Short: "List the canonical Alexa info-skill names",
-		RunE: func(_ *cobra.Command, _ []string) error {
+		Args:  cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			client, _, err := newClient(false)
 			if err != nil {
 				return err
 			}
+			out := cmd.OutOrStdout()
 			for _, s := range client.Media.InfoSkills() {
-				_, _ = fmt.Fprintln(os.Stdout, s)
+				_, _ = fmt.Fprintln(out, s)
 			}
 			return nil
 		},
